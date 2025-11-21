@@ -1,0 +1,27 @@
+# GAADP TOPOLOGY CONFIGURATION
+topology_type: "pair_programming"
+
+ratios:
+  BUILDER:
+    VERIFIER: 1.0
+  BUILDER:
+    ARCHITECT: 0.2
+  GLOBAL:
+    TREASURER: 1
+    LIBRARIAN: 1
+    CURATOR: 1
+    SENTINEL: 1
+
+parallel_limits:
+  max_concurrent_builders: 10
+  max_concurrent_verifiers: 10
+  max_wavefront_width: 20
+
+verification_requirements:
+  strict_gating: true
+  minimum_verifiers_per_node: 1
+  require_different_llm_provider: true
+
+timeouts:
+  plan_execution_seconds: 300
+  verification_seconds: 120

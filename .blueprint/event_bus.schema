@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GAADP Event Bus Message",
+  "type": "object",
+  "required": ["id", "source_agent_id", "target_agent_id", "message_type", "payload", "correlation_id"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "source_agent_id": {"type": "string"},
+    "target_agent_id": {"type": "string"},
+    "message_type": {
+      "type": "string",
+      "enum": ["TASK_ASSIGN", "RESULT_SUBMIT", "VERIFY_REQ", "ERROR", "STOP_SIGNAL"]
+    },
+    "payload": {
+      "type": "object",
+      "required": ["target_node_id"],
+      "properties": {
+        "target_node_id": {"type": "string", "format": "uuid"},
+        "content": {"type": ["string", "object", "null"]},
+        "graph_context_hash": {"type": "string"}
+      }
+    },
+    "correlation_id": {"type": "string", "format": "uuid"}
+  }
+}

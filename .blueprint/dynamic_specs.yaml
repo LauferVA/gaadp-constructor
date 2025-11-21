@@ -1,0 +1,20 @@
+# GAADP DYNAMIC SPEC GENERATION
+specification_patterns:
+  web_login:
+    trigger_keywords: ["login", "auth", "authentication", "oauth"]
+    generates_nodes:
+      - type: "SPEC"
+        content_template: "specifications/templates/web_login.yaml"
+        metadata: { domain: "SECURITY" }
+      - type: "PLAN"
+        content: "Implement Authentication Module"
+        metadata: { assigned_role: "ARCHITECT" }
+  rest_api:
+    trigger_keywords: ["api", "rest", "endpoint", "json"]
+    generates_nodes:
+      - type: "SPEC"
+        content_template: "specifications/templates/rest_api.yaml"
+        metadata: { domain: "BACKEND" }
+      - type: "PLAN"
+        content: "Define API Routes and Schema"
+        metadata: { assigned_role: "ARCHITECT" }

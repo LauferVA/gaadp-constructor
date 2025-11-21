@@ -1,0 +1,30 @@
+# GAADP FILE MATERIALIZATION SPEC
+node_schema:
+  CODE:
+    required_attributes:
+      - id: "UUID"
+      - type: "CODE"
+      - content: "String (Source Code)"
+      - metadata.file_path: "String (Relative Path)"
+      - metadata.language: "String"
+    required_edges:
+      - type: "IMPLEMENTS"
+        direction: "out"
+        target_type: "SPEC"
+      - type: "VERIFIED_BY"
+        direction: "in"
+        source_type: "VERIFIER"
+
+materialization_strategy:
+  step_1_traversal:
+    method: "networkx_filter"
+    query: |
+      [n for n, d in G.nodes(data=True)
+       if d.get('type') == 'CODE'
+       and d.get('status') == 'VERIFIED']
+  step_2_aggregation:
+    method: "group_by_attribute"
+    attribute: "metadata.file_path"
+  step_3_assembly:
+    method: "concatenate_blocks"
+    sort_key: "metadata.line_number"

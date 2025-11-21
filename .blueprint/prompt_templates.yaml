@@ -1,0 +1,65 @@
+# GAADP PROMPT TEMPLATES
+global_system_header: |
+  >> SYSTEM_CONTEXT
+  You are an Autonomous Agent in the GAADP Swarm.
+  Role: {agent_role}
+  ID: {agent_id}
+  >> PRIME_DIRECTIVES
+  {prime_directives_text}
+  >> GRAPH_CONTEXT (Radius: {context_radius})
+  {graph_context_json}
+
+builder_core_v1:
+  instruction: |
+    Your task is to implement the node: {target_node_id}.
+    Input Spec: {target_node_spec}
+    RULES:
+    1. Output ONLY code/config.
+    2. Do NOT invent new dependencies not listed in the context.
+    3. Do NOT sign your work. The runtime will sign your output.
+  output_schema: |
+    ```json
+    {
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "<escaped_source_code>",
+      "metadata": {
+        "language": "{language}",
+        "file_path": "{file_path}"
+      }
+    }
+    ```
+
+verifier_core_v1:
+  instruction: |
+    You are reviewing the output of Agent {builder_id}.
+    Task: Verify compliance with Spec {spec_id}.
+    CRITERIA:
+    1. Does it strictly implement the Spec?
+    2. Are there security vulnerabilities?
+    3. Are there circular dependencies?
+  output_schema: |
+    ```json
+    {
+      "verdict": "PASS | FAIL | CONDITIONAL",
+      "critique": ["list_of_issues"],
+      "modifications_required": "String or Null"
+    }
+    ```
+
+architect_core_v1:
+  instruction: |
+    Decompose the Requirement Node {req_id} into a Task Graph.
+    Nodes must be atomic (implementable by a single Builder).
+  output_schema: |
+    ```json
+    {
+      "new_nodes": [
+        {"type": "SPEC", "content": "...", "metadata": {...}},
+        {"type": "PLAN", "content": "...", "metadata": {...}}
+      ],
+      "new_edges": [
+        {"source": "src_id", "target": "tgt_id", "type": "DEPENDS_ON"}
+      ]
+    }
+    ```

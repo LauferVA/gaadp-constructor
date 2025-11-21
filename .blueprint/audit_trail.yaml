@@ -1,0 +1,17 @@
+# GAADP AUDIT TRAIL SPECIFICATION
+agent_identity:
+  naming_convention: "agent_{role}_{uuid_short}"
+
+cryptographic_protocol:
+  algorithm: "Ed25519"
+  key_management:
+    generation: "Runtime (Python) on Agent Instantiation"
+    storage: "Encrypted Local Keystore (.gaadp/keys/)"
+    access: "Strictly prohibited to LLM context"
+
+signing_workflow:
+  1_llm_output: "Agent produces JSON content (Unsigned)"
+  2_runtime_intercept: "Python wrapper captures output"
+  3_hashing: "SHA-256 hash of (content + timestamp + previous_hash)"
+  4_signing: "Runtime signs hash with Agent's Private Key"
+  5_edge_creation: "Edge created with attribute 'signature'"

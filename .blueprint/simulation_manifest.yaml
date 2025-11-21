@@ -1,0 +1,32 @@
+# GAADP SIMULATION MANIFEST
+scenarios:
+  - id: "sim_001_auth_module"
+    name: "Implement JWT Authentication"
+    domain: "SECURITY"
+    steps:
+      1_requirement:
+        type: "REQ"
+        content: "System must support JWT-based stateless authentication."
+      2_architecture:
+        role: "ARCHITECT"
+        action: "decompose"
+        output_nodes:
+          - type: "SPEC"
+            id: "spec_jwt_01"
+            content: "Define verify_token() function signature."
+          - type: "PLAN"
+            id: "plan_jwt_01"
+            content: "Implement verify_token() in python"
+      3_implementation:
+        role: "BUILDER"
+        target_node: "plan_jwt_01"
+        output_nodes:
+          - type: "CODE"
+            id: "code_jwt_01"
+            content: "def verify_token(token): return True # Mock"
+            file_path: "auth/jwt.py"
+      4_verification:
+        role: "VERIFIER"
+        target_node: "code_jwt_01"
+        action: "verify"
+        verdict: "PASS"
