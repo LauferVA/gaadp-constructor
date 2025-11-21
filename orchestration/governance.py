@@ -36,14 +36,16 @@ class TreasurerMiddleware:
     Rejects tasks if budget would be exceeded.
     """
 
-    def __init__(self, gateway, config: Optional[BudgetConfig] = None):
+    def __init__(self, gateway, config: Optional[BudgetConfig] = None, event_bus: Optional[Any] = None):
         """
         Args:
             gateway: LLMGateway instance (has _cost_session)
             config: Budget configuration
+            event_bus: Optional EventBus for alerting
         """
         self.gateway = gateway
         self.config = config or BudgetConfig()
+        self.event_bus = event_bus
         self._warned = False
 
     def get_current_spend(self) -> float:
@@ -62,15 +64,26 @@ class TreasurerMiddleware:
         current_spend = self.get_current_spend()
         budget = self.config.project_total_limit_usd
 
-        # Hard limit
+        # Hard limit - CRITICAL ALERT
         if current_spend >= budget:
             logger.error(f"TREASURER HALT: Budget exhausted (${current_spend:.2f} >= ${budget:.2f})")
-            await self._publish_halt_event(task, current_spend, budget)
+            await self._publish_alert(
+                severity="CRITICAL",
+                message=f"Budget exhausted: ${current_spend:.2f} >= ${budget:.2f}",
+                task=task,
+                action_required="Pipeline halted. Increase budget or terminate."
+            )
             return False
 
-        # Warning threshold
+        # Warning threshold - WARNING ALERT
         if not self._warned and current_spend >= budget * self.config.warning_threshold:
-            logger.warning(f"TREASURER WARNING: {self.config.warning_threshold*100}% budget consumed")
+            logger.warning(f"TREASURER WARNING: {self.config.warning_threshold*100:.0f}% budget consumed")
+            await self._publish_alert(
+                severity="WARNING",
+                message=f"Budget {self.config.warning_threshold*100:.0f}% consumed (${current_spend:.2f}/${budget:.2f})",
+                task=task,
+                action_required="Consider pausing non-critical tasks."
+            )
             self._warned = True
 
         # Estimate cost (rough heuristic)
@@ -80,10 +93,25 @@ class TreasurerMiddleware:
 
         return True
 
-    async def _publish_halt_event(self, task: Any, spend: float, budget: float):
-        """Publish budget halt event (if event bus available)."""
-        # Event publishing would be wired by Engine
-        pass
+    async def _publish_alert(self, severity: str, message: str, task: Any, action_required: str):
+        """Publish governance alert to event bus."""
+        if not self.event_bus:
+            return
+
+        await self.event_bus.publish(
+            topic="alerts",
+            message_type=f"TREASURER_{severity}",
+            payload={
+                "severity": severity,
+                "message": message,
+                "task_id": getattr(task, 'id', 'unknown'),
+                "node_id": getattr(task, 'node_id', 'unknown'),
+                "current_spend": self.get_current_spend(),
+                "budget_limit": self.config.project_total_limit_usd,
+                "action_required": action_required
+            },
+            source_id="treasurer"
+        )
 
     def get_status(self) -> Dict:
         """Get Treasurer status for MCP queries."""
@@ -143,9 +171,10 @@ class SentinelMiddleware:
         ]
     }
 
-    def __init__(self, db: GraphDB, config: Optional[SecurityConfig] = None):
+    def __init__(self, db: GraphDB, config: Optional[SecurityConfig] = None, event_bus: Optional[Any] = None):
         self.db = db
         self.config = config or SecurityConfig()
+        self.event_bus = event_bus
         self._compiled_patterns = self._compile_patterns()
 
     def _compile_patterns(self) -> Dict[str, List]:
@@ -225,14 +254,50 @@ class SentinelMiddleware:
                 if issue['severity'] in ['critical', 'high']:
                     logger.error(f"  [{issue['severity'].upper()}] Line {issue['line']}: {issue['description']}")
 
+            # Publish CRITICAL security alert
+            await self._publish_alert(
+                severity="CRITICAL",
+                message=f"Security violation: {scan_result['summary']['critical']} critical, {scan_result['summary']['high']} high issues",
+                task=task,
+                issues=scan_result['issues'],
+                action_required="Code blocked. Review and fix security issues."
+            )
+
             # Store scan results on the task for debugging
             result['security_scan'] = scan_result
             return False
 
         if scan_result['summary']['medium'] > 0 or scan_result['summary']['info'] > 0:
             logger.info(f"SENTINEL: {sum(scan_result['summary'].values())} issues found (non-blocking)")
+            # Publish INFO alert for awareness
+            await self._publish_alert(
+                severity="INFO",
+                message=f"Non-blocking issues: {scan_result['summary']['medium']} medium, {scan_result['summary']['info']} info",
+                task=task,
+                issues=[i for i in scan_result['issues'] if i['severity'] in ['medium', 'info']],
+                action_required="Review recommended but not required."
+            )
 
         return True
+
+    async def _publish_alert(self, severity: str, message: str, task: Any, issues: list, action_required: str):
+        """Publish security alert to event bus."""
+        if not self.event_bus:
+            return
+
+        await self.event_bus.publish(
+            topic="alerts",
+            message_type=f"SENTINEL_{severity}",
+            payload={
+                "severity": severity,
+                "message": message,
+                "task_id": getattr(task, 'id', 'unknown'),
+                "node_id": getattr(task, 'node_id', 'unknown'),
+                "issues": issues[:10],  # Limit to first 10
+                "action_required": action_required
+            },
+            source_id="sentinel"
+        )
 
     def get_status(self) -> Dict:
         """Get Sentinel status for MCP queries."""
@@ -414,8 +479,8 @@ def create_governance_middleware(
             'post_hooks': [callable]
         }
     """
-    treasurer = TreasurerMiddleware(gateway)
-    sentinel = SentinelMiddleware(db)
+    treasurer = TreasurerMiddleware(gateway, event_bus=event_bus)
+    sentinel = SentinelMiddleware(db, event_bus=event_bus)
     curator = CuratorDaemon(db, event_bus)
 
     return {

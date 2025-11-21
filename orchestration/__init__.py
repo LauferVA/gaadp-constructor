@@ -17,6 +17,7 @@ from orchestration.human_loop import (
     PausePoint,
     PausePoints
 )
+from orchestration.alerts import AlertHandler, Alert
 
 __all__ = [
     'TaskScheduler',
@@ -36,4 +37,6 @@ __all__ = [
     'InteractionType',
     'PausePoint',
     'PausePoints',
+    'AlertHandler',
+    'Alert',
 ]
