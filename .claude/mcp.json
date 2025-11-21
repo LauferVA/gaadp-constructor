@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "gaadp-core": {
+      "command": "python",
+      "args": ["/Users/lauferva/gaadp-constructor/server.py"]
+    }
+  }
+}
