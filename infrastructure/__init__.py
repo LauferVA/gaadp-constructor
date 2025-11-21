@@ -3,6 +3,15 @@ GAADP Infrastructure Layer
 """
 from infrastructure.graph_db import GraphDB
 from infrastructure.llm_gateway import LLMGateway, LLMGatewayError
+from infrastructure.llm_providers import (
+    LLMProvider,
+    ClaudeSDKProvider,
+    AnthropicAPIProvider,
+    OpenAIProvider,
+    LocalModelProvider,
+    ProviderRegistry,
+    create_default_registry
+)
 from infrastructure.event_bus import EventBus, MessageType
 from infrastructure.sandbox import CodeSandbox, SandboxSecurityError
 from infrastructure.version_control import GitController
@@ -22,6 +31,13 @@ __all__ = [
     'GraphDB',
     'LLMGateway',
     'LLMGatewayError',
+    'LLMProvider',
+    'ClaudeSDKProvider',
+    'AnthropicAPIProvider',
+    'OpenAIProvider',
+    'LocalModelProvider',
+    'ProviderRegistry',
+    'create_default_registry',
     'EventBus',
     'MessageType',
     'CodeSandbox',
