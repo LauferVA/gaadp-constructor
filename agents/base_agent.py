@@ -1,6 +1,6 @@
 """
-BASE AGENT (Hardened)
-Integrates Runtime Signing, File Locks, and LLM Gateway.
+BASE AGENT (Hardened with MCP & RBAC)
+Integrates Runtime Signing, File Locks, LLM Gateway, and Tool Permissions.
 """
 import json
 import logging
@@ -8,17 +8,31 @@ import yaml
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives import serialization
 from infrastructure.llm_gateway import LLMGateway
 from core.ontology import AgentRole
 
+# Optional MCP import
+try:
+    from infrastructure.mcp_hub import MCPHub
+except ImportError:
+    MCPHub = None
+
+
 class BaseAgent(ABC):
-    def __init__(self, agent_id: str, role: AgentRole, graph_db):
+    def __init__(
+        self,
+        agent_id: str,
+        role: AgentRole,
+        graph_db,
+        mcp_hub: Optional["MCPHub"] = None
+    ):
         self.agent_id = agent_id
         self.role = role
         self.graph_db = graph_db
+        self.mcp_hub = mcp_hub
         self.gateway = LLMGateway()
         self.logger = logging.getLogger(f"Agent.{role}.{agent_id}")
         self._private_key = ed25519.Ed25519PrivateKey.generate()
@@ -29,6 +43,21 @@ class BaseAgent(ABC):
             self.templates = yaml.safe_load(f)
         with open(".blueprint/prime_directives.md", "r") as f:
             self.directives = f.read()
+
+        # Load topology for RBAC
+        try:
+            with open(".blueprint/topology_config.yaml", "r") as f:
+                self.topology = yaml.safe_load(f)
+        except FileNotFoundError:
+            self.topology = {"tool_permissions": {}}
+
+        # Cache allowed tools for fast lookup
+        self.allowed_tools = (
+            self.topology
+            .get("tool_permissions", {})
+            .get(role.value, {})
+            .get("allowed_tools", [])
+        )
 
     def _save_keys(self):
         key_dir = ".gaadp/keys"
@@ -74,7 +103,6 @@ class BaseAgent(ABC):
             "agent_id": self.agent_id,
             "timestamp": time.time()
         }
-        # Sort keys for deterministic hashing
         data_bytes = json.dumps(payload, sort_keys=True).encode('utf-8')
         signature = self._private_key.sign(data_bytes).hex()
         return signature
@@ -92,6 +120,59 @@ class BaseAgent(ABC):
             return json.loads(clean_text)
         except json.JSONDecodeError:
             raise ValueError("LLM did not return valid JSON")
+
+    def get_tools_schema(self) -> List[Dict]:
+        """Get filtered tool schemas for this agent's role."""
+        if self.mcp_hub:
+            return self.mcp_hub.get_tools_for_role(self.role.value)
+        return []
+
+    def check_tool_permission(self, tool_name: str) -> bool:
+        """Check if this agent can use a specific tool."""
+        return tool_name in self.allowed_tools
+
+    async def execute_tool_calls(self, response: Dict) -> str:
+        """
+        Execute tool calls from LLM response with permission checking.
+
+        Args:
+            response: Parsed LLM response containing tool_calls
+
+        Returns:
+            Concatenated results from all tool executions
+        """
+        if not self.mcp_hub:
+            return "No MCP Hub configured"
+
+        tool_calls = response.get('tool_calls', [])
+        results_log = []
+
+        for call in tool_calls:
+            func_name = call['function']['name']
+            args = json.loads(call['function']['arguments'])
+
+            # SECURITY CHECK
+            if not self.check_tool_permission(func_name):
+                denial_msg = (
+                    f"⛔ SECURITY ALERT: Agent '{self.agent_id}' ({self.role.value}) "
+                    f"attempted to use forbidden tool '{func_name}'"
+                )
+                self.logger.warning(denial_msg)
+                results_log.append(denial_msg)
+                continue
+
+            try:
+                self.logger.info(f"🛠️ Executing Tool: {func_name}")
+                result = await self.mcp_hub.execute_tool(
+                    func_name, args, role_name=self.role.value
+                )
+                results_log.append(f"Tool '{func_name}' Output: {str(result)}")
+            except PermissionError as e:
+                results_log.append(f"⛔ Permission Denied: {str(e)}")
+            except Exception as e:
+                results_log.append(f"Tool '{func_name}' Failed: {str(e)}")
+
+        return "\n".join(results_log)
 
     @abstractmethod
     async def process(self, context: Dict) -> Dict:

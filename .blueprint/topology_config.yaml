@@ -25,3 +25,45 @@ verification_requirements:
 timeouts:
   plan_execution_seconds: 300
   verification_seconds: 120
+
+# Role-Based Access Control for MCP Tools
+tool_permissions:
+  # The Architect designs; needs read-only access + web search
+  ARCHITECT:
+    allowed_servers: ["filesystem", "internet"]
+    allowed_tools: ["read_file", "list_directory", "fetch_url", "search_web"]
+
+  # The Builder constructs; needs write access
+  BUILDER:
+    allowed_servers: ["filesystem"]
+    allowed_tools: ["read_file", "write_file", "list_directory"]
+
+  # The Verifier audits; needs read-only access
+  VERIFIER:
+    allowed_servers: ["filesystem"]
+    allowed_tools: ["read_file", "list_directory"]
+
+  # The Curator manages state; needs Git access
+  CURATOR:
+    allowed_servers: ["git", "filesystem"]
+    allowed_tools: ["git_status", "git_commit", "git_push", "read_file", "list_directory"]
+
+  # The Sentinel protects; needs deep inspection
+  SENTINEL:
+    allowed_servers: ["filesystem"]
+    allowed_tools: ["read_file", "list_directory"]
+
+  # The Treasurer monitors costs; read-only
+  TREASURER:
+    allowed_servers: ["filesystem"]
+    allowed_tools: ["read_file"]
+
+  # The Librarian manages prompts
+  LIBRARIAN:
+    allowed_servers: ["filesystem"]
+    allowed_tools: ["read_file", "write_file", "list_directory"]
+
+  # Socrates researches; needs web access
+  SOCRATES:
+    allowed_servers: ["filesystem", "internet"]
+    allowed_tools: ["read_file", "fetch_url", "search_web"]
