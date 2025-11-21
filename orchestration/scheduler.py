@@ -104,6 +104,7 @@ class TaskScheduler:
         # Runtime state
         self._running = False
         self._in_flight: Set[str] = set()  # Node IDs currently being processed
+        self._waiting_for_human: Set[str] = set()  # Node IDs blocked on human input
         self._task_queue: asyncio.Queue = asyncio.Queue()
 
     def register_agent(self, role: AgentRole, agent: Any):
@@ -119,12 +120,24 @@ class TaskScheduler:
         """Register a post-execution hook (e.g., Sentinel security scan)."""
         self._post_hooks.append(hook)
 
+    def mark_waiting_for_human(self, node_id: str):
+        """Mark a node as blocked waiting for human input."""
+        self._waiting_for_human.add(node_id)
+        logger.info(f"Node {node_id} marked as waiting for human input")
+
+    def resume_from_human(self, node_id: str):
+        """Resume processing after human input received."""
+        self._waiting_for_human.discard(node_id)
+        logger.info(f"Node {node_id} resumed after human input")
+
     def _get_ready_nodes(self) -> List[Dict]:
         """
         Find nodes ready for processing:
         - Status = PENDING
         - All DEPENDS_ON predecessors are COMPLETE or VERIFIED
         - Not currently in flight
+        - Not waiting for human input
+        - Dependencies not waiting for human input
         """
         ready = []
 
@@ -132,6 +145,9 @@ class TaskScheduler:
             if data.get('status') != NodeStatus.PENDING.value:
                 continue
             if node_id in self._in_flight:
+                continue
+            if node_id in self._waiting_for_human:
+                # Skip this node - it's blocked on human input
                 continue
 
             # Check dependencies
@@ -141,6 +157,12 @@ class TaskScheduler:
                 if edge_data.get('type') != EdgeType.DEPENDS_ON.value:
                     continue
 
+                # Check if dependency is waiting for human input
+                if pred in self._waiting_for_human:
+                    deps_satisfied = False
+                    break
+
+                # Check if dependency is complete
                 pred_status = self.db.graph.nodes[pred].get('status')
                 if pred_status not in [NodeStatus.COMPLETE.value, NodeStatus.VERIFIED.value]:
                     deps_satisfied = False

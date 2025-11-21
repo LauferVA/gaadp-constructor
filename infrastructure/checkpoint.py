@@ -67,9 +67,9 @@ class CheckpointManager:
         checkpoint_path = self.checkpoint_dir / checkpoint_id
         checkpoint_path.mkdir(parents=True, exist_ok=True)
 
-        # Copy graph pickle
+        # Copy graph JSON
         graph_src = Path(self.db.persistence_path)
-        graph_dst = checkpoint_path / "graph.pkl"
+        graph_dst = checkpoint_path / "graph.json"
         if graph_src.exists():
             shutil.copy2(graph_src, graph_dst)
 
@@ -145,7 +145,7 @@ class CheckpointManager:
             logger.error(f"Checkpoint not found: {checkpoint_id}")
             return False
 
-        graph_src = checkpoint_path / "graph.pkl"
+        graph_src = checkpoint_path / "graph.json"
         if not graph_src.exists():
             logger.error(f"Graph file not found in checkpoint: {checkpoint_id}")
             return False

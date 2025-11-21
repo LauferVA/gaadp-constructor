@@ -16,8 +16,18 @@ class RealArchitect(BaseAgent):
 
     async def process(self, context: Dict) -> Dict:
         req_node = context['nodes'][0]
-        system_prompt = self._hydrate_prompt("architect_core_v1", {})
-        user_prompt = f"REQUIREMENT: {req_node['content']}\nDecompose into Atomic Specs and Plans."
+
+        # Check for escalation context (from feedback controller)
+        escalation_context = req_node.get('escalation_context')
+        if escalation_context:
+            # This is a re-planning after failures - use escalation prompt
+            system_prompt = self._hydrate_prompt("architect_core_v1", {})
+            user_prompt = self._build_escalation_prompt(req_node, escalation_context)
+            self.logger.warning(f"Processing escalated REQ {req_node['id']} with strategy change")
+        else:
+            # Normal first-time planning
+            system_prompt = self._hydrate_prompt("architect_core_v1", {})
+            user_prompt = f"REQUIREMENT: {req_node['content']}\nDecompose into Atomic Specs and Plans."
 
         # Get filtered tools for this role
         tools_schema = self.get_tools_schema()
@@ -44,6 +54,47 @@ class RealArchitect(BaseAgent):
             pass
 
         return self._parse_json_response(raw_response)
+
+    def _build_escalation_prompt(self, req_node: Dict, escalation_context: str) -> str:
+        """
+        Build prompt for re-planning after failures.
+        Includes failure analysis and strategy change instructions.
+        """
+        # Analyze failure patterns from escalation context
+        failure_hints = []
+
+        if "Missing import" in escalation_context or "import" in escalation_context.lower():
+            failure_hints.append("- Add explicit dependency specifications for all external libraries")
+            failure_hints.append("- Include setup/installation instructions in the spec")
+
+        if "Type mismatch" in escalation_context or "type" in escalation_context.lower():
+            failure_hints.append("- Add explicit type annotations to the specification")
+            failure_hints.append("- Specify input/output types clearly")
+
+        if "incomplete" in escalation_context.lower():
+            failure_hints.append("- Break this requirement into smaller, more atomic specifications")
+            failure_hints.append("- Create sub-tasks for each major component")
+
+        if "complex" in escalation_context.lower():
+            failure_hints.append("- Simplify the approach - prefer simpler implementation strategies")
+            failure_hints.append("- Reduce dependencies and coupling")
+
+        hints_text = "\n".join(failure_hints) if failure_hints else "- Consider a fundamentally different approach"
+
+        return f"""
+{escalation_context}
+
+STRATEGY CHANGE REQUIRED:
+Previous specifications led to implementation failures. You must re-plan with a DIFFERENT approach.
+
+Suggested adjustments based on failure analysis:
+{hints_text}
+
+REQUIREMENT: {req_node['content']}
+
+Create NEW specifications that address the root causes of the previous failures.
+DO NOT simply reproduce the failed specification - change the approach.
+"""
 
 
 class RealBuilder(BaseAgent):

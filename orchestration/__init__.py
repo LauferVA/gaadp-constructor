@@ -18,6 +18,8 @@ from orchestration.human_loop import (
     PausePoints
 )
 from orchestration.alerts import AlertHandler, Alert
+from orchestration.consensus import ConsensusManager, ConsensusResult, ConsensusVerdict
+from orchestration.janitor import JanitorDaemon, JanitorConfig
 
 __all__ = [
     'TaskScheduler',
@@ -39,4 +41,9 @@ __all__ = [
     'PausePoints',
     'AlertHandler',
     'Alert',
+    'ConsensusManager',
+    'ConsensusResult',
+    'ConsensusVerdict',
+    'JanitorDaemon',
+    'JanitorConfig',
 ]

@@ -61,7 +61,7 @@ async def main(interactive: bool = True):
     print("🚀 INITIALIZING GAADP PRODUCTION SWARM (FULL FEATURED)...")
 
     # Initialize core infrastructure
-    db = GraphDB(persistence_path=".gaadp/live_graph.pkl")
+    db = GraphDB(persistence_path=".gaadp/live_graph.json")
     memory = SemanticMemory()
     mcp_hub = MCPHub()
 

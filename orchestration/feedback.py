@@ -99,6 +99,17 @@ class FeedbackController:
 
         logger.info(f"Processing failure for {code_id}, SPEC {spec_id} retry #{current_retries + 1}")
 
+        # Emit metrics event for retry
+        await self.event_bus.publish(
+            topic="node_lifecycle",
+            message_type="RETRY_ATTEMPT",
+            payload={
+                "node_id": spec_id,
+                "retry_number": current_retries + 1
+            },
+            source_id="feedback_controller"
+        )
+
         # Create FEEDBACK edge with critique
         feedback_edge_id = f"feedback_{uuid.uuid4().hex[:8]}"
         self.db.add_edge(

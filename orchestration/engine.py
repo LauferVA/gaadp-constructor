@@ -21,6 +21,7 @@ from orchestration.governance import (
     SentinelMiddleware,
     CuratorDaemon
 )
+from orchestration.janitor import JanitorDaemon, JanitorConfig
 from core.ontology import AgentRole
 
 logger = logging.getLogger("Engine")
@@ -44,7 +45,7 @@ class GADPEngine:
 
     def __init__(
         self,
-        persistence_path: str = ".gaadp/live_graph.pkl",
+        persistence_path: str = ".gaadp/live_graph.json",
         num_workers: int = 5
     ):
         # Core infrastructure
@@ -61,6 +62,9 @@ class GADPEngine:
         self.treasurer: TreasurerMiddleware = governance['treasurer']
         self.sentinel: SentinelMiddleware = governance['sentinel']
         self.curator: CuratorDaemon = governance['curator']
+
+        # Janitor daemon (orphan cleanup)
+        self.janitor = JanitorDaemon(self.db, self.event_bus, JanitorConfig())
 
         # Register governance hooks with scheduler
         for hook in governance['pre_hooks']:
@@ -99,12 +103,14 @@ class GADPEngine:
             asyncio.create_task(self.scheduler.start(self.num_workers)),
             asyncio.create_task(self.feedback.start()),
             asyncio.create_task(self.curator.start()),
+            asyncio.create_task(self.janitor.start()),
         ]
 
         logger.info("Engine components started:")
         logger.info(f"  - Scheduler: {self.num_workers} workers")
         logger.info(f"  - Feedback Controller: active")
         logger.info(f"  - Curator Daemon: {self.curator.config.interval_seconds}s interval")
+        logger.info(f"  - Janitor Daemon: {self.janitor.config.scan_interval}s scan, {self.janitor.config.orphan_timeout}s timeout")
         logger.info(f"  - Budget: ${self.treasurer.config.project_total_limit_usd}")
 
         try:
@@ -112,7 +118,7 @@ class GADPEngine:
         except asyncio.CancelledError:
             logger.info("Engine tasks cancelled")
 
-    def stop(self):
+    async def stop(self):
         """Stop the engine gracefully."""
         logger.info("Stopping GAADP Engine")
         self._running = False
@@ -121,6 +127,7 @@ class GADPEngine:
         self.scheduler.stop()
         self.feedback.stop()
         self.curator.stop()
+        await self.janitor.stop()
 
         for task in self._tasks:
             task.cancel()
