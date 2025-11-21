@@ -10,12 +10,16 @@ import os
 import time
 from typing import List, Dict, Any
 from core.ontology import NodeType, EdgeType, NodeStatus
+from core.state_machine import NodeStateMachine, StateTransitionError
+from core.token_counter import TokenCounter
 
 class GraphDB:
-    def __init__(self, persistence_path: str = ".gaadp/graph.pkl"):
+    def __init__(self, persistence_path: str = ".gaadp/graph.pkl", model: str = "claude-3-sonnet"):
         self.logger = logging.getLogger("GraphDB")
         self.persistence_path = persistence_path
         self.graph = nx.DiGraph()
+        self._state_machine = NodeStateMachine()
+        self._token_counter = TokenCounter(default_model=model)
         self._load()
 
     def _persist(self):
@@ -85,25 +89,90 @@ class GraphDB:
         )
         self._persist()
 
+    def set_status(self, node_id: str, new_status: NodeStatus, reason: str = "") -> bool:
+        """
+        Set node status with state machine validation.
+
+        Args:
+            node_id: The node ID
+            new_status: Target status (NodeStatus enum or string)
+            reason: Reason for transition (for audit trail)
+
+        Returns:
+            True if transition succeeded
+
+        Raises:
+            StateTransitionError if transition is invalid
+            ValueError if node doesn't exist
+        """
+        if node_id not in self.graph:
+            raise ValueError(f"Node {node_id} does not exist")
+
+        node_data = self.graph.nodes[node_id]
+        current_status = node_data.get('status', NodeStatus.PENDING.value)
+        node_type_str = node_data.get('type')
+
+        # Convert to enums
+        if isinstance(current_status, str):
+            current_status = NodeStatus(current_status)
+        if isinstance(new_status, str):
+            new_status = NodeStatus(new_status)
+
+        node_type = NodeType(node_type_str) if node_type_str else None
+
+        # Validate and record transition
+        self._state_machine.transition(
+            node_id, current_status, new_status, node_type, reason
+        )
+
+        # Apply the change
+        self.graph.nodes[node_id]['status'] = new_status.value
+        self.graph.nodes[node_id]['status_updated_at'] = datetime.datetime.utcnow().isoformat()
+        if reason:
+            self.graph.nodes[node_id]['status_reason'] = reason
+
+        self._persist()
+        self.logger.info(f"Status: {node_id} {current_status.value} → {new_status.value}")
+        return True
+
+    def get_status_history(self, node_id: str) -> list:
+        """Get the state transition history for a node."""
+        return self._state_machine.get_history(node_id)
+
     def get_context_neighborhood(self, center_node_id: str, radius: int, filter_domain: str = None, max_tokens: int = 6000) -> Dict:
-        """Token-Aware Context Pruner"""
+        """Token-Aware Context Pruner with Feedback Integration (using real token counting)."""
         if center_node_id not in self.graph: return {}
 
         # BFS to prioritize close neighbors
         subgraph_nodes = {center_node_id}
         current_tokens = 0
+        feedback_critiques = []
 
-        # Calculate center node tokens first
+        # Calculate center node tokens first (using real token counter)
         center_content = str(self.graph.nodes[center_node_id].get('content', ''))
-        current_tokens += len(center_content) / 4
+        current_tokens += self._token_counter.count_tokens(center_content)
+
+        # Check for FEEDBACK edges pointing to this node (previous failure critiques)
+        for pred in self.graph.predecessors(center_node_id):
+            edge_data = self.graph.edges[pred, center_node_id]
+            if edge_data.get('type') == EdgeType.FEEDBACK.value:
+                critique = edge_data.get('critique', '')
+                retry_num = edge_data.get('retry_number', 0)
+                if critique:
+                    feedback_critiques.append({
+                        'retry': retry_num,
+                        'critique': critique
+                    })
+                    # Count feedback critique tokens
+                    current_tokens += self._token_counter.count_tokens(critique)
 
         for u, v in nx.bfs_edges(self.graph, center_node_id, depth_limit=radius):
-            # Simple heuristic: 4 chars ~= 1 token
+            # Use real token counting
             node_content = str(self.graph.nodes[v].get('content', ''))
-            tokens = len(node_content) / 4
+            tokens = self._token_counter.count_tokens(node_content)
 
             if current_tokens + tokens > max_tokens:
-                self.logger.warning(f"Context truncated at {current_tokens} tokens")
+                self.logger.warning(f"Context truncated at {current_tokens} tokens (limit: {max_tokens})")
                 break
 
             if filter_domain:
@@ -115,7 +184,20 @@ class GraphDB:
             current_tokens += tokens
 
         subgraph = self.graph.subgraph(subgraph_nodes)
-        return nx.node_link_data(subgraph)
+        result = nx.node_link_data(subgraph)
+
+        # Inject feedback critiques into context
+        if feedback_critiques:
+            result['feedback_history'] = sorted(feedback_critiques, key=lambda x: x['retry'])
+
+        # Include token usage stats
+        result['_token_stats'] = {
+            'total_tokens': current_tokens,
+            'max_tokens': max_tokens,
+            'nodes_included': len(subgraph_nodes)
+        }
+
+        return result
 
     def prune_dead_ends(self):
         """Garbage Collection for failed branches"""

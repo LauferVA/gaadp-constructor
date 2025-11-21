@@ -29,6 +29,7 @@ class EdgeType(str, Enum):
     IMPLEMENTS = "IMPLEMENTS"
     VERIFIES = "VERIFIES"
     DEFINES = "DEFINES"
+    FEEDBACK = "FEEDBACK"  # Critique from Verifier back to SPEC for retry
 
 class NodeStatus(str, Enum):
     PENDING = "PENDING"
