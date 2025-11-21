@@ -10,6 +10,7 @@ import networkx as nx
 from infrastructure.graph_db import GraphDB
 from infrastructure.version_control import GitController
 from infrastructure.sandbox import CodeSandbox
+from infrastructure.semantic_memory import SemanticMemory
 from agents.concrete_agents import RealArchitect, RealBuilder, RealVerifier
 from core.ontology import AgentRole, NodeType, EdgeType, NodeStatus
 
@@ -38,6 +39,10 @@ async def main():
     print("🚀 INITIALIZING GAADP PRODUCTION SWARM (HARDENED)...")
     db = GraphDB(persistence_path=".gaadp/live_graph.pkl")
 
+    # Initialize Semantic Memory
+    memory = SemanticMemory()
+    print("🧠 Semantic Memory Online")
+
     architect = RealArchitect("arch_01", AgentRole.ARCHITECT, db)
     builder = RealBuilder("build_01", AgentRole.BUILDER, db)
     verifier = RealVerifier("verif_01", AgentRole.VERIFIER, db)
@@ -65,6 +70,10 @@ async def main():
     code_id = uuid.uuid4().hex
     db.add_node(code_id, NodeType(build_output['type']), build_output['content'], metadata=build_output.get('metadata'))
     print(f"   > Generated Code ID: {code_id}")
+
+    # Embed code into semantic memory
+    memory.embed_node(code_id, build_output['content'])
+    print(f"   > Embedded into Vector Space")
 
     # 4. Verification & Merkle Signing
     print("⚖️ Verifier is judging...")

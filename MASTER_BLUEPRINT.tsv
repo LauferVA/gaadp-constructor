@@ -1,0 +1,32 @@
+Category	Item	Resources	Definition	Implementation_Key
+Core Architecture	Graph-Augmented Generation	networkx	Context via node traversal	infrastructure/graph_db.py
+Core Architecture	Code Property Graph	joern	AST + Flow graph	core/cpg_builder.py
+Core Architecture	Agent Topology	autogen	Worker/Verifier Ratios	.blueprint/topology_config.yaml
+Core Architecture	Spec-Driven Development	IEEE-830	Spec is root; code links back	core/ontology.py
+Core Architecture	Immutable Ontology	enum	Typed nodes and edges	core/ontology.py
+Execution	Wavefront Execution	wikipedia	Parallel subgraph execution	orchestration/wavefront.py
+Execution	Phase Gating	FSM	State machine rules	.blueprint/prime_directives.md
+Execution	Event Bus	asyncio	Decoupled agent messaging	infrastructure/event_bus.py
+Verification	Crypto Edge Signing	ed25519	Sign approved edges	agents/base_agent.py
+Verification	Merkle Chaining	blockchain	Link signatures to history	agents/base_agent.py
+Verification	Sandboxed Execution	docker	Isolated containers	infrastructure/sandbox.py
+Verification	Clean Room Assembly	cleanroom	Isolated integration	infrastructure/sandbox.py
+State	Graph Database	neo4j	Persistent State	infrastructure/graph_db.py
+State	Atomic Persistence	pickle	Crash recovery	infrastructure/graph_db.py
+State	Semantic Memory	vector_db	Embeddings for retrieval	infrastructure/semantic_memory.py
+Roles	The Architect	c4model	Decompose specs into plans	agents/concrete_agents.py
+Roles	The Builder	autogen	Implement code nodes	agents/concrete_agents.py
+Roles	The Verifier	yapf	Review and sign code	agents/concrete_agents.py
+Roles	The Treasurer	finops	Monitor cost budgets	agents/governance.py
+Roles	The Sentinel	security	Taint analysis scanning	agents/governance.py
+Roles	The Curator	gc	Graph integrity and cleanup	agents/governance.py
+Roles	The Librarian	prompts	Prompt optimization	agents/governance.py
+IO	Materializer	fs	Graph nodes to filesystem	production_main.py
+IO	Git Integration	git	Version control commits	infrastructure/version_control.py
+IO	Test Runner	pytest	Execute TEST nodes	infrastructure/test_runner.py
+Requirements	Socratic Engine	nlp	Ambiguity resolution	requirements/socratic_engine.py
+Requirements	Dynamic Specs	templates	Auto-generate from keywords	.blueprint/dynamic_specs.yaml
+Simulation	Mock Agents	testing	Dry run without LLM	simulation/mock_agents.py
+Simulation	Scenario Runner	yaml	Replay defined scenarios	simulate.py
+Validation	Blueprint Validator	schema	Check ontology compliance	validate_blueprint.py
+Validation	Phase Validator	smoke	Integration smoke tests	validate_phase.py
