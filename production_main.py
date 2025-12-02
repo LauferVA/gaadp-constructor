@@ -327,55 +327,113 @@ async def main(interactive: bool = True):
 
     logger.info(f"Graph after Architect: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
 
-    # --- PHASE 4: BUILDER EXECUTION ---
-    TraceContext.set_phase("BUILDER")
-    logger.info("Builder processing started")
-    print("🔨 Builder is coding...")
+    # --- PHASE 4 & 5: BUILD → VERIFY LOOP (with retry/feedback) ---
+    MAX_BUILD_RETRIES = 3
+    ESCALATE_AFTER = 2  # After this many failures, go back to Architect
+
     spec_content = arch_output.get('new_nodes', [{}])[0].get('content', request)
-    build_output = await builder.process({"nodes": [{"content": spec_content, "id": spec_id}]})
-    logger.info(f"Builder output: type={build_output.get('type')}, content_len={len(build_output.get('content', ''))}")
+    feedback_context = ""  # Accumulates critique for retries
+    verified = False
+    final_code_id = None
+    final_build_output = None
 
-    code_id = uuid.uuid4().hex
-    db.add_node(
-        code_id,
-        NodeType(build_output['type']),
-        build_output['content'],
-        metadata=build_output.get('metadata', {})
-    )
-    logger.info(f"Code node created: {code_id}")
-    print(f"   > Generated Code ID: {code_id[:8]}...")
+    for attempt in range(MAX_BUILD_RETRIES):
+        # --- PHASE 4: BUILDER EXECUTION ---
+        TraceContext.set_phase("BUILDER")
+        attempt_label = f"(attempt {attempt + 1}/{MAX_BUILD_RETRIES})" if attempt > 0 else ""
+        logger.info(f"Builder processing started {attempt_label}")
+        print(f"🔨 Builder is coding... {attempt_label}")
 
-    # === EDGE: CODE --[IMPLEMENTS]--> SPEC ===
-    if spec_id:
-        sig = builder.sign_content(code_id, previous_hash=spec_id)
-        db.add_edge(code_id, spec_id, EdgeType.IMPLEMENTS, builder.agent_id, sig)
-        logger.info(f"Created edge: {code_id[:8]} --[IMPLEMENTS]--> {spec_id[:8]}")
+        # Include feedback from previous failure if any
+        builder_context = spec_content
+        if feedback_context:
+            builder_context = f"""{spec_content}
 
-    # === EDGE: CODE --[TRACES_TO]--> REQ (for full traceability) ===
-    sig = builder.sign_content(code_id, previous_hash=req_id)
-    db.add_edge(code_id, req_id, EdgeType.TRACES_TO, builder.agent_id, sig)
-    logger.debug(f"Created edge: {code_id[:8]} --[TRACES_TO]--> {req_id}")
+[FEEDBACK FROM PREVIOUS ATTEMPT]:
+{feedback_context}
 
-    logger.info(f"Graph after Builder: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
+Please fix the issues mentioned above and try again."""
 
-    # Embed code into semantic memory
-    memory.embed_node(code_id, build_output['content'])
-    print(f"   > Embedded into Vector Space")
+        build_output = await builder.process({"nodes": [{"content": builder_context, "id": spec_id}]})
+        logger.info(f"Builder output: type={build_output.get('type')}, content_len={len(build_output.get('content', ''))}")
 
-    # --- PHASE 5: VERIFICATION ---
-    TraceContext.set_phase("VERIFIER")
-    logger.info("Verifier processing started")
-    print("⚖️ Verifier is judging...")
-    verify_output = await verifier.process({
-        "nodes": [{"id": code_id, "content": build_output['content']}]
-    })
-    verdict = verify_output.get('verdict', 'UNKNOWN')
-    logger.info(f"Verifier verdict: {verdict}")
-    if verify_output.get('critique'):
-        logger.info(f"Verifier critique: {verify_output.get('critique')}")
-    print(f"   > Verdict: {verdict}")
+        code_id = uuid.uuid4().hex
+        db.add_node(
+            code_id,
+            NodeType(build_output['type']),
+            build_output['content'],
+            metadata={**build_output.get('metadata', {}), "attempt": attempt + 1}
+        )
+        logger.info(f"Code node created: {code_id}")
+        print(f"   > Generated Code ID: {code_id[:8]}...")
 
-    if verify_output.get('verdict') == 'PASS':
+        # === EDGE: CODE --[IMPLEMENTS]--> SPEC ===
+        if spec_id:
+            sig = builder.sign_content(code_id, previous_hash=spec_id)
+            db.add_edge(code_id, spec_id, EdgeType.IMPLEMENTS, builder.agent_id, sig)
+            logger.info(f"Created edge: {code_id[:8]} --[IMPLEMENTS]--> {spec_id[:8]}")
+
+        # === EDGE: CODE --[TRACES_TO]--> REQ (for full traceability) ===
+        sig = builder.sign_content(code_id, previous_hash=req_id)
+        db.add_edge(code_id, req_id, EdgeType.TRACES_TO, builder.agent_id, sig)
+        logger.debug(f"Created edge: {code_id[:8]} --[TRACES_TO]--> {req_id}")
+
+        logger.info(f"Graph after Builder: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
+
+        # Embed code into semantic memory
+        memory.embed_node(code_id, build_output['content'])
+        print(f"   > Embedded into Vector Space")
+
+        # --- PHASE 5: VERIFICATION ---
+        TraceContext.set_phase("VERIFIER")
+        logger.info("Verifier processing started")
+        print("⚖️ Verifier is judging...")
+        verify_output = await verifier.process({
+            "nodes": [{"id": code_id, "content": build_output['content']}]
+        })
+        verdict = verify_output.get('verdict', 'UNKNOWN')
+        logger.info(f"Verifier verdict: {verdict}")
+        if verify_output.get('critique'):
+            logger.info(f"Verifier critique: {verify_output.get('critique')}")
+        print(f"   > Verdict: {verdict}")
+
+        if verdict == 'PASS':
+            verified = True
+            final_code_id = code_id
+            final_build_output = build_output
+            break  # Success! Exit the retry loop
+        else:
+            # FAILED: Mark code node, store critique, prepare for retry
+            critique = verify_output.get('critique', 'No details provided')
+            issues = verify_output.get('issues', [])
+            issues_text = "\n".join([f"- [{i.get('severity', 'error')}] {i.get('description', '')}" for i in issues]) if issues else critique
+
+            db.graph.nodes[code_id]['status'] = NodeStatus.FAILED.value
+            db.graph.nodes[code_id]['critique'] = critique
+
+            # Create FEEDBACK edge from failed CODE to SPEC
+            if spec_id:
+                feedback_sig = f"feedback_{code_id[:8]}"
+                db.add_edge(code_id, spec_id, EdgeType.FEEDBACK, "feedback_controller", feedback_sig)
+                logger.info(f"Created FEEDBACK edge: {code_id[:8]} --[FEEDBACK]--> {spec_id[:8]}")
+
+            logger.warning(f"Verification FAILED (attempt {attempt + 1}): {critique[:100]}...")
+            print(f"❌ FAILED (attempt {attempt + 1}/{MAX_BUILD_RETRIES})")
+            print(f"   Critique: {critique[:200]}...")
+
+            # Accumulate feedback for next attempt
+            feedback_context = f"""Attempt {attempt + 1} failed with these issues:
+{issues_text}
+
+Verifier reasoning: {verify_output.get('reasoning', 'N/A')}"""
+
+            # Check if we should escalate to Architect
+            if attempt + 1 >= ESCALATE_AFTER and attempt + 1 < MAX_BUILD_RETRIES:
+                logger.warning(f"Multiple failures - would escalate to Architect (not implemented in simple flow)")
+                print(f"⚠️ Multiple failures detected - retrying with accumulated feedback")
+
+    # --- POST-LOOP: Handle final result ---
+    if verified and final_code_id and final_build_output:
         TraceContext.set_phase("MATERIALIZE")
         logger.info("Verification PASSED - materializing code")
         print("✅ SUCCESS: Code Verified. Linking Chain...")
@@ -384,10 +442,10 @@ async def main(interactive: bool = True):
         prev_hash = db.get_last_node_hash()
 
         # B. Sign with Chain Context
-        sig = verifier.sign_content(code_id, previous_hash=prev_hash)
+        sig = verifier.sign_content(final_code_id, previous_hash=prev_hash)
 
         # C. Create verification node and link to code
-        verification_id = f"verify_{code_id[:8]}"
+        verification_id = f"verify_{final_code_id[:8]}"
         db.add_node(
             verification_id,
             NodeType.TEST,  # Verification is a TEST-type node
@@ -395,17 +453,18 @@ async def main(interactive: bool = True):
             metadata={
                 "verdict": verdict,
                 "verifier_id": verifier.agent_id,
-                "code_id": code_id
+                "code_id": final_code_id,
+                "attempts": attempt + 1
             }
         )
-        db.add_edge(verification_id, code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
-        db.graph.nodes[code_id]['status'] = NodeStatus.VERIFIED.value
+        db.add_edge(verification_id, final_code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
+        db.graph.nodes[final_code_id]['status'] = NodeStatus.VERIFIED.value
 
         # D. MATERIALIZE (Write to Disk)
-        file_path = build_output.get('metadata', {}).get('file_path', 'generated_output.py')
+        file_path = final_build_output.get('metadata', {}).get('file_path', 'generated_output.py')
         os.makedirs(os.path.dirname(file_path) if os.path.dirname(file_path) else '.', exist_ok=True)
         with open(file_path, "w") as f:
-            f.write(build_output['content'])
+            f.write(final_build_output['content'])
         print(f"💾 Saved to disk: {file_path}")
 
         # E. SANDBOX EXECUTION
@@ -422,16 +481,15 @@ async def main(interactive: bool = True):
 
         # F. GIT COMMIT
         git = GitController()
-        git.commit_work("builder_01", code_id, f"Implemented {file_path}")
+        git.commit_work("builder_01", final_code_id, f"Implemented {file_path}")
         logger.info(f"Git commit created for {file_path}")
         print("📦 Changes committed to Git")
 
     else:
         TraceContext.set_phase("FAILED")
-        logger.warning(f"Verification FAILED: {verify_output.get('critique', 'No details')}")
-        print("❌ FAILURE: Code rejected.")
-        critique = verify_output.get('critique', 'No details provided')
-        print(f"   Critique: {critique}")
+        logger.error(f"All {MAX_BUILD_RETRIES} attempts failed - giving up")
+        print(f"❌ FINAL FAILURE: All {MAX_BUILD_RETRIES} attempts failed.")
+        print(f"   Last critique: {feedback_context[:300]}...")
 
     # --- FINAL: INTROSPECTION ---
     TraceContext.set_phase("COMPLETE")
