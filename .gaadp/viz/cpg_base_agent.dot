@@ -1,0 +1,695 @@
+digraph GAADP {
+  rankdir=TB;
+  node [fontname="Arial"];
+  edge [fontname="Arial"];
+
+  "code_8986981870346077726" [
+    label="code_8986981870\n[CODE]",
+    shape=ellipse,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_json" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_logging" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_yaml" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_os" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_time" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_abc" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_typing" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_cryptography.hazmat.primitives.asymmetric" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_cryptography.hazmat.primitives" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_infrastructure.llm_gateway" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_core.ontology" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_infrastructure.mcp_hub" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "phantom_import_re" [
+    label="phantom_import_\n[CODE]",
+    shape=diamond,
+    fillcolor="#96CEB4",
+    style=filled
+  ];
+  "class_BaseAgent" [
+    label="class_BaseAgent\n[CLASS]",
+    shape=diamond,
+    fillcolor="#9B59B6",
+    style=filled
+  ];
+  "function___init__" [
+    label="function___init\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function__save_keys" [
+    label="function__save_\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_acquire_lock" [
+    label="function_acquir\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_release_lock" [
+    label="function_releas\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_sign_content" [
+    label="function_sign_c\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function__hydrate_prompt" [
+    label="function__hydra\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function__parse_json_response" [
+    label="function__parse\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_get_tools_schema" [
+    label="function_get_to\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_check_tool_permission" [
+    label="function_check_\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_execute_tool_calls" [
+    label="function_execut\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "function_process" [
+    label="function_proces\n[FUNCTION]",
+    shape=diamond,
+    fillcolor="#3498DB",
+    style=filled
+  ];
+  "call_LLMGateway" [
+    label="call_LLMGateway\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_getLogger" [
+    label="call_getLogger\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_generate" [
+    label="call_generate\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_public_key" [
+    label="call_public_key\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call__save_keys" [
+    label="call__save_keys\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_get" [
+    label="call_get\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_makedirs" [
+    label="call_makedirs\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_public_bytes" [
+    label="call_public_byt\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_time" [
+    label="call_time\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_exists" [
+    label="call_exists\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_encode" [
+    label="call_encode\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_hex" [
+    label="call_hex\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_format" [
+    label="call_format\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_strip" [
+    label="call_strip\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_search" [
+    label="call_search\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_print" [
+    label="call_print\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_warning" [
+    label="call_warning\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_join" [
+    label="call_join\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_open" [
+    label="call_open\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_safe_load" [
+    label="call_safe_load\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_read" [
+    label="call_read\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_write" [
+    label="call_write\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_remove" [
+    label="call_remove\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_ValueError" [
+    label="call_ValueError\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_loads" [
+    label="call_loads\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_get_tools_for_role" [
+    label="call_get_tools_\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_isinstance" [
+    label="call_isinstance\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_dumps" [
+    label="call_dumps\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_sign" [
+    label="call_sign\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_check_tool_permission" [
+    label="call_check_tool\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_append" [
+    label="call_append\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_info" [
+    label="call_info\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_sleep" [
+    label="call_sleep\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_group" [
+    label="call_group\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_execute_tool" [
+    label="call_execute_to\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_getmtime" [
+    label="call_getmtime\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+  "call_str" [
+    label="call_str\n[CALL]",
+    shape=diamond,
+    fillcolor="#E67E22",
+    style=filled
+  ];
+
+  "code_8986981870346077726" -> "phantom_import_json" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_logging" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_yaml" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_os" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_time" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_abc" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_typing" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_cryptography.hazmat.primitives.asymmetric" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_cryptography.hazmat.primitives" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_infrastructure.llm_gateway" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_core.ontology" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_infrastructure.mcp_hub" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "phantom_import_re" [
+    label="DEPENDS_ON",
+    color="#E74C3C",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "class_BaseAgent" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function___init__" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function__save_keys" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_acquire_lock" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_release_lock" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_sign_content" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function__hydrate_prompt" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function__parse_json_response" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_get_tools_schema" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_check_tool_permission" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_execute_tool_calls" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "function_process" [
+    label="CONTAINS",
+    color="#2ECC71",
+    style=solid
+  ];
+  "code_8986981870346077726" -> "call_LLMGateway" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_getLogger" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_generate" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_public_key" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call__save_keys" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_get" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_makedirs" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_public_bytes" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_time" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_exists" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_encode" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_hex" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_format" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_strip" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_search" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_print" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_warning" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_join" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_open" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_safe_load" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_read" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_write" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_remove" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_ValueError" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_loads" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_get_tools_for_role" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_isinstance" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_dumps" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_sign" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_check_tool_permission" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_append" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_info" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_sleep" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_group" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_execute_tool" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_getmtime" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+  "code_8986981870346077726" -> "call_str" [
+    label="REFERENCES",
+    color="#E74C3C",
+    style=dashed
+  ];
+}

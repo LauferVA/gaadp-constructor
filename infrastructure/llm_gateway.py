@@ -3,17 +3,31 @@ GAADP LLM GATEWAY
 Pluggable LLM provider architecture supporting multiple backends.
 Automatically selects the best available provider based on environment.
 Includes STRICT Model Router that forces all traffic to available models.
+
+Protocol Support:
+    The gateway supports protocol-based structured output via forced tool_choice.
+    When an output_protocol is specified, the LLM is forced to respond with
+    a tool call matching the protocol schema, guaranteeing valid JSON output.
 """
 import os
 import yaml
 import logging
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Type, Union
 from tenacity import retry, stop_after_attempt, wait_exponential
+from pydantic import BaseModel, ValidationError
 
 from infrastructure.llm_providers import (
     LLMProvider,
     ProviderRegistry,
     create_default_registry
+)
+from core.protocols import (
+    protocol_to_tool_schema,
+    validate_agent_output,
+    ArchitectOutput,
+    BuilderOutput,
+    VerifierOutput,
+    SocratesOutput
 )
 
 logger = logging.getLogger("LLM_Gateway")
@@ -221,7 +235,7 @@ class LLMGateway:
         tools: Optional[List[Dict]] = None
     ) -> str:
         """
-        Call LLM with optional tool definitions.
+        Call LLM with optional tool definitions (legacy mode).
 
         Routes to the active provider with STRICT model enforcement.
         For Anthropic, ALL requests are forced to claude-3-5-haiku-20241022.
@@ -234,6 +248,9 @@ class LLMGateway:
 
         Returns:
             Response content as string (or JSON if tool calls present)
+
+        Note:
+            For guaranteed structured output, use call_with_protocol() instead.
         """
         # Get role config from file or use defaults
         role_config = self.config.get('model_assignments', {}).get(role)
@@ -258,6 +275,114 @@ class LLMGateway:
                 model_config=forced_config,
                 tools=tools
             )
+        except Exception as e:
+            logger.error(f"Provider {self.provider.get_name()} call failed: {e}")
+            raise LLMGatewayError(f"LLM call failed: {e}")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+    def call_with_protocol(
+        self,
+        role: str,
+        system_prompt: str,
+        user_context: str,
+        output_protocol: Type[BaseModel],
+        tool_name: str,
+        additional_tools: Optional[List[Dict]] = None
+    ) -> BaseModel:
+        """
+        Call LLM with forced structured output via protocol.
+
+        This method guarantees the LLM returns data matching the protocol schema
+        by using forced tool_choice. The response is validated and returned as
+        a typed Pydantic model.
+
+        Args:
+            role: Agent role (maps to model config)
+            system_prompt: System message
+            user_context: User message
+            output_protocol: Pydantic model class defining expected output
+            tool_name: Name for the output tool (e.g., 'submit_architecture')
+            additional_tools: Optional additional tools the agent can use
+
+        Returns:
+            Validated Pydantic model instance
+
+        Raises:
+            LLMGatewayError: If LLM call fails
+            ValidationError: If output doesn't match protocol (should be rare with forced tool_choice)
+        """
+        # Get role config
+        role_config = self.config.get('model_assignments', {}).get(role)
+        if not role_config:
+            tier = ROLE_TIER_MAP.get(role, 'standard')
+            role_config = {
+                'model': tier,
+                'temperature': 0.7 if tier == 'heavy' else 0.5,
+                'max_tokens': 4000
+            }
+
+        forced_config = self._force_model_override(role, role_config)
+
+        # Build tool definition from protocol
+        output_tool = protocol_to_tool_schema(output_protocol, tool_name)
+
+        # Combine output tool with any additional tools
+        all_tools = [output_tool]
+        if additional_tools:
+            all_tools.extend(additional_tools)
+
+        # Add forced tool choice to config
+        forced_config["tool_choice"] = {
+            "type": "tool",
+            "name": tool_name
+        }
+
+        logger.debug(f"Calling with protocol: {output_protocol.__name__}, tool: {tool_name}")
+
+        try:
+            response = self.provider.call(
+                system_prompt=system_prompt,
+                user_prompt=user_context,
+                model_config=forced_config,
+                tools=all_tools
+            )
+
+            # Parse the response - should be JSON with tool_calls
+            import json
+            try:
+                parsed = json.loads(response)
+            except json.JSONDecodeError:
+                # If not JSON, the provider might return the tool args directly
+                # This shouldn't happen with forced tool_choice, but handle it
+                logger.warning("Response not JSON, attempting direct parse")
+                parsed = {"tool_calls": [{"name": tool_name, "input": response}]}
+
+            # Extract tool call arguments
+            tool_calls = parsed.get("tool_calls", [])
+            if not tool_calls:
+                raise LLMGatewayError(f"No tool calls in response despite forced tool_choice")
+
+            # Find our output tool call
+            output_args = None
+            for tc in tool_calls:
+                tc_name = tc.get("name") or tc.get("function", {}).get("name")
+                if tc_name == tool_name:
+                    output_args = tc.get("input") or tc.get("arguments") or tc.get("function", {}).get("arguments")
+                    if isinstance(output_args, str):
+                        output_args = json.loads(output_args)
+                    break
+
+            if output_args is None:
+                raise LLMGatewayError(f"Output tool '{tool_name}' not found in response")
+
+            # Validate against protocol
+            validated = output_protocol.model_validate(output_args)
+            logger.info(f"Protocol validation successful: {output_protocol.__name__}")
+            return validated
+
+        except ValidationError as e:
+            logger.error(f"Protocol validation failed: {e}")
+            raise
         except Exception as e:
             logger.error(f"Provider {self.provider.get_name()} call failed: {e}")
             raise LLMGatewayError(f"LLM call failed: {e}")

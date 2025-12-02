@@ -332,8 +332,18 @@ async def main(interactive: bool = True):
         # B. Sign with Chain Context
         sig = verifier.sign_content(code_id, previous_hash=prev_hash)
 
-        # C. Update Graph (verification edge from verifier to code, not self-referential)
+        # C. Create verification node and link to code
         verification_id = f"verify_{code_id[:8]}"
+        db.add_node(
+            verification_id,
+            NodeType.TEST,  # Verification is a TEST-type node
+            json.dumps(verify_output),  # Store the verification output
+            metadata={
+                "verdict": verdict,
+                "verifier_id": verifier.agent_id,
+                "code_id": code_id
+            }
+        )
         db.add_edge(verification_id, code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
         db.graph.nodes[code_id]['status'] = NodeStatus.VERIFIED.value
 

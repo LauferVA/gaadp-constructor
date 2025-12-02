@@ -114,15 +114,50 @@ class BaseAgent(ABC):
         vars['agent_id'] = self.agent_id
         return template.format(**vars)
 
+    def _parse_nested_json(self, obj: Any) -> Any:
+        """
+        Recursively parse JSON strings within a dict/list structure.
+        Some LLM responses return nested JSON as strings that need parsing.
+
+        Args:
+            obj: The object to parse (dict, list, or primitive)
+
+        Returns:
+            The object with any JSON strings parsed into proper objects
+        """
+        if isinstance(obj, str):
+            # Try to parse as JSON
+            stripped = obj.strip()
+            if (stripped.startswith('{') and stripped.endswith('}')) or \
+               (stripped.startswith('[') and stripped.endswith(']')):
+                try:
+                    return self._parse_nested_json(json.loads(obj))
+                except json.JSONDecodeError:
+                    return obj
+            return obj
+        elif isinstance(obj, dict):
+            return {k: self._parse_nested_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._parse_nested_json(item) for item in obj]
+        else:
+            return obj
+
     def _parse_json_response(self, text: str) -> Dict:
         """
+        DEPRECATED: Use protocol-based output via gateway.call_with_protocol() instead.
+
         Parse LLM response, handling JSON, Markdown blocks, and mixed content.
+        This method is kept for backwards compatibility during migration.
+
+        WARNING: This regex-based parsing is unreliable. Agents should use
+        Pydantic protocols with forced tool_choice for guaranteed structured output.
+        See core/protocols.py and gateway.call_with_protocol().
 
         Strategies:
         1. Direct JSON parse
         2. Extract from ```json ... ``` blocks
         3. Find first outer brace { ... }
-        4. Raise ValueError with debug output
+        4. Return error dict
 
         Args:
             text: Raw LLM response
@@ -130,13 +165,27 @@ class BaseAgent(ABC):
         Returns:
             Parsed dict
 
-        Raises:
-            ValueError: If no valid JSON can be extracted
+        Note:
+            New agents should NOT use this method. Use call_with_protocol() instead.
         """
         import re
+        import warnings
+
+        warnings.warn(
+            "_parse_json_response is deprecated. Use gateway.call_with_protocol() "
+            "with Pydantic protocols for guaranteed structured output.",
+            DeprecationWarning,
+            stacklevel=2
+        )
 
         if not text or not text.strip():
-            raise ValueError("Empty response from LLM")
+            self.logger.error("Empty response from LLM")
+            return {
+                "content": "",
+                "verdict": "FAIL",
+                "critique": "Empty response from LLM",
+                "parse_error": True
+            }
 
         text = text.strip()
 
@@ -162,8 +211,8 @@ class BaseAgent(ABC):
             except json.JSONDecodeError:
                 pass
 
-        # 4. Debug: Print what failed and return a sensible default
-        print(f"❌ JSON PARSE FAILED. Raw Output:\n{text[:500]}...\n")
+        # 4. Return error dict (no longer raises exception)
+        self.logger.error(f"JSON PARSE FAILED. Raw Output (first 500 chars): {text[:500]}")
         self.logger.warning("LLM returned non-JSON response, wrapping as content")
         return {
             "content": text,

@@ -311,7 +311,12 @@ class AnthropicAPIProvider(LLMProvider):
         model_config: Dict,
         tools: Optional[List[Dict]] = None
     ) -> str:
-        """Make a call using Anthropic API."""
+        """
+        Make a call using Anthropic API.
+
+        Supports forced tool_choice for structured output:
+            model_config["tool_choice"] = {"type": "tool", "name": "submit_X"}
+        """
         kwargs = {
             "model": model_config.get('model', 'claude-3-5-sonnet-20241022'),
             "max_tokens": model_config.get('max_tokens', 4000),
@@ -324,6 +329,14 @@ class AnthropicAPIProvider(LLMProvider):
             # Convert OpenAI-formatted tools to Anthropic format
             kwargs["tools"] = self._convert_tools_to_anthropic(tools)
 
+            # Check for forced tool_choice (for protocol-based output)
+            tool_choice = model_config.get("tool_choice")
+            if tool_choice:
+                # Anthropic format: {"type": "tool", "name": "tool_name"}
+                # or {"type": "any"} or {"type": "auto"}
+                kwargs["tool_choice"] = tool_choice
+                logger.debug(f"Forced tool_choice: {tool_choice}")
+
         try:
             response = self.client.messages.create(**kwargs)
         except AnthropicError as e:
@@ -333,11 +346,11 @@ class AnthropicAPIProvider(LLMProvider):
         # Track usage
         self._track_usage(response)
 
-        # Handle tool use
+        # Handle tool use (either voluntary or forced)
         if response.stop_reason == "tool_use":
             return self._format_tool_response(response)
 
-        # Extract text
+        # Extract text (shouldn't happen with forced tool_choice, but handle it)
         text_content = ""
         for block in response.content:
             if block.type == "text":
@@ -351,7 +364,12 @@ class AnthropicAPIProvider(LLMProvider):
         model_config: Dict,
         tools: Optional[List[Dict]] = None
     ) -> str:
-        """Multi-turn conversation."""
+        """
+        Multi-turn conversation.
+
+        Supports forced tool_choice for structured output:
+            model_config["tool_choice"] = {"type": "tool", "name": "submit_X"}
+        """
         kwargs = {
             "model": model_config.get('model', 'claude-3-5-sonnet-20241022'),
             "max_tokens": model_config.get('max_tokens', 4000),
@@ -362,6 +380,12 @@ class AnthropicAPIProvider(LLMProvider):
         if tools:
             # Convert OpenAI-formatted tools to Anthropic format
             kwargs["tools"] = self._convert_tools_to_anthropic(tools)
+
+            # Check for forced tool_choice (for protocol-based output)
+            tool_choice = model_config.get("tool_choice")
+            if tool_choice:
+                kwargs["tool_choice"] = tool_choice
+                logger.debug(f"Multi-turn forced tool_choice: {tool_choice}")
 
         try:
             response = self.client.messages.create(**kwargs)
