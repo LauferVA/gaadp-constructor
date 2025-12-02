@@ -134,14 +134,17 @@ class ClaudeSDKProvider(LLMProvider):
     ) -> str:
         """Make a call using Claude Agent SDK."""
         # Handle async in sync context
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Create new event loop if already in async context
-            return asyncio.run(self._async_call(system_prompt, user_prompt, model_config, tools))
-        else:
+        try:
+            loop = asyncio.get_running_loop()
+            # Already in async context - use nest_asyncio or create task
+            import nest_asyncio
+            nest_asyncio.apply()
             return loop.run_until_complete(
                 self._async_call(system_prompt, user_prompt, model_config, tools)
             )
+        except RuntimeError:
+            # No running loop, create one
+            return asyncio.run(self._async_call(system_prompt, user_prompt, model_config, tools))
 
     async def _async_call(
         self,
@@ -255,6 +258,52 @@ class AnthropicAPIProvider(LLMProvider):
         # Variable cost, return session average
         return self._cost_session
 
+    def _convert_tools_to_anthropic(self, tools: List[Dict]) -> List[Dict]:
+        """
+        Convert OpenAI-formatted tools to Anthropic format.
+
+        OpenAI format:
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get weather for a location",
+                    "parameters": { ... JSON Schema ... }
+                }
+            }
+
+        Anthropic format:
+            {
+                "name": "get_weather",
+                "description": "Get weather for a location",
+                "input_schema": { ... JSON Schema ... }
+            }
+
+        Args:
+            tools: List of tool definitions (OpenAI or Anthropic format)
+
+        Returns:
+            List of tools in Anthropic format
+        """
+        converted = []
+
+        for tool in tools:
+            # Check if it's OpenAI format (has 'type': 'function' and 'function' key)
+            if tool.get('type') == 'function' and 'function' in tool:
+                func = tool['function']
+                anthropic_tool = {
+                    "name": func.get('name', 'unknown'),
+                    "description": func.get('description', ''),
+                    "input_schema": func.get('parameters', {"type": "object", "properties": {}})
+                }
+                converted.append(anthropic_tool)
+                logger.debug(f"Converted OpenAI tool '{anthropic_tool['name']}' to Anthropic format")
+            else:
+                # Already in Anthropic format or unknown - pass through
+                converted.append(tool)
+
+        return converted
+
     def call(
         self,
         system_prompt: str,
@@ -272,7 +321,8 @@ class AnthropicAPIProvider(LLMProvider):
         }
 
         if tools:
-            kwargs["tools"] = tools
+            # Convert OpenAI-formatted tools to Anthropic format
+            kwargs["tools"] = self._convert_tools_to_anthropic(tools)
 
         try:
             response = self.client.messages.create(**kwargs)
@@ -310,7 +360,8 @@ class AnthropicAPIProvider(LLMProvider):
         }
 
         if tools:
-            kwargs["tools"] = tools
+            # Convert OpenAI-formatted tools to Anthropic format
+            kwargs["tools"] = self._convert_tools_to_anthropic(tools)
 
         try:
             response = self.client.messages.create(**kwargs)
@@ -383,38 +434,28 @@ class AnthropicAPIProvider(LLMProvider):
 
 
 # =============================================================================
-# OPENAI API PROVIDER (STUB - For Future Implementation)
+# OPENAI API PROVIDER (Imported from separate module)
 # =============================================================================
 
-class OpenAIProvider(LLMProvider):
-    """
-    Provider for OpenAI API (GPT-4, etc.).
-    Stub implementation - can be filled in later.
-    """
-
-    def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-
-    def is_available(self) -> bool:
-        return False  # Not implemented yet
-
-    def get_name(self) -> str:
-        return "openai_api"
-
-    def get_cost_per_call(self) -> float:
-        return 0.0
-
-    def call(self, system_prompt: str, user_prompt: str, model_config: Dict, tools: Optional[List[Dict]] = None) -> str:
-        raise NotImplementedError("OpenAI provider not yet implemented")
-
-    def call_multi_turn(self, messages: List[Dict], model_config: Dict, tools: Optional[List[Dict]] = None) -> str:
-        raise NotImplementedError("OpenAI provider not yet implemented")
-
-    def get_usage_stats(self) -> Dict:
-        return {"provider": "openai_api", "status": "not_implemented"}
-
-    def reset_usage_stats(self):
-        pass
+# Import the real OpenAI provider implementation
+try:
+    from infrastructure.openai_provider import OpenAIProvider
+except ImportError:
+    # Fallback for relative imports
+    try:
+        from .openai_provider import OpenAIProvider
+    except ImportError:
+        # Create a stub if the file doesn't exist
+        class OpenAIProvider(LLMProvider):
+            """Fallback stub if openai_provider.py is missing."""
+            def __init__(self, *args, **kwargs): pass
+            def is_available(self) -> bool: return False
+            def get_name(self) -> str: return "openai_api"
+            def get_cost_per_call(self) -> float: return 0.0
+            def call(self, *args, **kwargs) -> str: raise NotImplementedError()
+            def call_multi_turn(self, *args, **kwargs) -> str: raise NotImplementedError()
+            def get_usage_stats(self) -> Dict: return {}
+            def reset_usage_stats(self): pass
 
 
 # =============================================================================
@@ -450,6 +491,162 @@ class LocalModelProvider(LLMProvider):
 
     def reset_usage_stats(self):
         pass
+
+
+# =============================================================================
+# MANUAL PROVIDER (Human-in-the-Loop Testing)
+# =============================================================================
+
+import sys
+
+class ManualProvider(LLMProvider):
+    """
+    Provider for manual/interactive testing.
+    Prints prompts to stdout and reads responses from stdin.
+    Allows a human to act as the LLM for debugging agent logic.
+
+    Usage:
+        export LLM_PROVIDER=manual
+        python production_main.py
+    """
+
+    def __init__(self):
+        self._call_count = 0
+        self._current_role = "UNKNOWN"
+
+    def is_available(self) -> bool:
+        """Manual provider is always available when explicitly requested."""
+        return os.getenv("LLM_PROVIDER", "").lower() == "manual"
+
+    def get_name(self) -> str:
+        return "manual"
+
+    def get_cost_per_call(self) -> float:
+        return 0.0  # Free (human labor not counted)
+
+    def call(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        model_config: Dict,
+        tools: Optional[List[Dict]] = None
+    ) -> str:
+        """
+        Display the prompt to the human and capture their response.
+        """
+        self._call_count += 1
+
+        # Print clear separator and context
+        print("\n" + "=" * 80)
+        print(f"  MANUAL LLM REQUEST #{self._call_count}")
+        print(f"  Role: {model_config.get('role', 'UNKNOWN')}")
+        print(f"  Model Config: temp={model_config.get('temperature', 'N/A')}, max_tokens={model_config.get('max_tokens', 'N/A')}")
+        print("=" * 80)
+
+        print("\n┌─── SYSTEM PROMPT ───────────────────────────────────────────────────────────┐")
+        # Truncate very long system prompts for readability
+        if len(system_prompt) > 2000:
+            print(system_prompt[:2000])
+            print(f"\n... [TRUNCATED - {len(system_prompt)} chars total] ...")
+        else:
+            print(system_prompt)
+        print("└─────────────────────────────────────────────────────────────────────────────┘")
+
+        print("\n┌─── USER PROMPT / CONTEXT ───────────────────────────────────────────────────┐")
+        # Show full user prompt (may include tool results from ReAct loop)
+        print(user_prompt)
+        print("└─────────────────────────────────────────────────────────────────────────────┘")
+
+        if tools:
+            print("\n┌─── AVAILABLE TOOLS ─────────────────────────────────────────────────────────┐")
+            for tool in tools:
+                func = tool.get('function', tool)
+                tool_name = func.get('name', 'unknown')
+                tool_desc = func.get('description', 'No description')[:60]
+                print(f"  • {tool_name}: {tool_desc}")
+            print("└─────────────────────────────────────────────────────────────────────────────┘")
+            print("\n💡 TIP: To call a tool, respond with JSON like:")
+            print('   {"tool_calls": [{"name": "read_file", "input": {"path": "some/file.py"}}]}')
+
+        print("\n" + "=" * 80)
+        print("  PASTE YOUR RESPONSE BELOW")
+        print("  (Press Ctrl+D on empty line when finished, or Ctrl+C to abort)")
+        print("=" * 80)
+        print()
+
+        # Capture multi-line input
+        try:
+            response = sys.stdin.read()
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Input cancelled by user. Returning empty response.")
+            response = '{"error": "User cancelled input"}'
+
+        print("\n" + "─" * 80)
+        print(f"  ✅ RESPONSE CAPTURED ({len(response)} chars)")
+        print("─" * 80 + "\n")
+
+        return response.strip()
+
+    def call_multi_turn(
+        self,
+        messages: List[Dict],
+        model_config: Dict,
+        tools: Optional[List[Dict]] = None
+    ) -> str:
+        """Multi-turn conversation - show full history."""
+        self._call_count += 1
+
+        print("\n" + "=" * 80)
+        print(f"  MANUAL LLM REQUEST #{self._call_count} (Multi-Turn)")
+        print("=" * 80)
+
+        print("\n┌─── CONVERSATION HISTORY ────────────────────────────────────────────────────┐")
+        for i, msg in enumerate(messages):
+            role = msg.get('role', 'unknown').upper()
+            content = msg.get('content', '')
+            if len(content) > 500:
+                content = content[:500] + f"... [{len(content)} chars total]"
+            print(f"\n[{i+1}] {role}:")
+            print(content)
+        print("\n└─────────────────────────────────────────────────────────────────────────────┘")
+
+        if tools:
+            print("\n┌─── AVAILABLE TOOLS ─────────────────────────────────────────────────────────┐")
+            for tool in tools:
+                func = tool.get('function', tool)
+                tool_name = func.get('name', 'unknown')
+                tool_desc = func.get('description', 'No description')[:60]
+                print(f"  • {tool_name}: {tool_desc}")
+            print("└─────────────────────────────────────────────────────────────────────────────┘")
+
+        print("\n" + "=" * 80)
+        print("  PASTE YOUR RESPONSE BELOW")
+        print("  (Press Ctrl+D on empty line when finished)")
+        print("=" * 80)
+        print()
+
+        try:
+            response = sys.stdin.read()
+        except KeyboardInterrupt:
+            print("\n\n⚠️  Input cancelled by user.")
+            response = '{"error": "User cancelled input"}'
+
+        print("\n" + "─" * 80)
+        print(f"  ✅ RESPONSE CAPTURED ({len(response)} chars)")
+        print("─" * 80 + "\n")
+
+        return response.strip()
+
+    def get_usage_stats(self) -> Dict:
+        return {
+            "provider": "manual",
+            "calls": self._call_count,
+            "cost": 0.0,
+            "note": "Human-in-the-loop testing mode"
+        }
+
+    def reset_usage_stats(self):
+        self._call_count = 0
 
 
 # =============================================================================
@@ -518,15 +715,18 @@ def create_default_registry() -> ProviderRegistry:
     """
     Create a registry with all available providers.
     Priority order:
-    1. Claude SDK (if in Claude Code) - Free
-    2. Anthropic API (if API key available) - Paid
-    3. OpenAI (not yet implemented)
-    4. Local models (not yet implemented)
+    1. Manual (if LLM_PROVIDER=manual) - Human-in-the-loop testing
+    2. Claude SDK (if in Claude Code) - Free
+    3. Anthropic API (if API key available) - Paid
+    4. OpenAI (not yet implemented)
+    5. Local models (not yet implemented)
     """
     registry = ProviderRegistry()
 
     # Register providers in priority order
-    registry.register(ClaudeSDKProvider(), priority=100)  # Highest priority (free)
+    # ManualProvider has highest priority when LLM_PROVIDER=manual is set
+    registry.register(ManualProvider(), priority=200)  # Highest when enabled
+    registry.register(ClaudeSDKProvider(), priority=100)  # Free in Claude Code
     registry.register(AnthropicAPIProvider(), priority=50)  # Fallback (paid)
     registry.register(OpenAIProvider(), priority=25)  # Future
     registry.register(LocalModelProvider(), priority=10)  # Future

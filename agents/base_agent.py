@@ -114,12 +114,63 @@ class BaseAgent(ABC):
         vars['agent_id'] = self.agent_id
         return template.format(**vars)
 
-    def _parse_json_response(self, response_text: str) -> Dict:
+    def _parse_json_response(self, text: str) -> Dict:
+        """
+        Parse LLM response, handling JSON, Markdown blocks, and mixed content.
+
+        Strategies:
+        1. Direct JSON parse
+        2. Extract from ```json ... ``` blocks
+        3. Find first outer brace { ... }
+        4. Raise ValueError with debug output
+
+        Args:
+            text: Raw LLM response
+
+        Returns:
+            Parsed dict
+
+        Raises:
+            ValueError: If no valid JSON can be extracted
+        """
+        import re
+
+        if not text or not text.strip():
+            raise ValueError("Empty response from LLM")
+
+        text = text.strip()
+
+        # 1. Try direct parsing
         try:
-            clean_text = response_text.replace("```json", "").replace("```", "").strip()
-            return json.loads(clean_text)
+            return json.loads(text)
         except json.JSONDecodeError:
-            raise ValueError("LLM did not return valid JSON")
+            pass
+
+        # 2. Try extracting from ```json ... ``` blocks
+        match = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+        # 3. Try finding the first outer brace { ... }
+        match = re.search(r"(\{.*\})", text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+        # 4. Debug: Print what failed and return a sensible default
+        print(f"❌ JSON PARSE FAILED. Raw Output:\n{text[:500]}...\n")
+        self.logger.warning("LLM returned non-JSON response, wrapping as content")
+        return {
+            "content": text,
+            "verdict": "FAIL",
+            "critique": "LLM failed to produce valid JSON output - response was conversational text",
+            "parse_error": True
+        }
 
     def get_tools_schema(self) -> List[Dict]:
         """Get filtered tool schemas for this agent's role."""
@@ -140,6 +191,10 @@ class BaseAgent(ABC):
 
         Returns:
             Concatenated results from all tool executions
+
+        Supports multiple tool call formats:
+            - OpenAI/Anthropic API format: {"function": {"name": "...", "arguments": "..."}}
+            - Simple format: {"name": "...", "input": {...}}
         """
         if not self.mcp_hub:
             return "No MCP Hub configured"
@@ -148,8 +203,27 @@ class BaseAgent(ABC):
         results_log = []
 
         for call in tool_calls:
-            func_name = call['function']['name']
-            args = json.loads(call['function']['arguments'])
+            # Support both API format and simple format
+            if 'function' in call:
+                # OpenAI/Anthropic API format
+                func_name = call['function']['name']
+                raw_args = call['function'].get('arguments', '{}')
+            else:
+                # Simple format (e.g., from ManualProvider)
+                func_name = call.get('name', 'unknown')
+                raw_args = call.get('input', {})
+
+            # Handle arguments: can be string (needs parsing) or dict (use directly)
+            if isinstance(raw_args, str):
+                try:
+                    args = json.loads(raw_args)
+                except json.JSONDecodeError:
+                    results_log.append(f"Tool '{func_name}' Failed: Invalid JSON arguments: {raw_args}")
+                    continue
+            elif isinstance(raw_args, dict):
+                args = raw_args
+            else:
+                args = {}
 
             # SECURITY CHECK
             if not self.check_tool_permission(func_name):

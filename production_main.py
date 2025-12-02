@@ -3,8 +3,11 @@
 GAADP PRODUCTION RUNTIME (Full Featured)
 Includes: Domain Discovery, Data Loading, MCP Tools, RBAC
 """
-import asyncio
+# Disable tokenizer parallelism warning BEFORE any other imports
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+import asyncio
 import uuid
 import subprocess
 import networkx as nx
@@ -18,10 +21,14 @@ from core.domain_discovery import DomainResearcher
 from agents.concrete_agents import RealArchitect, RealBuilder, RealVerifier
 from core.ontology import AgentRole, NodeType, EdgeType, NodeStatus
 
-# Check for API keys
-if not os.getenv("ANTHROPIC_API_KEY") and not os.getenv("OPENAI_API_KEY"):
-    print("❌ ERROR: Missing API Keys (ANTHROPIC_API_KEY or OPENAI_API_KEY)")
-    exit(1)
+# Check for API keys (skip if using manual mode)
+if os.getenv("LLM_PROVIDER", "").lower() != "manual":
+    if not os.getenv("ANTHROPIC_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        print("❌ ERROR: Missing API Keys (ANTHROPIC_API_KEY or OPENAI_API_KEY)")
+        print("   TIP: Set LLM_PROVIDER=manual to use human-in-the-loop mode")
+        exit(1)
+else:
+    print("🧑‍💻 MANUAL MODE: You will provide LLM responses interactively")
 
 
 def introspect_graph(db: GraphDB):
