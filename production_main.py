@@ -274,17 +274,58 @@ async def main(interactive: bool = True):
     arch_output = await architect.process({"nodes": [{"content": request, "id": req_id}]})
     logger.info(f"Architect output: {len(arch_output.get('new_nodes', []))} new nodes")
 
+    # Track created nodes: store both plan_id, spec_id and a mapping for edge creation
     plan_id, spec_id = None, None
-    for n in arch_output.get('new_nodes', []):
+    spec_ids = []  # Track all SPECs (there may be multiple)
+    node_id_map = {}  # Maps index/temp_id -> actual node_id for edge resolution
+
+    for idx, n in enumerate(arch_output.get('new_nodes', [])):
         node_id = uuid.uuid4().hex
+        node_id_map[f"new_{idx}"] = node_id  # For edge resolution if Architect uses temp IDs
+        node_id_map[idx] = node_id
+
         print(f"   + Created Node: {n['type']} ({node_id[:8]}...)")
         db.add_node(node_id, NodeType(n['type']), n['content'])
         memory.embed_node(node_id, n['content'])
 
+        # Track key node types
         if n['type'] == 'PLAN':
             plan_id = node_id
         if n['type'] == 'SPEC':
-            spec_id = node_id
+            spec_id = node_id  # Last SPEC becomes the primary one for Builder
+            spec_ids.append(node_id)
+
+        # === IMPLICIT EDGE: All new nodes TRACE_TO the requirement ===
+        sig = architect.sign_content(node_id, previous_hash=req_id)
+        db.add_edge(node_id, req_id, EdgeType.TRACES_TO, architect.agent_id, sig)
+        logger.debug(f"Created edge: {node_id[:8]} --[TRACES_TO]--> {req_id}")
+
+    # === PLAN → SPEC edges: Plan DEFINES the specs ===
+    if plan_id and spec_ids:
+        for sid in spec_ids:
+            sig = architect.sign_content(f"{plan_id}:{sid}")
+            db.add_edge(plan_id, sid, EdgeType.DEFINES, architect.agent_id, sig)
+            logger.debug(f"Created edge: {plan_id[:8]} --[DEFINES]--> {sid[:8]}")
+
+    # === Process explicit new_edges from Architect ===
+    for edge in arch_output.get('new_edges', []):
+        try:
+            # Resolve source/target IDs (may be temp IDs or actual IDs)
+            src = node_id_map.get(edge.get('source_id'), edge.get('source_id'))
+            tgt = node_id_map.get(edge.get('target_id'), edge.get('target_id'))
+
+            # Handle special targets like "req" or "requirement"
+            if tgt in ('req', 'requirement', 'REQ'):
+                tgt = req_id
+
+            edge_type = EdgeType(edge.get('relation', 'DEPENDS_ON'))
+            sig = architect.sign_content(f"{src}:{tgt}:{edge_type.value}")
+            db.add_edge(src, tgt, edge_type, architect.agent_id, sig)
+            logger.info(f"Created explicit edge: {src[:8] if len(src) > 8 else src} --[{edge_type.value}]--> {tgt[:8] if len(tgt) > 8 else tgt}")
+        except Exception as e:
+            logger.warning(f"Failed to create edge {edge}: {e}")
+
+    logger.info(f"Graph after Architect: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
 
     # --- PHASE 4: BUILDER EXECUTION ---
     TraceContext.set_phase("BUILDER")
@@ -303,6 +344,19 @@ async def main(interactive: bool = True):
     )
     logger.info(f"Code node created: {code_id}")
     print(f"   > Generated Code ID: {code_id[:8]}...")
+
+    # === EDGE: CODE --[IMPLEMENTS]--> SPEC ===
+    if spec_id:
+        sig = builder.sign_content(code_id, previous_hash=spec_id)
+        db.add_edge(code_id, spec_id, EdgeType.IMPLEMENTS, builder.agent_id, sig)
+        logger.info(f"Created edge: {code_id[:8]} --[IMPLEMENTS]--> {spec_id[:8]}")
+
+    # === EDGE: CODE --[TRACES_TO]--> REQ (for full traceability) ===
+    sig = builder.sign_content(code_id, previous_hash=req_id)
+    db.add_edge(code_id, req_id, EdgeType.TRACES_TO, builder.agent_id, sig)
+    logger.debug(f"Created edge: {code_id[:8]} --[TRACES_TO]--> {req_id}")
+
+    logger.info(f"Graph after Builder: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
 
     # Embed code into semantic memory
     memory.embed_node(code_id, build_output['content'])
