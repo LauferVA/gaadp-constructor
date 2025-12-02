@@ -95,7 +95,8 @@ class CodeSandbox:
             logger.warning(
                 f"Executing agent-generated code locally (UNSAFE): {file_path}"
             )
-            cmd = [sys.executable, file_path]
+            # Use basename since cwd is already the work_dir
+            cmd = [sys.executable, os.path.basename(file_path)]
 
         try:
             result = subprocess.run(

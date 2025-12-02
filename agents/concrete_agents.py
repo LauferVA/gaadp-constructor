@@ -47,6 +47,7 @@ Available tools: read_file, list_directory, fetch_url, search_web"""
 
         # Get filtered tools for this role
         tools_schema = self.get_tools_schema()
+        self.logger.info(f"Architect processing requirement: {req_content[:100]}...")
 
         # === ReAct Loop: Iterate until LLM produces final output (no tool calls) ===
         for iteration in range(MAX_REACT_ITERATIONS):
@@ -59,14 +60,19 @@ Available tools: read_file, list_directory, fetch_url, search_web"""
                 tools=tools_schema if tools_schema else None
             )
 
+            # Log raw response for debugging
+            self.logger.debug(f"Architect raw response length: {len(raw_response)} chars")
+
             # Try to parse as JSON to check for tool calls
             try:
                 parsed = json.loads(raw_response)
 
                 if 'tool_calls' in parsed and parsed['tool_calls']:
                     # Execute tools and get results
+                    tool_names = [tc.get('name', tc.get('function', {}).get('name', '?')) for tc in parsed['tool_calls']]
+                    self.logger.info(f"Architect calling tools: {tool_names}")
                     tool_results = await self.execute_tool_calls(parsed)
-                    self.logger.info(f"Architect tool calls executed, feeding results back to LLM")
+                    self.logger.debug(f"Tool results: {tool_results[:500]}...")
 
                     # CRITICAL: Append tool results to user_prompt for next iteration
                     user_prompt += f"\n\n[TOOL RESULTS from iteration {iteration + 1}]:\n{tool_results}"
@@ -81,20 +87,29 @@ Available tools: read_file, list_directory, fetch_url, search_web"""
                 # No tool calls - this is the final response
                 # Check if it has the expected structure (new_nodes, new_edges)
                 if 'new_nodes' in parsed or 'content' in parsed:
-                    self.logger.info(f"Architect produced final plan after {iteration + 1} iterations")
+                    num_nodes = len(parsed.get('new_nodes', []))
+                    self.logger.info(f"Architect produced plan with {num_nodes} nodes after {iteration + 1} iterations")
                     return parsed
+                else:
+                    self.logger.warning(f"Architect returned JSON without 'new_nodes'. Keys: {list(parsed.keys())}")
 
-            except json.JSONDecodeError:
-                # Response is not JSON - might be raw text plan
-                pass
+            except json.JSONDecodeError as e:
+                # Response is not JSON - log what we got
+                self.logger.warning(f"Architect response not valid JSON: {e}")
+                self.logger.debug(f"Raw response preview: {raw_response[:300]}...")
 
             # If we get here, response is either non-JSON or doesn't have tool_calls
             # Try to parse it as the final response
             self.logger.info(f"Architect produced final response after {iteration + 1} iterations")
-            return self._parse_json_response(raw_response)
+            result = self._parse_json_response(raw_response)
+            if result.get('parse_error'):
+                self.logger.error(f"Architect failed to produce valid plan. Raw: {raw_response[:500]}...")
+            return result
 
-        # Max iterations reached - return whatever we have
-        self.logger.warning(f"Architect reached max iterations ({MAX_REACT_ITERATIONS}), returning last response")
+        # Max iterations reached - this is a problem
+        self.logger.error(f"Architect reached max iterations ({MAX_REACT_ITERATIONS}) without producing plan")
+        self.logger.error(f"Requirement: {req_content[:300]}...")
+        self.logger.error(f"Last response: {raw_response[:500]}...")
         return self._parse_json_response(raw_response)
 
     def _build_escalation_prompt(self, req_node: Dict, escalation_context: str) -> str:
@@ -188,14 +203,19 @@ Implement now and output JSON:"""
                 tools=tools_schema if tools_schema else None
             )
 
+            # Log raw response length for debugging
+            self.logger.debug(f"Builder raw response length: {len(raw_response)} chars")
+
             # Try to parse as JSON to check for tool calls
             try:
                 parsed = json.loads(raw_response)
 
                 if 'tool_calls' in parsed and parsed['tool_calls']:
                     # Execute tools and get results
+                    tool_names = [tc.get('name', tc.get('function', {}).get('name', '?')) for tc in parsed['tool_calls']]
+                    self.logger.info(f"Builder calling tools: {tool_names}")
                     tool_results = await self.execute_tool_calls(parsed)
-                    self.logger.info(f"Builder tool calls executed, feeding results back to LLM")
+                    self.logger.debug(f"Tool results: {tool_results[:500]}...")
 
                     # CRITICAL: Append tool results to user_prompt for next iteration
                     user_prompt += f"\n\n[TOOL RESULTS from iteration {iteration + 1}]:\n{tool_results}"
@@ -209,25 +229,34 @@ Implement now and output JSON:"""
 
                 # No tool calls - this is the final response
                 if 'content' in parsed:
-                    self.logger.info(f"Builder produced final code after {iteration + 1} iterations")
+                    content_preview = parsed['content'][:100] if parsed.get('content') else '(empty)'
+                    self.logger.info(f"Builder produced code after {iteration + 1} iterations: {content_preview}...")
                     result = parsed
                     result['type'] = NodeType.CODE.value
                     result['status'] = NodeStatus.PENDING.value
                     return result
+                else:
+                    # JSON but no 'content' key - this is unexpected
+                    self.logger.warning(f"Builder returned JSON without 'content' key. Keys: {list(parsed.keys())}")
 
-            except json.JSONDecodeError:
-                # Response is not JSON - might be raw code
-                pass
+            except json.JSONDecodeError as e:
+                # Response is not JSON - log what we got
+                self.logger.warning(f"Builder response not valid JSON: {e}")
+                self.logger.debug(f"Raw response preview: {raw_response[:300]}...")
 
             # If we get here, response is either non-JSON or doesn't have tool_calls
             self.logger.info(f"Builder produced final response after {iteration + 1} iterations")
             result = self._parse_json_response(raw_response)
+            if result.get('parse_error'):
+                self.logger.error(f"Builder failed to produce valid output. Raw: {raw_response[:500]}...")
             result['type'] = NodeType.CODE.value
             result['status'] = NodeStatus.PENDING.value
             return result
 
-        # Max iterations reached - return whatever we have
-        self.logger.warning(f"Builder reached max iterations ({MAX_REACT_ITERATIONS}), returning last response")
+        # Max iterations reached - this is a problem, log details
+        self.logger.error(f"Builder reached max iterations ({MAX_REACT_ITERATIONS}) without producing code")
+        self.logger.error(f"Last prompt sent: {user_prompt[-500:]}...")
+        self.logger.error(f"Last response: {raw_response[:500]}...")
         result = self._parse_json_response(raw_response)
         result['type'] = NodeType.CODE.value
         result['status'] = NodeStatus.PENDING.value
@@ -278,6 +307,10 @@ OR
 
 Output your JSON verdict now:"""
 
+        # Log the code being verified (preview)
+        code_preview = code_node['content'][:200] if code_node.get('content') else '(no content)'
+        self.logger.info(f"Verifier reviewing code: {code_preview}...")
+
         # === ReAct Loop: Iterate until LLM produces final verdict (no tool calls) ===
         for iteration in range(MAX_REACT_ITERATIONS):
             self.logger.info(f"Verifier ReAct iteration {iteration + 1}/{MAX_REACT_ITERATIONS}")
@@ -289,14 +322,19 @@ Output your JSON verdict now:"""
                 tools=tools_schema if tools_schema else None
             )
 
+            # Log raw response for debugging
+            self.logger.debug(f"Verifier raw response length: {len(raw_response)} chars")
+
             # Try to parse as JSON to check for tool calls
             try:
                 parsed = json.loads(raw_response)
 
                 if 'tool_calls' in parsed and parsed['tool_calls']:
                     # Execute tools and get results
+                    tool_names = [tc.get('name', tc.get('function', {}).get('name', '?')) for tc in parsed['tool_calls']]
+                    self.logger.info(f"Verifier calling tools: {tool_names}")
                     tool_results = await self.execute_tool_calls(parsed)
-                    self.logger.info(f"Verifier tool calls executed, feeding results back to LLM")
+                    self.logger.debug(f"Tool results: {tool_results[:500]}...")
 
                     # CRITICAL: Append tool results to user_prompt for next iteration
                     user_prompt += f"\n\n[TOOL RESULTS from iteration {iteration + 1}]:\n{tool_results}"
@@ -310,19 +348,30 @@ Output your JSON verdict now:"""
 
                 # No tool calls - this is the final verdict
                 if 'verdict' in parsed:
-                    self.logger.info(f"Verifier produced final verdict after {iteration + 1} iterations: {parsed.get('verdict')}")
+                    self.logger.info(f"Verifier verdict: {parsed.get('verdict')} after {iteration + 1} iterations")
+                    if parsed.get('critique'):
+                        self.logger.info(f"Verifier critique: {parsed.get('critique')}")
                     return parsed
+                else:
+                    # JSON but no verdict - unexpected
+                    self.logger.warning(f"Verifier returned JSON without 'verdict'. Keys: {list(parsed.keys())}")
 
-            except json.JSONDecodeError:
-                # Response is not JSON
-                pass
+            except json.JSONDecodeError as e:
+                # Response is not JSON - log what we got
+                self.logger.warning(f"Verifier response not valid JSON: {e}")
+                self.logger.debug(f"Raw response preview: {raw_response[:300]}...")
 
             # If we get here, response is either non-JSON or doesn't have tool_calls
             self.logger.info(f"Verifier produced final response after {iteration + 1} iterations")
-            return self._parse_json_response(raw_response)
+            result = self._parse_json_response(raw_response)
+            if result.get('parse_error'):
+                self.logger.error(f"Verifier failed to produce valid verdict. Raw: {raw_response[:500]}...")
+            return result
 
-        # Max iterations reached - return whatever we have
-        self.logger.warning(f"Verifier reached max iterations ({MAX_REACT_ITERATIONS}), returning last response")
+        # Max iterations reached - this is a problem
+        self.logger.error(f"Verifier reached max iterations ({MAX_REACT_ITERATIONS}) without verdict")
+        self.logger.error(f"Code being verified: {code_node['content'][:300]}...")
+        self.logger.error(f"Last response: {raw_response[:500]}...")
         return self._parse_json_response(raw_response)
 
 

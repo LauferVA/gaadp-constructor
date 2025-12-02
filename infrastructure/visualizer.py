@@ -14,6 +14,7 @@ logger = logging.getLogger("Visualizer")
 
 # Color schemes for node types and statuses
 NODE_COLORS = {
+    # High-level artifacts
     NodeType.REQ.value: "#FF6B6B",      # Red
     NodeType.SPEC.value: "#4ECDC4",     # Teal
     NodeType.PLAN.value: "#45B7D1",     # Blue
@@ -22,6 +23,11 @@ NODE_COLORS = {
     NodeType.DOC.value: "#DDA0DD",      # Plum
     NodeType.STATE.value: "#A0A0A0",    # Gray
     NodeType.DEAD_END.value: "#696969", # Dark Gray
+    # AST-level types
+    NodeType.CLASS.value: "#9B59B6",    # Purple
+    NodeType.FUNCTION.value: "#3498DB", # Blue
+    NodeType.CALL.value: "#E67E22",     # Orange
+    NodeType.IMPORT.value: "#1ABC9C",   # Turquoise
 }
 
 STATUS_SHAPES = {
@@ -34,12 +40,17 @@ STATUS_SHAPES = {
 }
 
 EDGE_STYLES = {
+    # High-level relationships
     EdgeType.TRACES_TO.value: {"color": "#888888", "style": "dashed"},
     EdgeType.DEPENDS_ON.value: {"color": "#E74C3C", "style": "solid"},
     EdgeType.IMPLEMENTS.value: {"color": "#27AE60", "style": "solid"},
     EdgeType.VERIFIES.value: {"color": "#3498DB", "style": "bold"},
     EdgeType.DEFINES.value: {"color": "#9B59B6", "style": "dotted"},
     EdgeType.FEEDBACK.value: {"color": "#F39C12", "style": "dashed"},
+    # AST-level relationships
+    EdgeType.CONTAINS.value: {"color": "#2ECC71", "style": "solid"},
+    EdgeType.REFERENCES.value: {"color": "#E74C3C", "style": "dashed"},
+    EdgeType.INHERITS.value: {"color": "#9B59B6", "style": "bold"},
 }
 
 
@@ -52,10 +63,24 @@ class GraphVisualizer:
     - JSON (D3.js / Cytoscape)
     - HTML (Standalone D3 visualization)
     - Mermaid (Markdown diagrams)
+
+    Can work with either a GraphDB instance or a raw NetworkX graph.
     """
 
-    def __init__(self, db: GraphDB):
-        self.db = db
+    def __init__(self, db_or_graph):
+        """
+        Initialize visualizer with either GraphDB or NetworkX graph.
+
+        Args:
+            db_or_graph: Either a GraphDB instance or a networkx.DiGraph
+        """
+        import networkx as nx
+        if isinstance(db_or_graph, GraphDB):
+            self.graph = db_or_graph.graph
+        elif isinstance(db_or_graph, nx.DiGraph):
+            self.graph = db_or_graph
+        else:
+            raise TypeError(f"Expected GraphDB or nx.DiGraph, got {type(db_or_graph)}")
 
     def to_dot(self, include_content: bool = False) -> str:
         """
@@ -74,7 +99,7 @@ class GraphVisualizer:
         lines.append('')
 
         # Nodes
-        for node_id, data in self.db.graph.nodes(data=True):
+        for node_id, data in self.graph.nodes(data=True):
             node_type = data.get('type', 'UNKNOWN')
             status = data.get('status', 'PENDING')
             color = NODE_COLORS.get(node_type, '#CCCCCC')
@@ -95,7 +120,7 @@ class GraphVisualizer:
         lines.append('')
 
         # Edges
-        for source, target, data in self.db.graph.edges(data=True):
+        for source, target, data in self.graph.edges(data=True):
             edge_type = data.get('type', 'UNKNOWN')
             style_info = EDGE_STYLES.get(edge_type, {"color": "#000000", "style": "solid"})
 
@@ -118,7 +143,7 @@ class GraphVisualizer:
         nodes = []
         links = []
 
-        for node_id, data in self.db.graph.nodes(data=True):
+        for node_id, data in self.graph.nodes(data=True):
             nodes.append({
                 "id": node_id,
                 "type": data.get('type', 'UNKNOWN'),
@@ -128,7 +153,7 @@ class GraphVisualizer:
                 "metadata": data.get('metadata', {})
             })
 
-        for source, target, data in self.db.graph.edges(data=True):
+        for source, target, data in self.graph.edges(data=True):
             edge_type = data.get('type', 'UNKNOWN')
             style = EDGE_STYLES.get(edge_type, {"color": "#000000"})
             links.append({
@@ -152,7 +177,7 @@ class GraphVisualizer:
         lines = ['graph TD']
 
         # Define node styles
-        for node_id, data in self.db.graph.nodes(data=True):
+        for node_id, data in self.graph.nodes(data=True):
             node_type = data.get('type', 'UNKNOWN')
             status = data.get('status', 'PENDING')
             short_id = node_id[:12]
@@ -168,7 +193,7 @@ class GraphVisualizer:
         lines.append('')
 
         # Edges
-        for source, target, data in self.db.graph.edges(data=True):
+        for source, target, data in self.graph.edges(data=True):
             edge_type = data.get('type', 'UNKNOWN')
             src_short = source[:12]
             tgt_short = target[:12]

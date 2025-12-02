@@ -10,7 +10,150 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import asyncio
 import uuid
 import subprocess
+import logging
+import json
+from datetime import datetime
+from typing import Optional
 import networkx as nx
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+class JSONFormatter(logging.Formatter):
+    """Structured JSON log formatter for file output."""
+
+    def format(self, record):
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "trace_id": getattr(record, 'trace_id', None),
+            "phase": getattr(record, 'phase', None),
+            "agent": getattr(record, 'agent', None),
+        }
+        # Add exception info if present
+        if record.exc_info:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        # Remove None values
+        log_entry = {k: v for k, v in log_entry.items() if v is not None}
+        return json.dumps(log_entry)
+
+
+class ConsoleFormatter(logging.Formatter):
+    """Colored console formatter with trace context."""
+
+    COLORS = {
+        'DEBUG': '\033[36m',     # Cyan
+        'INFO': '\033[32m',      # Green
+        'WARNING': '\033[33m',   # Yellow
+        'ERROR': '\033[31m',     # Red
+        'CRITICAL': '\033[35m',  # Magenta
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, self.RESET)
+        trace_id = getattr(record, 'trace_id', None)
+        phase = getattr(record, 'phase', None)
+
+        # Build prefix
+        prefix_parts = []
+        if trace_id:
+            prefix_parts.append(f"[{trace_id[:8]}]")
+        if phase:
+            prefix_parts.append(f"[{phase}]")
+        prefix = " ".join(prefix_parts)
+
+        # Format: [LEVEL] [logger] prefix message
+        formatted = f"{color}[{record.levelname:7}]{self.RESET} [{record.name}] {prefix} {record.getMessage()}"
+        return formatted
+
+
+class TraceContext:
+    """Thread-local trace context for request tracing."""
+    _current_trace_id: Optional[str] = None
+    _current_phase: Optional[str] = None
+
+    @classmethod
+    def set_trace(cls, trace_id: str):
+        cls._current_trace_id = trace_id
+
+    @classmethod
+    def set_phase(cls, phase: str):
+        cls._current_phase = phase
+
+    @classmethod
+    def get_trace_id(cls) -> Optional[str]:
+        return cls._current_trace_id
+
+    @classmethod
+    def get_phase(cls) -> Optional[str]:
+        return cls._current_phase
+
+    @classmethod
+    def clear(cls):
+        cls._current_trace_id = None
+        cls._current_phase = None
+
+
+class ContextFilter(logging.Filter):
+    """Injects trace context into log records."""
+
+    def filter(self, record):
+        record.trace_id = TraceContext.get_trace_id()
+        record.phase = TraceContext.get_phase()
+        return True
+
+
+def setup_logging(log_level: str = "INFO", log_dir: str = ".gaadp/logs"):
+    """
+    Configure logging with console and file handlers.
+
+    Args:
+        log_level: Console log level (DEBUG, INFO, WARNING, ERROR)
+        log_dir: Directory for log files
+    """
+    # Create log directory
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Generate log filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = os.path.join(log_dir, f"gaadp_{timestamp}.jsonl")
+
+    # Get root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)  # Capture all levels
+
+    # Clear existing handlers
+    root_logger.handlers.clear()
+
+    # Console handler (human-readable)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(getattr(logging, log_level.upper()))
+    console_handler.setFormatter(ConsoleFormatter())
+    console_handler.addFilter(ContextFilter())
+    root_logger.addHandler(console_handler)
+
+    # File handler (structured JSON)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)  # Capture everything to file
+    file_handler.setFormatter(JSONFormatter())
+    file_handler.addFilter(ContextFilter())
+    root_logger.addHandler(file_handler)
+
+    # Log startup
+    logger = logging.getLogger("GAADP")
+    logger.info(f"Logging initialized. File: {log_file}")
+
+    return log_file
+
+
+# Initialize logging immediately
+LOG_FILE = setup_logging(
+    log_level=os.getenv("GAADP_LOG_LEVEL", "INFO")
+)
 from infrastructure.graph_db import GraphDB
 from infrastructure.version_control import GitController
 from infrastructure.sandbox import CodeSandbox
@@ -65,6 +208,17 @@ def get_requirement(interactive: bool = True) -> str:
 
 
 async def main(interactive: bool = True):
+    logger = logging.getLogger("GAADP.Main")
+
+    # Generate trace ID for this run
+    trace_id = uuid.uuid4().hex
+    TraceContext.set_trace(trace_id)
+    TraceContext.set_phase("INIT")
+
+    logger.info("=" * 60)
+    logger.info(f"GAADP RUN STARTED - Trace ID: {trace_id}")
+    logger.info("=" * 60)
+
     print("🚀 INITIALIZING GAADP PRODUCTION SWARM (FULL FEATURED)...")
 
     # Initialize core infrastructure
@@ -72,11 +226,14 @@ async def main(interactive: bool = True):
     memory = SemanticMemory()
     mcp_hub = MCPHub()
 
+    logger.info(f"Infrastructure initialized: GraphDB, SemanticMemory, MCPHub ({len(mcp_hub.list_all_tools())} tools)")
     print("🧠 Semantic Memory Online")
     print(f"🔧 MCP Hub Online ({len(mcp_hub.list_all_tools())} tools available)")
 
     # --- PHASE 0: GET REQUIREMENT ---
+    TraceContext.set_phase("REQUIREMENT")
     request = get_requirement(interactive)
+    logger.info(f"Requirement received: {request[:200]}...")
     print(f"\n📋 Requirement: {request[:100]}...")
 
     # --- PHASE 0.5: DOMAIN DISCOVERY ---
@@ -94,12 +251,16 @@ async def main(interactive: bool = True):
             loader.interactive_load()
 
     # --- PHASE 1: INITIALIZE AGENTS WITH MCP ---
+    TraceContext.set_phase("AGENT_INIT")
     architect = RealArchitect("arch_01", AgentRole.ARCHITECT, db, mcp_hub=mcp_hub)
     builder = RealBuilder("build_01", AgentRole.BUILDER, db, mcp_hub=mcp_hub)
     verifier = RealVerifier("verif_01", AgentRole.VERIFIER, db, mcp_hub=mcp_hub)
+    logger.info("Agents initialized: Architect, Builder, Verifier")
 
     # --- PHASE 2: INJECT REQUIREMENT ---
+    TraceContext.set_phase("INJECT_REQ")
     req_id = f"req_{uuid.uuid4().hex[:8]}"
+    logger.info(f"Injecting requirement node: {req_id}")
     print(f"\n📝 Injecting Root Requirement: {req_id}")
     db.add_node(req_id, NodeType.REQ, request)
 
@@ -107,8 +268,11 @@ async def main(interactive: bool = True):
     memory.embed_node(req_id, request)
 
     # --- PHASE 3: ARCHITECT PLANNING ---
+    TraceContext.set_phase("ARCHITECT")
+    logger.info("Architect processing started")
     print("🧠 Architect is thinking...")
     arch_output = await architect.process({"nodes": [{"content": request, "id": req_id}]})
+    logger.info(f"Architect output: {len(arch_output.get('new_nodes', []))} new nodes")
 
     plan_id, spec_id = None, None
     for n in arch_output.get('new_nodes', []):
@@ -123,9 +287,12 @@ async def main(interactive: bool = True):
             spec_id = node_id
 
     # --- PHASE 4: BUILDER EXECUTION ---
+    TraceContext.set_phase("BUILDER")
+    logger.info("Builder processing started")
     print("🔨 Builder is coding...")
     spec_content = arch_output.get('new_nodes', [{}])[0].get('content', request)
     build_output = await builder.process({"nodes": [{"content": spec_content, "id": spec_id}]})
+    logger.info(f"Builder output: type={build_output.get('type')}, content_len={len(build_output.get('content', ''))}")
 
     code_id = uuid.uuid4().hex
     db.add_node(
@@ -134,6 +301,7 @@ async def main(interactive: bool = True):
         build_output['content'],
         metadata=build_output.get('metadata', {})
     )
+    logger.info(f"Code node created: {code_id}")
     print(f"   > Generated Code ID: {code_id[:8]}...")
 
     # Embed code into semantic memory
@@ -141,13 +309,21 @@ async def main(interactive: bool = True):
     print(f"   > Embedded into Vector Space")
 
     # --- PHASE 5: VERIFICATION ---
+    TraceContext.set_phase("VERIFIER")
+    logger.info("Verifier processing started")
     print("⚖️ Verifier is judging...")
     verify_output = await verifier.process({
         "nodes": [{"id": code_id, "content": build_output['content']}]
     })
-    print(f"   > Verdict: {verify_output.get('verdict', 'UNKNOWN')}")
+    verdict = verify_output.get('verdict', 'UNKNOWN')
+    logger.info(f"Verifier verdict: {verdict}")
+    if verify_output.get('critique'):
+        logger.info(f"Verifier critique: {verify_output.get('critique')}")
+    print(f"   > Verdict: {verdict}")
 
     if verify_output.get('verdict') == 'PASS':
+        TraceContext.set_phase("MATERIALIZE")
+        logger.info("Verification PASSED - materializing code")
         print("✅ SUCCESS: Code Verified. Linking Chain...")
 
         # A. Get Previous Hash for Chain
@@ -156,8 +332,9 @@ async def main(interactive: bool = True):
         # B. Sign with Chain Context
         sig = verifier.sign_content(code_id, previous_hash=prev_hash)
 
-        # C. Update Graph
-        db.add_edge(code_id, code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
+        # C. Update Graph (verification edge from verifier to code, not self-referential)
+        verification_id = f"verify_{code_id[:8]}"
+        db.add_edge(verification_id, code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
         db.graph.nodes[code_id]['status'] = NodeStatus.VERIFIED.value
 
         # D. MATERIALIZE (Write to Disk)
@@ -173,21 +350,32 @@ async def main(interactive: bool = True):
         run_result = sandbox.run_code(file_path)
 
         if run_result['exit_code'] == 0:
+            logger.info(f"Sandbox execution SUCCESS: {run_result['stdout'][:100]}")
             print(f"🚀 Output: {run_result['stdout'][:200]}")
         else:
+            logger.warning(f"Sandbox execution FAILED: {run_result['stderr'][:200]}")
             print(f"⚠️ Execution issue: {run_result['stderr'][:200]}")
 
         # F. GIT COMMIT
         git = GitController()
         git.commit_work("builder_01", code_id, f"Implemented {file_path}")
+        logger.info(f"Git commit created for {file_path}")
         print("📦 Changes committed to Git")
 
     else:
+        TraceContext.set_phase("FAILED")
+        logger.warning(f"Verification FAILED: {verify_output.get('critique', 'No details')}")
         print("❌ FAILURE: Code rejected.")
         critique = verify_output.get('critique', 'No details provided')
         print(f"   Critique: {critique}")
 
     # --- FINAL: INTROSPECTION ---
+    TraceContext.set_phase("COMPLETE")
+    logger.info("=" * 60)
+    logger.info(f"GAADP RUN COMPLETED - Trace ID: {trace_id}")
+    logger.info(f"Final graph state: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
+    logger.info("=" * 60)
+
     introspect_graph(db)
 
     # Show semantic search capability

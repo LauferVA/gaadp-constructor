@@ -25,10 +25,10 @@ class CPGBuilder:
         graph = nx.DiGraph()
         root_id = f"code_{hash(file_path)}"
 
-        # Extract code elements
+        # Extract code elements (pass source_code for get_source_segment)
         imports = self._extract_imports(tree)
-        classes = self._extract_classes(tree)
-        functions = self._extract_functions(tree)
+        classes = self._extract_classes(tree, source_code)
+        functions = self._extract_functions(tree, source_code)
         calls = self._extract_calls(tree)
 
         # Add root node with source code and metadata
@@ -114,13 +114,14 @@ class CPGBuilder:
                     imports.append(node.module)
         return imports
 
-    def _extract_classes(self, tree: ast.AST) -> Dict[str, Dict[str, Any]]:
+    def _extract_classes(self, tree: ast.AST, source_code: str) -> Dict[str, Dict[str, Any]]:
         """
         Extract class definitions from the AST
-        
+
         Args:
             tree (ast.AST): Abstract Syntax Tree
-        
+            source_code (str): Original source code for extracting segments
+
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of class details
         """
@@ -132,17 +133,18 @@ class CPGBuilder:
                     'lineno': node.lineno,
                     'col_offset': node.col_offset,
                     'bases': [base.id for base in node.bases if isinstance(base, ast.Name)],
-                    'content': ast.get_source_segment(tree, node) or ''
+                    'content': ast.get_source_segment(source_code, node) or ''
                 }
         return classes
 
-    def _extract_functions(self, tree: ast.AST) -> Dict[str, Dict[str, Any]]:
+    def _extract_functions(self, tree: ast.AST, source_code: str) -> Dict[str, Dict[str, Any]]:
         """
         Extract function definitions from the AST
-        
+
         Args:
             tree (ast.AST): Abstract Syntax Tree
-        
+            source_code (str): Original source code for extracting segments
+
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of function details
         """
@@ -155,7 +157,7 @@ class CPGBuilder:
                     'col_offset': node.col_offset,
                     'is_async': isinstance(node, ast.AsyncFunctionDef),
                     'args': [arg.arg for arg in node.args.args],
-                    'content': ast.get_source_segment(tree, node) or ''
+                    'content': ast.get_source_segment(source_code, node) or ''
                 }
         return functions
 
