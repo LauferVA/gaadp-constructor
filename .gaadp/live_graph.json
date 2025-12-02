@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2025-12-02T21:38:50.497389",
+  "timestamp": "2025-12-02T21:47:33.366380",
   "graph": {
     "directed": true,
     "multigraph": false,
@@ -374,6 +374,247 @@
         },
         "created_at": "2025-12-02T21:38:50.492808",
         "id": "verify_81cf0e63"
+      },
+      {
+        "type": "REQ",
+        "status": "PENDING",
+        "content": "# GRAPH VISUALIZATION TEST\n# Tests that the generated artifacts can be visualized meaningfully.\n# Expected: Multiple interconnected nodes with clear relationships.\n\nPROJECT: Graph Visualization Test\nTARGET FILE(S): utils/graph_demo.py\n\n## CONTEXT\nThis test creates a more complex module to generate a rich graph structure\nthat demonstrates the visualization capabilities. The code should create\nmultiple classes with relationships that will be visible in graph exports.\n\n## OBJECTIVES\n1. Create a module with a class hierarchy (3+ levels)\n2. Include composition relationships (class A has-a class B)\n3. Include method calls between classes\n4. Include a factory pattern or similar structural pattern\n5. The module should demonstrate clear architectural relationships\n\n## CONSTRAINTS\n- Keep to standard library only\n- Use meaningful class and method names\n- Include docstrings for documentation\n- Code must be runnable (include a main block)\n\n## EXPECTED OUTPUT\nA module demonstrating patterns like:\n```python\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): pass\n\nclass Rectangle(Shape):\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nclass ShapeFactory:\n    @staticmethod\n    def create(shape_type, *args):\n        shapes = {\"rectangle\": Rectangle, \"square\": Square}\n        return shapes[shape_type](*args)\n\nclass Canvas:\n    def __init__(self):\n        self.shapes = []\n    def add_shape(self, shape):\n        self.shapes.append(shape)\n    def total_area(self):\n        return sum(s.area() for s in self.shapes)\n```\n\n## ACCEPTANCE CRITERIA\n- [ ] Code generates valid Python\n- [ ] CPG builder extracts class hierarchy\n- [ ] Visualization shows inheritance relationships\n- [ ] Visualization shows composition/reference relationships\n- [ ] HTML export is viewable in browser\n\n## ANTI-PATTERNS\n- Do NOT use complex metaclasses\n- Do NOT use multiple inheritance (keep it simple)\n- Do NOT create circular dependencies",
+        "metadata": {},
+        "created_at": "2025-12-02T21:40:53.183201",
+        "id": "req_70bfb759"
+      },
+      {
+        "type": "REQ",
+        "status": "PENDING",
+        "content": "# GRAPH VISUALIZATION TEST\n# Tests that the generated artifacts can be visualized meaningfully.\n# Expected: Multiple interconnected nodes with clear relationships.\n\nPROJECT: Graph Visualization Test\nTARGET FILE(S): utils/graph_demo.py\n\n## CONTEXT\nThis test creates a more complex module to generate a rich graph structure\nthat demonstrates the visualization capabilities. The code should create\nmultiple classes with relationships that will be visible in graph exports.\n\n## OBJECTIVES\n1. Create a module with a class hierarchy (3+ levels)\n2. Include composition relationships (class A has-a class B)\n3. Include method calls between classes\n4. Include a factory pattern or similar structural pattern\n5. The module should demonstrate clear architectural relationships\n\n## CONSTRAINTS\n- Keep to standard library only\n- Use meaningful class and method names\n- Include docstrings for documentation\n- Code must be runnable (include a main block)\n\n## EXPECTED OUTPUT\nA module demonstrating patterns like:\n```python\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): pass\n\nclass Rectangle(Shape):\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nclass ShapeFactory:\n    @staticmethod\n    def create(shape_type, *args):\n        shapes = {\"rectangle\": Rectangle, \"square\": Square}\n        return shapes[shape_type](*args)\n\nclass Canvas:\n    def __init__(self):\n        self.shapes = []\n    def add_shape(self, shape):\n        self.shapes.append(shape)\n    def total_area(self):\n        return sum(s.area() for s in self.shapes)\n```\n\n## ACCEPTANCE CRITERIA\n- [ ] Code generates valid Python\n- [ ] CPG builder extracts class hierarchy\n- [ ] Visualization shows inheritance relationships\n- [ ] Visualization shows composition/reference relationships\n- [ ] HTML export is viewable in browser\n\n## ANTI-PATTERNS\n- Do NOT use complex metaclasses\n- Do NOT use multiple inheritance (keep it simple)\n- Do NOT create circular dependencies",
+        "metadata": {},
+        "created_at": "2025-12-02T21:41:50.358762",
+        "id": "req_8ed02fd0"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create a graph visualization demo module (utils/graph_demo.py) that demonstrates:\n1. Class hierarchy with abstract base class and concrete implementations\n2. Composition relationships\n3. Method interactions\n4. Factory pattern\n5. Clear architectural relationships",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.051488",
+        "id": "95f088f397934a69b0807679a8619a29"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Define abstract base class Shape with abstract method area()",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.130318",
+        "id": "c60099e7efcf4ca7ba0070e7656ba282"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Rectangle class inheriting from Shape, with width and height attributes",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.438613",
+        "id": "3acd361716424d4c88a5cc00baccf0b3"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Square class inheriting from Rectangle, ensuring single-side initialization",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.460719",
+        "id": "35ff6b27b0924995b73c9e8d54c02fbc"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create ShapeFactory with static method to generate shape instances dynamically",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.482415",
+        "id": "88efd45a06aa4838bcde9b72eedf59ef"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Canvas class to demonstrate composition and aggregate shapes",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.504214",
+        "id": "1c96825740ec46d1a20847f86a63ba17"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Add main block to demonstrate usage of classes and factory",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.536728",
+        "id": "8e3f12cf799f41339a3f6552e7ef47e5"
+      },
+      {
+        "type": "TEST",
+        "status": "PENDING",
+        "content": "Verify module generates valid Python code",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.558061",
+        "id": "58e8d560979443b7a92b43693f4e11b5"
+      },
+      {
+        "type": "TEST",
+        "status": "PENDING",
+        "content": "Verify class hierarchy can be extracted by CPG builder",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.589778",
+        "id": "1c4d0ea6b513439c949865877e257b81"
+      },
+      {
+        "type": "TEST",
+        "status": "PENDING",
+        "content": "Ensure visualization shows inheritance and composition relationships",
+        "metadata": {},
+        "created_at": "2025-12-02T21:42:08.597248",
+        "id": "aba1c93c1904478cbeb938d1e26f00af"
+      },
+      {
+        "type": "REQ",
+        "status": "PENDING",
+        "content": "# GRAPH VISUALIZATION TEST\n# Tests that the generated artifacts can be visualized meaningfully.\n# Expected: Multiple interconnected nodes with clear relationships.\n\nPROJECT: Graph Visualization Test\nTARGET FILE(S): utils/graph_demo.py\n\n## CONTEXT\nThis test creates a more complex module to generate a rich graph structure\nthat demonstrates the visualization capabilities. The code should create\nmultiple classes with relationships that will be visible in graph exports.\n\n## OBJECTIVES\n1. Create a module with a class hierarchy (3+ levels)\n2. Include composition relationships (class A has-a class B)\n3. Include method calls between classes\n4. Include a factory pattern or similar structural pattern\n5. The module should demonstrate clear architectural relationships\n\n## CONSTRAINTS\n- Keep to standard library only\n- Use meaningful class and method names\n- Include docstrings for documentation\n- Code must be runnable (include a main block)\n\n## EXPECTED OUTPUT\nA module demonstrating patterns like:\n```python\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): pass\n\nclass Rectangle(Shape):\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nclass ShapeFactory:\n    @staticmethod\n    def create(shape_type, *args):\n        shapes = {\"rectangle\": Rectangle, \"square\": Square}\n        return shapes[shape_type](*args)\n\nclass Canvas:\n    def __init__(self):\n        self.shapes = []\n    def add_shape(self, shape):\n        self.shapes.append(shape)\n    def total_area(self):\n        return sum(s.area() for s in self.shapes)\n```\n\n## ACCEPTANCE CRITERIA\n- [ ] Code generates valid Python\n- [ ] CPG builder extracts class hierarchy\n- [ ] Visualization shows inheritance relationships\n- [ ] Visualization shows composition/reference relationships\n- [ ] HTML export is viewable in browser\n\n## ANTI-PATTERNS\n- Do NOT use complex metaclasses\n- Do NOT use multiple inheritance (keep it simple)\n- Do NOT create circular dependencies",
+        "metadata": {},
+        "created_at": "2025-12-02T21:44:25.926854",
+        "id": "req_adf71d5c"
+      },
+      {
+        "type": "REQ",
+        "status": "PENDING",
+        "content": "# GRAPH VISUALIZATION TEST\n# Tests that the generated artifacts can be visualized meaningfully.\n# Expected: Multiple interconnected nodes with clear relationships.\n\nPROJECT: Graph Visualization Test\nTARGET FILE(S): utils/graph_demo.py\n\n## CONTEXT\nThis test creates a more complex module to generate a rich graph structure\nthat demonstrates the visualization capabilities. The code should create\nmultiple classes with relationships that will be visible in graph exports.\n\n## OBJECTIVES\n1. Create a module with a class hierarchy (3+ levels)\n2. Include composition relationships (class A has-a class B)\n3. Include method calls between classes\n4. Include a factory pattern or similar structural pattern\n5. The module should demonstrate clear architectural relationships\n\n## CONSTRAINTS\n- Keep to standard library only\n- Use meaningful class and method names\n- Include docstrings for documentation\n- Code must be runnable (include a main block)\n\n## EXPECTED OUTPUT\nA module demonstrating patterns like:\n```python\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): pass\n\nclass Rectangle(Shape):\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nclass ShapeFactory:\n    @staticmethod\n    def create(shape_type, *args):\n        shapes = {\"rectangle\": Rectangle, \"square\": Square}\n        return shapes[shape_type](*args)\n\nclass Canvas:\n    def __init__(self):\n        self.shapes = []\n    def add_shape(self, shape):\n        self.shapes.append(shape)\n    def total_area(self):\n        return sum(s.area() for s in self.shapes)\n```\n\n## ACCEPTANCE CRITERIA\n- [ ] Code generates valid Python\n- [ ] CPG builder extracts class hierarchy\n- [ ] Visualization shows inheritance relationships\n- [ ] Visualization shows composition/reference relationships\n- [ ] HTML export is viewable in browser\n\n## ANTI-PATTERNS\n- Do NOT use complex metaclasses\n- Do NOT use multiple inheritance (keep it simple)\n- Do NOT create circular dependencies",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:36.534225",
+        "id": "req_a5f3128c"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create a graph demonstration module in utils/graph_demo.py that showcases class relationships and patterns",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.614585",
+        "id": "d06d79ad9edd4277aaea498cdd5241f7"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement abstract base class Shape with inheritance hierarchy",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.672661",
+        "id": "594e0dbe499b4127af4f7f136811b444"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create concrete shape classes (Rectangle, Square) inheriting from Shape",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.742058",
+        "id": "198c793637b441208fdf32f23112a892"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement ShapeFactory for creating shape instances",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.765388",
+        "id": "dc6b84702f5d4d35a9afa927b27a4ced"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create Canvas class to demonstrate composition and aggregation",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.788954",
+        "id": "90c66474892b46a899361ef622373e43"
+      },
+      {
+        "type": "PLAN",
+        "status": "PENDING",
+        "content": "1. Define Shape abstract base class\n2. Create Rectangle and Square concrete implementations\n3. Implement ShapeFactory\n4. Create Canvas with shape management\n5. Add main block for demonstration",
+        "metadata": {},
+        "created_at": "2025-12-02T21:45:53.796967",
+        "id": "2933b29f2f7441bbb0ed25593bc7b5fc"
+      },
+      {
+        "type": "REQ",
+        "status": "PENDING",
+        "content": "# GRAPH VISUALIZATION TEST\n# Tests that the generated artifacts can be visualized meaningfully.\n# Expected: Multiple interconnected nodes with clear relationships.\n\nPROJECT: Graph Visualization Test\nTARGET FILE(S): utils/graph_demo.py\n\n## CONTEXT\nThis test creates a more complex module to generate a rich graph structure\nthat demonstrates the visualization capabilities. The code should create\nmultiple classes with relationships that will be visible in graph exports.\n\n## OBJECTIVES\n1. Create a module with a class hierarchy (3+ levels)\n2. Include composition relationships (class A has-a class B)\n3. Include method calls between classes\n4. Include a factory pattern or similar structural pattern\n5. The module should demonstrate clear architectural relationships\n\n## CONSTRAINTS\n- Keep to standard library only\n- Use meaningful class and method names\n- Include docstrings for documentation\n- Code must be runnable (include a main block)\n\n## EXPECTED OUTPUT\nA module demonstrating patterns like:\n```python\nfrom abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    @abstractmethod\n    def area(self): pass\n\nclass Rectangle(Shape):\n    def __init__(self, width, height):\n        self.width = width\n        self.height = height\n    def area(self):\n        return self.width * self.height\n\nclass Square(Rectangle):\n    def __init__(self, side):\n        super().__init__(side, side)\n\nclass ShapeFactory:\n    @staticmethod\n    def create(shape_type, *args):\n        shapes = {\"rectangle\": Rectangle, \"square\": Square}\n        return shapes[shape_type](*args)\n\nclass Canvas:\n    def __init__(self):\n        self.shapes = []\n    def add_shape(self, shape):\n        self.shapes.append(shape)\n    def total_area(self):\n        return sum(s.area() for s in self.shapes)\n```\n\n## ACCEPTANCE CRITERIA\n- [ ] Code generates valid Python\n- [ ] CPG builder extracts class hierarchy\n- [ ] Visualization shows inheritance relationships\n- [ ] Visualization shows composition/reference relationships\n- [ ] HTML export is viewable in browser\n\n## ANTI-PATTERNS\n- Do NOT use complex metaclasses\n- Do NOT use multiple inheritance (keep it simple)\n- Do NOT create circular dependencies",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:05.397219",
+        "id": "req_582d603e"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create abstract base class Shape with abstract method area()",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.276798",
+        "id": "068f2bafe22449b2b587820e2d6ae9c5"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Rectangle class inheriting from Shape, with width, height, and area calculation",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.345982",
+        "id": "d344948008c34f52a7ef853f222b8ea8"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Square class inheriting from Rectangle, with side length constructor",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.368002",
+        "id": "ba2fd24bdebb430fb8b148c2cda3bed9"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Create ShapeFactory with static method to instantiate shapes dynamically",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.390143",
+        "id": "8c2a6eece4a845e3a2d39390006572a0"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Implement Canvas class to manage and calculate total area of shapes",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.454312",
+        "id": "16dab27357cf44989a6fd6cdee8d379d"
+      },
+      {
+        "type": "SPEC",
+        "status": "PENDING",
+        "content": "Add main block to demonstrate class interactions and factory usage",
+        "metadata": {},
+        "created_at": "2025-12-02T21:47:19.462119",
+        "id": "b66544c5fbfb4e8e8e31976f7247b66f"
+      },
+      {
+        "type": "CODE",
+        "status": "PENDING",
+        "content": "from abc import ABC, abstractmethod\n\nclass Shape(ABC):\n    \"\"\"Abstract base class representing a geometric shape.\"\"\"\n\n    @abstractmethod\n    def area(self):\n        \"\"\"Calculate and return the area of the shape.\n\n        This method must be implemented by all subclasses.\n\n        Returns:\n            float: The area of the shape.\n        \"\"\"\n        pass\n",
+        "metadata": {
+          "language": "python",
+          "file_path": "shape.py",
+          "dependencies": null,
+          "test_hints": null
+        },
+        "created_at": "2025-12-02T21:47:24.460440",
+        "id": "e1b37afd32604011a206ea175f25dfc4"
+      },
+      {
+        "type": "TEST",
+        "status": "PENDING",
+        "content": "{\"verdict\": \"PASS\", \"reasoning\": \"The Shape abstract base class is correctly implemented. It defines an abstract method area() that enforces subclasses to provide their own area calculation. The code follows Python's ABC module best practices and provides clear documentation.\", \"verified_aspects\": [\"Abstract base class definition\", \"Method signature\", \"Docstring quality\"], \"recommendations\": [\"Consider adding type hints for better type checking\", \"Ensure subclasses implement the area() method with the same signature\"], \"critique\": []}",
+        "metadata": {
+          "verdict": "PASS",
+          "verifier_id": "verif_01",
+          "code_id": "e1b37afd32604011a206ea175f25dfc4"
+        },
+        "created_at": "2025-12-02T21:47:33.363172",
+        "id": "verify_e1b37afd"
       }
     ],
     "edges": [
@@ -403,12 +644,21 @@
         "created_at": "2025-12-02T21:38:50.497282",
         "source": "verify_81cf0e63",
         "target": "81cf0e63d62a4f58a694f206bec4f83b"
+      },
+      {
+        "type": "VERIFIES",
+        "signed_by": "verif_01",
+        "signature": "0eaed61aecbcf8de168abf46fee854a3bcb2e41d8ebf02e9a649569773f8390028cb2866c532b86300929a24cfec3fbdef59aaeae6ea895cc1828b44a867370e",
+        "previous_hash": "8ea7480046c3a02d2078987483deb74d46fbfb33ff6955e8e6314bd7f940343bccb5cf33213e2b010d38188a16e678a5581a243db8fe639e0b9f49a4f24db504",
+        "created_at": "2025-12-02T21:47:33.366300",
+        "source": "verify_e1b37afd",
+        "target": "e1b37afd32604011a206ea175f25dfc4"
       }
     ]
   },
   "metadata": {
-    "node_count": 42,
-    "edge_count": 3
+    "node_count": 71,
+    "edge_count": 4
   },
-  "checksum": "b854663149a39105c2743ffb4aaedc42a4c58d18be6dbb53c2cb6ca3d8c862c0"
+  "checksum": "1ebb9ff36e72e5b11f9e53a01ad1d47c0e09c92d681517c6f5b0eee7016dc3f0"
 }

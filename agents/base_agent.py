@@ -125,24 +125,81 @@ class BaseAgent(ABC):
         Returns:
             The object with any JSON strings parsed into proper objects
         """
+        import re
+
         if isinstance(obj, str):
             # Try to parse as JSON - handle both raw and escaped strings
             stripped = obj.strip()
 
-            # Check if it looks like JSON
+            # Strip trailing XML-like tags (common LLM artifact)
+            # e.g., "]\n</invoke>" or "}\n</function_call>"
+            stripped = re.sub(r'\s*</[a-zA-Z_][a-zA-Z0-9_-]*>\s*$', '', stripped)
+
+            # Check if it looks like JSON (object or array)
             if (stripped.startswith('{') and stripped.endswith('}')) or \
                (stripped.startswith('[') and stripped.endswith(']')):
-                try:
-                    parsed = json.loads(obj)
-                    return self._parse_nested_json(parsed)
-                except json.JSONDecodeError:
-                    # Try unescaping common escape sequences
+                # Try multiple parsing strategies
+                attempts = [
+                    stripped,  # Cleaned version (XML tags removed)
+                    obj,  # Original
+                    stripped.replace('\\n', '\n').replace('\\t', '\t'),  # Common escapes on cleaned
+                ]
+
+                # Handle LLM using Python triple-quotes instead of JSON strings
+                # Convert '''content''' or \"\"\"content\"\"\" to proper JSON
+                if "'''" in stripped or '"""' in stripped:
+                    fixed = stripped
+                    # Match '''...''' or """...""" and replace with escaped content
+                    for quote in ["'''", '"""']:
+                        pattern = re.escape(quote) + r'(.*?)' + re.escape(quote)
+                        matches = list(re.finditer(pattern, fixed, re.DOTALL))
+                        for match in reversed(matches):  # Reverse to preserve indices
+                            content = match.group(1)
+                            # Escape for JSON: newlines, quotes, backslashes
+                            escaped = content.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\t', '\\t')
+                            fixed = fixed[:match.start()] + '"' + escaped + '"' + fixed[match.end():]
+                    attempts.append(fixed)
+
+                # Try unicode unescape
+                if '\\' in stripped:
                     try:
-                        unescaped = obj.encode().decode('unicode_escape')
-                        parsed = json.loads(unescaped)
+                        attempts.append(stripped.encode().decode('unicode_escape'))
+                    except UnicodeDecodeError:
+                        pass
+
+                # Handle unescaped newlines inside JSON string values
+                # This is common when LLM outputs multiline code in "content" field
+                def fix_unescaped_newlines(text: str) -> str:
+                    """Escape newlines that appear inside JSON string values."""
+                    result = []
+                    in_string = False
+                    i = 0
+                    while i < len(text):
+                        char = text[i]
+                        if char == '"' and (i == 0 or text[i-1] != '\\'):
+                            in_string = not in_string
+                            result.append(char)
+                        elif char == '\n' and in_string:
+                            result.append('\\n')
+                        elif char == '\t' and in_string:
+                            result.append('\\t')
+                        else:
+                            result.append(char)
+                        i += 1
+                    return ''.join(result)
+
+                attempts.append(fix_unescaped_newlines(stripped))
+
+                for attempt, text in enumerate(attempts):
+                    try:
+                        parsed = json.loads(text)
+                        self.logger.debug(f"Parsed nested JSON on attempt {attempt + 1}")
                         return self._parse_nested_json(parsed)
                     except (json.JSONDecodeError, UnicodeDecodeError):
-                        return obj
+                        continue
+
+                # If all parsing failed, return as-is
+                self.logger.warning(f"Failed to parse nested JSON string: {obj[:100]}...")
             return obj
         elif isinstance(obj, dict):
             return {k: self._parse_nested_json(v) for k, v in obj.items()}
