@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 GAADP PRODUCTION RUNTIME (Full Featured)
-Includes: Domain Discovery, Data Loading, MCP Tools, RBAC
+Includes: Domain Discovery, Data Loading, MCP Tools, RBAC, Socratic Research
 """
 # Disable tokenizer parallelism warning BEFORE any other imports
 import os
@@ -12,8 +12,9 @@ import uuid
 import subprocess
 import logging
 import json
+import argparse
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 import networkx as nx
 
 # =============================================================================
@@ -163,6 +164,9 @@ from infrastructure.mcp_hub import MCPHub
 from core.domain_discovery import DomainResearcher
 from agents.concrete_agents import RealArchitect, RealBuilder, RealVerifier
 from core.ontology import AgentRole, NodeType, EdgeType, NodeStatus
+from requirements.socratic_agent import InteractiveSocraticPhase, DevelopmentSocraticPhase, SocraticConfig
+from orchestration.dependency_resolver import DependencyResolver, resolve_architect_output, CyclicDependencyError
+from orchestration.escalation_controller import EscalationController, EscalationLevel
 
 # Check for API keys (skip if using manual mode)
 if os.getenv("LLM_PROVIDER", "").lower() != "manual":
@@ -207,7 +211,22 @@ def get_requirement(interactive: bool = True) -> str:
     return "Create a Python function that calculates the Fibonacci sequence recursively with memoization."
 
 
-async def main(interactive: bool = True):
+async def main(
+    interactive: bool = True,
+    socratic_mode: Literal["interactive", "development", "skip"] = "skip",
+    source_path: Optional[str] = None
+):
+    """
+    Main GAADP production runtime.
+
+    Args:
+        interactive: Whether to prompt for user input
+        socratic_mode: How to handle the Socratic research phase:
+            - "interactive": Ask user clarifying questions before development
+            - "development": Auto-extract specs from existing source code (for benchmarking)
+            - "skip": Skip Socratic phase entirely (current default behavior)
+        source_path: For development mode - path to source code to analyze
+    """
     logger = logging.getLogger("GAADP.Main")
 
     # Generate trace ID for this run
@@ -217,6 +236,7 @@ async def main(interactive: bool = True):
 
     logger.info("=" * 60)
     logger.info(f"GAADP RUN STARTED - Trace ID: {trace_id}")
+    logger.info(f"Socratic Mode: {socratic_mode}")
     logger.info("=" * 60)
 
     print("🚀 INITIALIZING GAADP PRODUCTION SWARM (FULL FEATURED)...")
@@ -249,6 +269,62 @@ async def main(interactive: bool = True):
         if do_data == 'y':
             loader = DataLoader(db)
             loader.interactive_load()
+
+    # --- PHASE 0.9: SOCRATIC RESEARCH / DEVELOPMENT SPEC PHASE ---
+    TraceContext.set_phase("SOCRATIC")
+    enriched_request = request  # May be enriched by Socratic phase
+    socratic_artifacts = {}  # Store any artifacts from Socratic phase
+
+    if socratic_mode == "interactive":
+        # Interactive Socratic phase: ask user clarifying questions
+        logger.info("Starting Interactive Socratic Phase")
+        print("\n🎓 SOCRATIC RESEARCH PHASE")
+        print("   Analyzing requirement for ambiguities...")
+
+        socratic_config = SocraticConfig(
+            max_questions=5,
+            question_timeout=120,
+            min_confidence=0.7
+        )
+        socratic_phase = InteractiveSocraticPhase(db, source_path or ".")
+        socratic_result = await socratic_phase.run(request, config=socratic_config)
+
+        if socratic_result.get("enriched_requirement"):
+            enriched_request = socratic_result["enriched_requirement"]
+            logger.info(f"Requirement enriched with {len(socratic_result.get('clarifications', []))} clarifications")
+            print(f"   ✅ Requirement enriched with {len(socratic_result.get('clarifications', []))} clarifications")
+
+        socratic_artifacts = socratic_result
+        logger.info(f"Socratic phase complete: confidence={socratic_result.get('confidence', 'N/A')}")
+
+    elif socratic_mode == "development":
+        # Development Spec phase: auto-extract specs from existing code
+        logger.info("Starting Development Specification Phase")
+        print("\n🔬 DEVELOPMENT SPECIFICATION PHASE")
+        print(f"   Analyzing source code at: {source_path or '.'}")
+
+        socratic_phase = DevelopmentSocraticPhase(db, source_path or ".")
+        socratic_result = await socratic_phase.run(request)
+
+        if socratic_result.get("enriched_requirement"):
+            enriched_request = socratic_result["enriched_requirement"]
+            specs_found = len(socratic_result.get("extracted_specs", []))
+            logger.info(f"Extracted {specs_found} specifications from existing code")
+            print(f"   ✅ Extracted {specs_found} specifications from existing code")
+
+            # Log what was discovered
+            for spec in socratic_result.get("extracted_specs", [])[:5]:
+                print(f"      - {spec.get('file_path', 'unknown')}: {len(spec.get('components', []))} components")
+
+        socratic_artifacts = socratic_result
+        logger.info(f"Development spec phase complete: {len(socratic_result.get('extracted_specs', []))} files analyzed")
+
+    else:
+        # Skip Socratic phase entirely
+        logger.info("Socratic phase skipped (mode=skip)")
+
+    # Use enriched request for downstream phases
+    request = enriched_request
 
     # --- PHASE 1: INITIALIZE AGENTS WITH MCP ---
     TraceContext.set_phase("AGENT_INIT")
@@ -327,169 +403,312 @@ async def main(interactive: bool = True):
 
     logger.info(f"Graph after Architect: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
 
+    # --- PHASE 3.5: RESOLVE BUILD ORDER FROM DEPENDS_ON EDGES ---
+    TraceContext.set_phase("DEPENDENCY_RESOLUTION")
+
+    # Build a resolver with all SPEC nodes
+    spec_data_map = {}  # Maps spec_id -> node data
+    for idx, n in enumerate(arch_output.get('new_nodes', [])):
+        if n.get('type') == 'SPEC':
+            actual_id = node_id_map.get(f"new_{idx}", node_id_map.get(idx))
+            spec_data_map[actual_id] = n
+
+    # Resolve build order using DEPENDS_ON edges
+    if spec_ids:
+        try:
+            build_order, build_waves = resolve_architect_output(
+                arch_output.get('new_nodes', []),
+                arch_output.get('new_edges', []),
+                node_id_map
+            )
+            logger.info(f"Resolved build order: {len(build_order)} specs in {len(build_waves)} waves")
+            print(f"\n📊 Build Order Resolved: {len(spec_ids)} specs")
+            for wave_idx, wave in enumerate(build_waves):
+                wave_display = [f"{sid[:8]}..." for sid in wave]
+                print(f"   Wave {wave_idx}: {wave_display}")
+        except CyclicDependencyError as e:
+            logger.error(f"Cyclic dependency detected: {e.cycle}")
+            print(f"⚠️ WARNING: Cyclic dependency detected - using original order")
+            build_order = spec_ids
+            build_waves = [spec_ids]
+    else:
+        build_order = spec_ids
+        build_waves = [spec_ids] if spec_ids else []
+
     # --- PHASE 4 & 5: BUILD → VERIFY LOOP (with retry/feedback) ---
+    # Now iterate through specs in dependency order
     MAX_BUILD_RETRIES = 3
     ESCALATE_AFTER = 2  # After this many failures, go back to Architect
+    MAX_ARCHITECT_REPLANS = 2  # Max Architect re-plans per spec before giving up
 
-    spec_content = arch_output.get('new_nodes', [{}])[0].get('content', request)
-    feedback_context = ""  # Accumulates critique for retries
-    verified = False
-    final_code_id = None
-    final_build_output = None
+    all_verified = True
+    built_artifacts = {}  # Maps spec_id -> code_id for dependency tracking
 
-    for attempt in range(MAX_BUILD_RETRIES):
-        # --- PHASE 4: BUILDER EXECUTION ---
-        TraceContext.set_phase("BUILDER")
-        attempt_label = f"(attempt {attempt + 1}/{MAX_BUILD_RETRIES})" if attempt > 0 else ""
-        logger.info(f"Builder processing started {attempt_label}")
-        print(f"🔨 Builder is coding... {attempt_label}")
+    # Initialize escalation controller for failure tracking
+    escalation_controller = EscalationController(
+        max_retries=MAX_BUILD_RETRIES,
+        escalate_after=ESCALATE_AFTER,
+        max_architect_attempts=MAX_ARCHITECT_REPLANS
+    )
 
-        # Include feedback from previous failure if any
-        builder_context = spec_content
-        if feedback_context:
-            builder_context = f"""{spec_content}
+    for wave_idx, wave in enumerate(build_waves):
+        TraceContext.set_phase(f"BUILD_WAVE_{wave_idx}")
+        logger.info(f"Processing build wave {wave_idx + 1}/{len(build_waves)}: {len(wave)} specs")
+        print(f"\n🔨 BUILD WAVE {wave_idx + 1}/{len(build_waves)}")
+
+        for current_spec_id in wave:
+            # Get spec content
+            spec_node = spec_data_map.get(current_spec_id)
+            if not spec_node:
+                # Fall back to graph lookup
+                spec_content = db.graph.nodes.get(current_spec_id, {}).get('content', request)
+            else:
+                spec_content = spec_node.get('content', request)
+
+            # Register spec with escalation controller
+            escalation_ctx = escalation_controller.get_or_create_context(
+                spec_id=current_spec_id,
+                spec_content=spec_content,
+                requirement_id=req_id
+            )
+
+            # Add context about already-built dependencies
+            dependency_context = ""
+            deps = db.graph.predecessors(current_spec_id) if current_spec_id in db.graph else []
+            built_deps = [(d, built_artifacts.get(d)) for d in deps if d in built_artifacts]
+            if built_deps:
+                dep_info = "\n".join([f"- {d[:8]}... -> code: {c[:8]}..." for d, c in built_deps])
+                dependency_context = f"\n\n[AVAILABLE DEPENDENCIES (already built)]:\n{dep_info}"
+
+            feedback_context = ""  # Accumulates critique for retries
+            verified = False
+            final_code_id = None
+            final_build_output = None
+            current_spec_content = spec_content  # May be updated by Architect re-plan
+
+            print(f"\n   📋 Building SPEC: {current_spec_id[:8]}...")
+
+            for attempt in range(MAX_BUILD_RETRIES):
+                # --- PHASE 4: BUILDER EXECUTION ---
+                TraceContext.set_phase("BUILDER")
+                attempt_label = f"(attempt {attempt + 1}/{MAX_BUILD_RETRIES})" if attempt > 0 else ""
+                logger.info(f"Builder processing spec {current_spec_id[:8]} {attempt_label}")
+                print(f"      🔨 Building... {attempt_label}")
+
+                # Include feedback from previous failure if any
+                builder_context = current_spec_content + dependency_context
+                if feedback_context:
+                    builder_context = f"""{current_spec_content}{dependency_context}
 
 [FEEDBACK FROM PREVIOUS ATTEMPT]:
 {feedback_context}
 
 Please fix the issues mentioned above and try again."""
 
-        build_output = await builder.process({"nodes": [{"content": builder_context, "id": spec_id}]})
-        logger.info(f"Builder output: type={build_output.get('type')}, content_len={len(build_output.get('content', ''))}")
+                build_output = await builder.process({"nodes": [{"content": builder_context, "id": current_spec_id}]})
+                logger.info(f"Builder output: type={build_output.get('type')}, content_len={len(build_output.get('content', ''))}")
 
-        code_id = uuid.uuid4().hex
-        db.add_node(
-            code_id,
-            NodeType(build_output['type']),
-            build_output['content'],
-            metadata={**build_output.get('metadata', {}), "attempt": attempt + 1}
-        )
-        logger.info(f"Code node created: {code_id}")
-        print(f"   > Generated Code ID: {code_id[:8]}...")
+                code_id = uuid.uuid4().hex
+                db.add_node(
+                    code_id,
+                    NodeType(build_output['type']),
+                    build_output['content'],
+                    metadata={**build_output.get('metadata', {}), "attempt": attempt + 1, "spec_id": current_spec_id}
+                )
+                logger.info(f"Code node created: {code_id}")
+                print(f"      > Generated Code ID: {code_id[:8]}...")
 
-        # === EDGE: CODE --[IMPLEMENTS]--> SPEC ===
-        if spec_id:
-            sig = builder.sign_content(code_id, previous_hash=spec_id)
-            db.add_edge(code_id, spec_id, EdgeType.IMPLEMENTS, builder.agent_id, sig)
-            logger.info(f"Created edge: {code_id[:8]} --[IMPLEMENTS]--> {spec_id[:8]}")
+                # === EDGE: CODE --[IMPLEMENTS]--> SPEC ===
+                sig = builder.sign_content(code_id, previous_hash=current_spec_id)
+                db.add_edge(code_id, current_spec_id, EdgeType.IMPLEMENTS, builder.agent_id, sig)
+                logger.info(f"Created edge: {code_id[:8]} --[IMPLEMENTS]--> {current_spec_id[:8]}")
 
-        # === EDGE: CODE --[TRACES_TO]--> REQ (for full traceability) ===
-        sig = builder.sign_content(code_id, previous_hash=req_id)
-        db.add_edge(code_id, req_id, EdgeType.TRACES_TO, builder.agent_id, sig)
-        logger.debug(f"Created edge: {code_id[:8]} --[TRACES_TO]--> {req_id}")
+                # === EDGE: CODE --[TRACES_TO]--> REQ (for full traceability) ===
+                sig = builder.sign_content(code_id, previous_hash=req_id)
+                db.add_edge(code_id, req_id, EdgeType.TRACES_TO, builder.agent_id, sig)
+                logger.debug(f"Created edge: {code_id[:8]} --[TRACES_TO]--> {req_id}")
 
-        logger.info(f"Graph after Builder: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
+                logger.info(f"Graph after Builder: {db.graph.number_of_nodes()} nodes, {db.graph.number_of_edges()} edges")
 
-        # Embed code into semantic memory
-        memory.embed_node(code_id, build_output['content'])
-        print(f"   > Embedded into Vector Space")
+                # Embed code into semantic memory
+                memory.embed_node(code_id, build_output['content'])
 
-        # --- PHASE 5: VERIFICATION ---
-        TraceContext.set_phase("VERIFIER")
-        logger.info("Verifier processing started")
-        print("⚖️ Verifier is judging...")
-        verify_output = await verifier.process({
-            "nodes": [{"id": code_id, "content": build_output['content']}]
-        })
-        verdict = verify_output.get('verdict', 'UNKNOWN')
-        logger.info(f"Verifier verdict: {verdict}")
-        if verify_output.get('critique'):
-            logger.info(f"Verifier critique: {verify_output.get('critique')}")
-        print(f"   > Verdict: {verdict}")
+                # --- PHASE 5: VERIFICATION ---
+                TraceContext.set_phase("VERIFIER")
+                logger.info("Verifier processing started")
+                print(f"      ⚖️ Verifying...")
+                verify_output = await verifier.process({
+                    "nodes": [{"id": code_id, "content": build_output['content']}]
+                })
+                verdict = verify_output.get('verdict', 'UNKNOWN')
+                logger.info(f"Verifier verdict: {verdict}")
+                if verify_output.get('critique'):
+                    logger.info(f"Verifier critique: {verify_output.get('critique')}")
+                print(f"      > Verdict: {verdict}")
 
-        if verdict == 'PASS':
-            verified = True
-            final_code_id = code_id
-            final_build_output = build_output
-            break  # Success! Exit the retry loop
-        else:
-            # FAILED: Mark code node, store critique, prepare for retry
-            critique = verify_output.get('critique', 'No details provided')
-            issues = verify_output.get('issues', [])
-            issues_text = "\n".join([f"- [{i.get('severity', 'error')}] {i.get('description', '')}" for i in issues]) if issues else critique
+                if verdict == 'PASS':
+                    verified = True
+                    final_code_id = code_id
+                    final_build_output = build_output
+                    break  # Success! Exit the retry loop
+                else:
+                    # FAILED: Mark code node, store critique, prepare for retry
+                    critique = verify_output.get('critique', 'No details provided')
+                    issues = verify_output.get('issues', [])
+                    issues_text = "\n".join([f"- [{i.get('severity', 'error')}] {i.get('description', '')}" for i in issues]) if issues else str(critique)
 
-            db.graph.nodes[code_id]['status'] = NodeStatus.FAILED.value
-            db.graph.nodes[code_id]['critique'] = critique
+                    db.graph.nodes[code_id]['status'] = NodeStatus.FAILED.value
+                    db.graph.nodes[code_id]['critique'] = critique
 
-            # Create FEEDBACK edge from failed CODE to SPEC
-            if spec_id:
-                feedback_sig = f"feedback_{code_id[:8]}"
-                db.add_edge(code_id, spec_id, EdgeType.FEEDBACK, "feedback_controller", feedback_sig)
-                logger.info(f"Created FEEDBACK edge: {code_id[:8]} --[FEEDBACK]--> {spec_id[:8]}")
+                    # Create FEEDBACK edge from failed CODE to SPEC
+                    feedback_sig = f"feedback_{code_id[:8]}"
+                    db.add_edge(code_id, current_spec_id, EdgeType.FEEDBACK, "feedback_controller", feedback_sig)
+                    logger.info(f"Created FEEDBACK edge: {code_id[:8]} --[FEEDBACK]--> {current_spec_id[:8]}")
 
-            logger.warning(f"Verification FAILED (attempt {attempt + 1}): {critique[:100]}...")
-            print(f"❌ FAILED (attempt {attempt + 1}/{MAX_BUILD_RETRIES})")
-            print(f"   Critique: {critique[:200]}...")
+                    # Record failure in escalation controller
+                    escalation_level = escalation_controller.record_failure(
+                        spec_id=current_spec_id,
+                        code_id=code_id,
+                        verify_output=verify_output
+                    )
 
-            # Accumulate feedback for next attempt
-            feedback_context = f"""Attempt {attempt + 1} failed with these issues:
+                    logger.warning(f"Verification FAILED (attempt {attempt + 1}): {str(critique)[:100]}...")
+                    print(f"      ❌ FAILED (attempt {attempt + 1}/{MAX_BUILD_RETRIES})")
+
+                    # Accumulate feedback for next attempt
+                    feedback_context = f"""Attempt {attempt + 1} failed with these issues:
 {issues_text}
 
 Verifier reasoning: {verify_output.get('reasoning', 'N/A')}"""
 
-            # Check if we should escalate to Architect
-            if attempt + 1 >= ESCALATE_AFTER and attempt + 1 < MAX_BUILD_RETRIES:
-                logger.warning(f"Multiple failures - would escalate to Architect (not implemented in simple flow)")
-                print(f"⚠️ Multiple failures detected - retrying with accumulated feedback")
+                    # Check escalation level and act accordingly
+                    if escalation_level == EscalationLevel.ARCHITECT:
+                        logger.warning(f"Escalating to Architect for spec {current_spec_id[:8]}")
+                        print(f"      ⚠️ Escalating to Architect for re-planning...")
 
-    # --- POST-LOOP: Handle final result ---
-    if verified and final_code_id and final_build_output:
-        TraceContext.set_phase("MATERIALIZE")
-        logger.info("Verification PASSED - materializing code")
-        print("✅ SUCCESS: Code Verified. Linking Chain...")
+                        # Execute Architect escalation
+                        TraceContext.set_phase("ARCHITECT_ESCALATION")
+                        escalation_result = await escalation_controller.execute_escalation(
+                            spec_id=current_spec_id,
+                            level=escalation_level,
+                            architect_agent=architect,
+                            db=db
+                        )
 
-        # A. Get Previous Hash for Chain
-        prev_hash = db.get_last_node_hash()
+                        if escalation_result.get("action") == "REPLAN":
+                            # Architect produced new nodes - extract new spec content
+                            arch_output_new = escalation_result.get("architect_output", {})
+                            new_nodes = arch_output_new.get("new_nodes", [])
+                            if new_nodes:
+                                # Use the first SPEC node from Architect's new output
+                                for node in new_nodes:
+                                    if node.get("type") == "SPEC":
+                                        current_spec_content = node.get("content", current_spec_content)
+                                        logger.info(f"Architect provided revised spec for {current_spec_id[:8]}")
+                                        print(f"      🔄 Architect revised the specification")
+                                        break
+                        elif escalation_result.get("action") == "HUMAN_INTERVENTION_REQUIRED":
+                            logger.error(f"Human intervention required for spec {current_spec_id[:8]}")
+                            print(f"      🚨 HUMAN INTERVENTION REQUIRED")
+                            print(f"         {escalation_result.get('message', 'System cannot solve this')}")
+                            break  # Exit retry loop for this spec
 
-        # B. Sign with Chain Context
-        sig = verifier.sign_content(final_code_id, previous_hash=prev_hash)
+                    elif escalation_level == EscalationLevel.HUMAN:
+                        logger.error(f"Human intervention required for spec {current_spec_id[:8]}")
+                        print(f"      🚨 HUMAN INTERVENTION REQUIRED")
+                        escalation_result = await escalation_controller.execute_escalation(
+                            spec_id=current_spec_id,
+                            level=escalation_level
+                        )
+                        print(f"         Patterns: {escalation_result.get('patterns', [])}")
+                        break  # Exit retry loop
 
-        # C. Create verification node and link to code
-        verification_id = f"verify_{final_code_id[:8]}"
-        db.add_node(
-            verification_id,
-            NodeType.TEST,  # Verification is a TEST-type node
-            json.dumps(verify_output),  # Store the verification output
-            metadata={
-                "verdict": verdict,
-                "verifier_id": verifier.agent_id,
-                "code_id": final_code_id,
-                "attempts": attempt + 1
-            }
-        )
-        db.add_edge(verification_id, final_code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
-        db.graph.nodes[final_code_id]['status'] = NodeStatus.VERIFIED.value
+            # --- POST-SPEC: Handle result for this spec ---
+            if verified and final_code_id and final_build_output:
+                # Track successful build for dependency context
+                built_artifacts[current_spec_id] = final_code_id
 
-        # D. MATERIALIZE (Write to Disk)
-        file_path = final_build_output.get('metadata', {}).get('file_path', 'generated_output.py')
-        os.makedirs(os.path.dirname(file_path) if os.path.dirname(file_path) else '.', exist_ok=True)
-        with open(file_path, "w") as f:
-            f.write(final_build_output['content'])
-        print(f"💾 Saved to disk: {file_path}")
+                TraceContext.set_phase("MATERIALIZE")
+                logger.info(f"Verification PASSED for spec {current_spec_id[:8]} - materializing code")
+                print(f"      ✅ SUCCESS: Code Verified")
 
-        # E. SANDBOX EXECUTION
-        print("⚙️ Executing Code in Sandbox...")
-        sandbox = CodeSandbox(use_docker=False)
-        run_result = sandbox.run_code(file_path)
+                # A. Get Previous Hash for Chain
+                prev_hash = db.get_last_node_hash()
 
-        if run_result['exit_code'] == 0:
-            logger.info(f"Sandbox execution SUCCESS: {run_result['stdout'][:100]}")
-            print(f"🚀 Output: {run_result['stdout'][:200]}")
-        else:
-            logger.warning(f"Sandbox execution FAILED: {run_result['stderr'][:200]}")
-            print(f"⚠️ Execution issue: {run_result['stderr'][:200]}")
+                # B. Sign with Chain Context
+                sig = verifier.sign_content(final_code_id, previous_hash=prev_hash)
 
-        # F. GIT COMMIT
+                # C. Create verification node and link to code
+                verification_id = f"verify_{final_code_id[:8]}"
+                db.add_node(
+                    verification_id,
+                    NodeType.TEST,  # Verification is a TEST-type node
+                    json.dumps(verify_output),  # Store the verification output
+                    metadata={
+                        "verdict": verdict,
+                        "verifier_id": verifier.agent_id,
+                        "code_id": final_code_id,
+                        "spec_id": current_spec_id,
+                        "attempts": attempt + 1
+                    }
+                )
+                db.add_edge(verification_id, final_code_id, EdgeType.VERIFIES, verifier.agent_id, sig, previous_hash=prev_hash)
+                db.graph.nodes[final_code_id]['status'] = NodeStatus.VERIFIED.value
+
+                # D. MATERIALIZE (Write to Disk)
+                file_path = final_build_output.get('metadata', {}).get('file_path', f'generated_{current_spec_id[:8]}.py')
+                os.makedirs(os.path.dirname(file_path) if os.path.dirname(file_path) else '.', exist_ok=True)
+                with open(file_path, "w") as f:
+                    f.write(final_build_output['content'])
+                print(f"      💾 Saved: {file_path}")
+
+            else:
+                all_verified = False
+                logger.error(f"All {MAX_BUILD_RETRIES} attempts failed for spec {current_spec_id[:8]}")
+                print(f"      ❌ FINAL FAILURE for spec {current_spec_id[:8]}")
+
+    # --- POST-BUILD: Final summary ---
+    TraceContext.set_phase("POST_BUILD")
+    if all_verified and built_artifacts:
+        print(f"\n✅ ALL SPECS VERIFIED: {len(built_artifacts)} artifacts built")
+
+        # SANDBOX EXECUTION (run the last/main artifact)
+        if final_build_output:
+            print("⚙️ Executing Code in Sandbox...")
+            sandbox = CodeSandbox(use_docker=False)
+            file_path = final_build_output.get('metadata', {}).get('file_path', 'generated_output.py')
+            run_result = sandbox.run_code(file_path)
+
+            if run_result['exit_code'] == 0:
+                logger.info(f"Sandbox execution SUCCESS: {run_result['stdout'][:100]}")
+                print(f"🚀 Output: {run_result['stdout'][:200]}")
+            else:
+                logger.warning(f"Sandbox execution FAILED: {run_result['stderr'][:200]}")
+                print(f"⚠️ Execution issue: {run_result['stderr'][:200]}")
+
+        # GIT COMMIT (commit all built artifacts)
         git = GitController()
-        git.commit_work("builder_01", final_code_id, f"Implemented {file_path}")
-        logger.info(f"Git commit created for {file_path}")
+        artifact_summary = ", ".join([f"{sid[:8]}" for sid in built_artifacts.keys()])
+        git.commit_work("builder_01", list(built_artifacts.values())[0], f"Implemented specs: {artifact_summary}")
+        logger.info(f"Git commit created for {len(built_artifacts)} artifacts")
         print("📦 Changes committed to Git")
 
+    elif built_artifacts:
+        failed_count = len(spec_ids) - len(built_artifacts)
+        print(f"\n⚠️ PARTIAL SUCCESS: {len(built_artifacts)}/{len(spec_ids)} specs verified, {failed_count} failed")
     else:
-        TraceContext.set_phase("FAILED")
-        logger.error(f"All {MAX_BUILD_RETRIES} attempts failed - giving up")
-        print(f"❌ FINAL FAILURE: All {MAX_BUILD_RETRIES} attempts failed.")
-        print(f"   Last critique: {feedback_context[:300]}...")
+        print(f"\n❌ COMPLETE FAILURE: No specs were successfully verified")
+
+    # --- ESCALATION STATS ---
+    escalation_stats = escalation_controller.get_stats()
+    if escalation_stats['total_failures'] > 0:
+        print(f"\n📊 ESCALATION SUMMARY:")
+        print(f"   Total failures: {escalation_stats['total_failures']}")
+        print(f"   Architect escalations: {escalation_stats['architect_escalations']}")
+        print(f"   Human escalations: {escalation_stats['human_escalations']}")
+        if escalation_stats['success_after_escalation'] > 0:
+            print(f"   ✅ Success after Architect re-plan: {escalation_stats['success_after_escalation']}")
+        logger.info(f"Escalation stats: {escalation_stats}")
 
     # --- FINAL: INTROSPECTION ---
     TraceContext.set_phase("COMPLETE")
@@ -508,21 +727,71 @@ Verifier reasoning: {verify_output.get('reasoning', 'N/A')}"""
             print(f"   [{score:.3f}] {node_id[:15]}...")
 
 
-async def run_batch(requirement: str):
+async def run_batch(
+    requirement: str,
+    socratic_mode: Literal["interactive", "development", "skip"] = "skip",
+    source_path: Optional[str] = None
+):
     """Run in non-interactive batch mode."""
     # Write requirement to prompt.md for batch processing
     with open("prompt.md", "w") as f:
         f.write(requirement)
-    await main(interactive=False)
+    await main(interactive=False, socratic_mode=socratic_mode, source_path=source_path)
 
 
 if __name__ == "__main__":
-    import sys
+    parser = argparse.ArgumentParser(
+        description="GAADP Production Runtime - Graph-Augmented Autonomous Development Platform",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Interactive mode (default)
+  python production_main.py
 
-    if len(sys.argv) > 1 and sys.argv[1] == "--batch":
-        # Batch mode: python production_main.py --batch "requirement"
-        req = sys.argv[2] if len(sys.argv) > 2 else "Create a hello world function"
-        asyncio.run(run_batch(req))
+  # Batch mode with requirement
+  python production_main.py --batch "Create a hello world function"
+
+  # With interactive Socratic phase (asks clarifying questions)
+  python production_main.py --socratic interactive
+
+  # Development mode - extract specs from existing code (for benchmarking)
+  python production_main.py --socratic development --source ./my_project
+
+  # Batch + development mode for reconstruction benchmarks
+  python production_main.py --batch "Reconstruct the module" --socratic development --source ./target_code
+        """
+    )
+
+    parser.add_argument(
+        "--batch",
+        metavar="REQUIREMENT",
+        help="Run in non-interactive batch mode with the given requirement"
+    )
+    parser.add_argument(
+        "--socratic",
+        choices=["interactive", "development", "skip"],
+        default="skip",
+        help="Socratic phase mode: 'interactive' asks user questions, 'development' extracts specs from code, 'skip' (default) bypasses"
+    )
+    parser.add_argument(
+        "--source",
+        metavar="PATH",
+        help="Source path for development mode (where to find existing code to analyze)"
+    )
+
+    args = parser.parse_args()
+
+    if args.batch:
+        # Batch mode
+        asyncio.run(run_batch(
+            requirement=args.batch,
+            socratic_mode=args.socratic,
+            source_path=args.source
+        ))
     else:
         # Interactive mode
-        asyncio.run(main(interactive=True))
+        asyncio.run(main(
+            interactive=True,
+            socratic_mode=args.socratic,
+            source_path=args.source
+        ))

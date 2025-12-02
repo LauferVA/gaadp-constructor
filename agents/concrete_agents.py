@@ -56,8 +56,18 @@ class RealArchitect(BaseAgent):
 
 INSTRUCTIONS:
 1. If the requirement references specific files (e.g., "inherit from X in file Y"), use the read_file tool to examine those files FIRST.
-2. After gathering necessary context, decompose into Atomic Specs and Plans.
-3. When you have enough information, use the submit_architecture tool to output your final plan.
+2. After gathering necessary context, decompose into ATOMIC Specs - each SPEC should be implementable by a single Builder.
+3. CRITICAL: Identify DEPENDENCIES between specs using DEPENDS_ON edges:
+   - If Spec A requires types/functions defined in Spec B, create edge: A --DEPENDS_ON--> B
+   - Dependencies determine BUILD ORDER: B will be built before A
+   - Use "new_N" notation for edge source/target IDs (e.g., "new_0" for first spec, "new_1" for second)
+4. Create a PLAN node summarizing the overall approach.
+5. When you have enough information, use the submit_architecture tool to output your final plan.
+
+DEPENDENCY EXAMPLES:
+- If you create a "DatabaseConnection" spec (new_0) and a "UserRepository" spec (new_1) that uses the connection:
+  new_edges: [{{"source_id": "new_1", "target_id": "new_0", "relation": "DEPENDS_ON"}}]
+  This means UserRepository depends on DatabaseConnection, so DatabaseConnection is built first.
 
 Available tools: read_file, list_directory, fetch_url, search_web, submit_architecture"""
 
