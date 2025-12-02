@@ -232,6 +232,16 @@ INSTRUCTIONS:
 2. Use list_directory if you need to understand the project structure.
 3. After gathering context, use the submit_code tool to output your implementation.
 
+IMPORTANT: The submit_code tool requires this exact structure:
+{{
+  "reasoning": "Brief explanation of your implementation",
+  "code": {{
+    "file_path": "path/to/file.py",
+    "language": "python",
+    "content": "your complete source code here"
+  }}
+}}
+
 Available tools: read_file, list_directory, write_file, submit_code"""
 
         # === ReAct Loop: Iterate until LLM produces final code via protocol ===
