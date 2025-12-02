@@ -126,14 +126,23 @@ class BaseAgent(ABC):
             The object with any JSON strings parsed into proper objects
         """
         if isinstance(obj, str):
-            # Try to parse as JSON
+            # Try to parse as JSON - handle both raw and escaped strings
             stripped = obj.strip()
+
+            # Check if it looks like JSON
             if (stripped.startswith('{') and stripped.endswith('}')) or \
                (stripped.startswith('[') and stripped.endswith(']')):
                 try:
-                    return self._parse_nested_json(json.loads(obj))
+                    parsed = json.loads(obj)
+                    return self._parse_nested_json(parsed)
                 except json.JSONDecodeError:
-                    return obj
+                    # Try unescaping common escape sequences
+                    try:
+                        unescaped = obj.encode().decode('unicode_escape')
+                        parsed = json.loads(unescaped)
+                        return self._parse_nested_json(parsed)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        return obj
             return obj
         elif isinstance(obj, dict):
             return {k: self._parse_nested_json(v) for k, v in obj.items()}
