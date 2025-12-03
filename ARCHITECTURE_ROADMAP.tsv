@@ -1,0 +1,179 @@
+Category	Item	Status	Definition	Implementation_Key	Notes
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+# GAADP ARCHITECTURE ROADMAP - Graph-First Architecture (v3.0)
+# Status: [DONE] = Implemented | [FUTURE] = Planned | [PARTIAL] = Started
+# All concepts reframed for TransitionMatrix + NodeMetadata + GenericAgent paradigm
+# ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# CORE ARCHITECTURE - The Foundation
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Core Architecture	TransitionMatrix	[DONE]	Single source of truth for state transitions; policy as physics	core/ontology.py	Heart of graph-first design
+Core Architecture	NodeMetadata	[DONE]	Governance embedded in data (cost_limit, security_level, attempts)	core/ontology.py	Replaces middleware governance
+Core Architecture	Graph-Augmented Generation	[DONE]	Context via node traversal (ego_graph)	infrastructure/graph_db.py	get_context_neighborhood()
+Core Architecture	Code Property Graph (CPG)	[DONE]	AST + Flow graph with CLASS/FUNCTION/CALL nodes	core/cpg_builder.py	Static analysis foundation
+Core Architecture	Immutable Ontology	[DONE]	Typed nodes (NodeType enum) and edges (EdgeType enum)	core/ontology.py	Enforces graph structure
+Core Architecture	Spec-Driven Development	[DONE]	REQ nodes are roots; all nodes trace back via TRACES_TO	core/ontology.py	IEEE-830 inspired
+Core Architecture	AGENT_DISPATCH Table	[DONE]	Maps (NodeType, Condition) → AgentRole for routing	core/ontology.py	Declarative agent assignment
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# EXECUTION - Runtime Engine
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Execution	GraphRuntime	[DONE]	Consults TransitionMatrix, evaluates conditions, dispatches agents	infrastructure/graph_runtime.py	Main execution loop
+Execution	GenericAgent	[DONE]	Universal agent class; behavior from YAML manifest	agents/generic_agent.py	One agent to rule them all
+Execution	Event Bus	[PARTIAL]	Decoupled agent messaging via asyncio	infrastructure/event_bus.py	Basic implementation exists
+Execution	Condition Evaluator	[DONE]	Named conditions resolved by GraphRuntime.evaluate_condition()	infrastructure/graph_runtime.py	has_verified_spec, cost_ok, etc.
+Execution	Wavefront Execution	[FUTURE]	Parallel subgraph execution via topological sort	infrastructure/graph_runtime.py	Add parallel dispatch to GraphRuntime
+Execution	Hierarchical Orchestration	[FUTURE]	Supervisor agents managing subordinates	config/agent_manifest.yaml	Define supervisor roles in manifest
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# AGENT ROLES - GenericAgent Personalities (loaded from YAML)
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Roles	The Architect	[DONE]	Decomposes REQ → SPEC → PLAN nodes	config/agent_manifest.yaml	ARCHITECT role in manifest
+Roles	The Builder	[DONE]	Implements PLAN → CODE nodes	config/agent_manifest.yaml	BUILDER role in manifest
+Roles	The Verifier	[DONE]	Reviews CODE, signs edges, transitions to VERIFIED	config/agent_manifest.yaml	VERIFIER role in manifest
+Roles	The Socratic Interrogator	[FUTURE]	Generates CLARIFICATION nodes for ambiguous REQs	config/agent_manifest.yaml	Add SOCRATES role to manifest
+Roles	The Test Engineer	[FUTURE]	Generates TEST nodes from CODE/SPEC	config/agent_manifest.yaml	Add TESTER role to manifest
+Roles	The Integration Agent	[FUTURE]	Assembles verified CODE nodes into cohesive modules	config/agent_manifest.yaml	Add INTEGRATOR role to manifest
+Roles	The Documentation Agent	[FUTURE]	Generates DOC nodes from verified CODE	config/agent_manifest.yaml	Add DOCUMENTER role to manifest
+Roles	The Security Analyst	[FUTURE]	Taint analysis via CPG; blocks high-risk nodes	config/agent_manifest.yaml	Uses NodeMetadata.security_level
+Roles	The DevOps Agent	[FUTURE]	Generates Dockerfiles, CI configs from graph	config/agent_manifest.yaml	Add DEVOPS role to manifest
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# VERIFICATION - Trust & Signing
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Verification	Cryptographic Edge Signing	[DONE]	Ed25519 signatures on VERIFIED edges	agents/generic_agent.py	sign_content() method
+Verification	Topology Verification	[DONE]	Nodes need N verified edges before materialization	infrastructure/graph_db.py	get_materializable_nodes()
+Verification	Sandboxed Execution	[FUTURE]	Run CODE nodes in isolated Docker containers	infrastructure/sandbox.py	Create sandbox.py
+Verification	Byzantine Tolerance	[FUTURE]	Multiple verifiers must agree (consensus)	infrastructure/graph_runtime.py	Add to TransitionMatrix conditions
+Verification	Red-Team Injection	[FUTURE]	Inject adversarial nodes to test verification	tests/test_adversarial.py	Security testing
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# STATE & MEMORY - Persistence
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+State	Graph Database	[DONE]	NetworkX graph with pickle persistence	infrastructure/graph_db.py	ProjectGraph class
+State	Atomic Persistence	[DONE]	Crash recovery via atomic writes	infrastructure/graph_db.py	save()/load() methods
+State	Semantic Memory	[FUTURE]	Vector embeddings for similarity search	infrastructure/semantic_memory.py	RAG for context retrieval
+State	Context Eviction	[DONE]	Limit ego_graph radius for context windows	infrastructure/graph_db.py	get_context_neighborhood(radius)
+State	Checkpoint/Resume	[DONE]	Serialize full graph state	infrastructure/graph_db.py	Pickle serialization
+State	Distributed Sync	[FUTURE]	Multi-node graph sync via CRDTs	infrastructure/distributed.py	For multi-agent clusters
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# GOVERNANCE - Policy as Physics (embedded in NodeMetadata)
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Governance	Cost Limits	[DONE]	NodeMetadata.cost_limit enforced by TransitionMatrix	core/ontology.py	cost_ok condition
+Governance	Attempt Tracking	[DONE]	NodeMetadata.attempts/max_attempts → auto-FAILED	core/ontology.py	Physics, not middleware
+Governance	Security Levels	[DONE]	NodeMetadata.security_level gates agent access	core/ontology.py	Agent clearance check
+Governance	Cost Ledger	[DONE]	Session cost tracking in LLMGateway	infrastructure/llm_gateway.py	get_session_cost()
+Governance	Budget Alerts	[FUTURE]	Alert when approaching cost limits	infrastructure/llm_gateway.py	Add threshold notifications
+Governance	Kill Switch	[FUTURE]	Emergency stop via Redis key or file flag	infrastructure/graph_runtime.py	Check before each iteration
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# REQUIREMENTS GATHERING - Socratic Engine
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Requirements	Socratic Engine	[DONE]	Generates clarifying questions for ambiguous REQs	requirements/socratic_engine.py	Creates CLARIFICATION nodes
+Requirements	Ambiguity Detector	[DONE]	Scores requirements for vagueness	requirements/socratic_engine.py	ambiguity_score()
+Requirements	IEEE 830 Template	[PARTIAL]	Structure specs per IEEE standard	.blueprint/dynamic_specs.yaml	Template exists
+Requirements	Question Prioritization	[FUTURE]	Rank questions by information gain	requirements/socratic_engine.py	Add entropy calculation
+Requirements	Search Query Generator	[FUTURE]	Convert knowledge gaps to web queries	requirements/socratic_engine.py	Integration with WebSearch
+Requirements	Documentation Parser	[FUTURE]	Extract answers from external docs	infrastructure/doc_parser.py	BeautifulSoup/markdown parsing
+Requirements	Saturation Monitor	[FUTURE]	Stop asking when diminishing returns	requirements/socratic_engine.py	Convergence detection
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# INPUT/OUTPUT - Materialization & Integration
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+IO	Materializer	[FUTURE]	Graph nodes → filesystem files	infrastructure/materializer.py	Write CODE nodes to disk
+IO	Git Integration	[FUTURE]	Auto-commit verified nodes	infrastructure/version_control.py	Atomic commits per node
+IO	Test Runner	[FUTURE]	Execute TEST nodes via pytest	infrastructure/test_runner.py	Run and report results
+IO	Visualization	[DONE]	Real-time DAG dashboard via WebSocket	infrastructure/viz_server.py	VizServer class
+IO	CLI Entry	[DONE]	argparse-based command line	main.py	python main.py "requirement"
+IO	MCP Server	[FUTURE]	Claude Code integration via fastmcp	server.py	Tool-based interface
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# LLM INTEGRATION - Gateway & Providers
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+LLM	Pluggable Providers	[DONE]	Abstract LLMProvider with multiple backends	infrastructure/llm_providers.py	ProviderRegistry
+LLM	Anthropic API	[DONE]	Claude via direct API	infrastructure/llm_providers.py	AnthropicAPIProvider
+LLM	OpenAI API	[FUTURE]	GPT-4 support	infrastructure/openai_provider.py	Create OpenAIProvider
+LLM	Claude SDK	[PARTIAL]	Headless Claude Code integration	infrastructure/llm_providers.py	ClaudeSDKProvider (experimental)
+LLM	Manual Provider	[DONE]	Human-in-the-loop for testing	infrastructure/llm_providers.py	ManualProvider
+LLM	Model Router	[DONE]	Role → Model tier mapping	infrastructure/llm_gateway.py	ROLE_TIER_MAP
+LLM	Protocol Enforcement	[DONE]	Forced tool_choice for structured output	infrastructure/llm_gateway.py	call_with_protocol()
+LLM	Retry Logic	[DONE]	Exponential backoff via tenacity	infrastructure/llm_gateway.py	@retry decorator
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# OBSERVABILITY - Monitoring & Debugging
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Observability	Session Logging	[DONE]	JSONL logs per session	.gaadp/logs/	Structured event logs
+Observability	Distributed Tracing	[FUTURE]	OpenTelemetry spans	infrastructure/telemetry.py	Trace agent calls
+Observability	Cost Dashboard	[FUTURE]	Real-time cost visualization	infrastructure/viz_server.py	Add cost panel
+Observability	Graph Metrics	[FUTURE]	Node counts, edge ratios, cycle detection	infrastructure/graph_db.py	Add metrics methods
+Observability	Replay Capability	[FUTURE]	Replay session from logs	infrastructure/replay.py	Event sourcing
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# QUALITY ASSURANCE - Testing & Validation
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+QA	Test-Driven Generation	[FUTURE]	Generate TEST nodes before CODE	config/agent_manifest.yaml	TDD workflow in TransitionMatrix
+QA	Mutation Testing	[FUTURE]	Inject faults to verify tests catch them	tests/test_mutations.py	Fault injection
+QA	Structural Traceability	[DONE]	REQ → SPEC → CODE → TEST via TRACES_TO	core/ontology.py	Graph structure enforces
+QA	Impact Analysis	[DONE]	Find affected nodes via nx.descendants	infrastructure/graph_db.py	Blast radius calculation
+QA	CI Integration	[FUTURE]	GitHub Actions workflow	.github/workflows/	Auto-run on push
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# ERROR HANDLING - Resilience
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Errors	ESCALATION Nodes	[DONE]	Human intervention requests as node type	core/ontology.py	NodeType.ESCALATION
+Errors	FAILED State	[DONE]	Terminal failure status for nodes	core/ontology.py	NodeStatus.FAILED
+Errors	Attempt Limits	[DONE]	Auto-fail after max_attempts exceeded	core/ontology.py	NodeMetadata.max_attempts
+Errors	Circuit Breakers	[FUTURE]	Stop cascading failures	infrastructure/graph_runtime.py	Track failure rates
+Errors	Graceful Degradation	[DONE]	Fallback to simpler providers	infrastructure/llm_gateway.py	Provider selection chain
+Errors	Dead Node Pruning	[DONE]	GC for terminal FAILED nodes	infrastructure/graph_db.py	prune_failed_nodes()
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# CONFIGURATION - System Settings
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Config	Prime Directives	[DONE]	22 immutable rules governing system behavior	.blueprint/prime_directives.md	System constitution
+Config	Global Ontology	[DONE]	Node/edge type definitions	.blueprint/global_ontology.md	Schema documentation
+Config	Agent Manifest	[DONE]	GenericAgent personality definitions	config/agent_manifest.yaml	Role → behavior mapping
+Config	LLM Router	[DONE]	Model assignments per role	.blueprint/llm_router.yaml	Cost/capability tiers
+Config	Topology Config	[DONE]	Execution limits and permissions	.blueprint/topology_config.yaml	Parallel limits, timeouts
+Config	Dynamic Specs	[PARTIAL]	Template-based spec generation	.blueprint/dynamic_specs.yaml	IEEE 830 templates
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# ADVANCED - Future Capabilities
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Advanced	Meta-Prompt Optimization	[FUTURE]	Self-improving prompts via performance feedback	config/agent_manifest.yaml	Prompt versioning
+Advanced	Cycle Detection	[DONE]	Detect dependency cycles in graph	infrastructure/graph_db.py	nx.simple_cycles
+Advanced	Atomic Graph Commits	[DONE]	Transactional updates with rollback	infrastructure/graph_db.py	Pickle-based persistence
+Advanced	Multi-Model Routing	[DONE]	Route different roles to different LLMs	infrastructure/llm_gateway.py	Provider + model selection
+Advanced	Workflow Checkpointing	[DONE]	Save/restore execution state	infrastructure/graph_db.py	Full graph serialization
+Advanced	One-Way Dependencies	[DONE]	DAG enforcement (no cycles)	core/ontology.py	Edge direction rules
+Advanced	Semantic Versioning	[FUTURE]	Auto-version nodes based on changes	infrastructure/version_control.py	Change detection
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# DEPLOYMENT - Production Readiness
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Deployment	CLI Entrypoint	[DONE]	python main.py "requirement"	main.py	argparse interface
+Deployment	Docker Container	[FUTURE]	Containerized deployment	Dockerfile	Create Dockerfile
+Deployment	Kubernetes	[FUTURE]	Orchestrated scaling	k8s/	Helm charts
+Deployment	Cloud Deploy	[FUTURE]	AWS/GCP terraform	terraform/	Infrastructure as code
+Deployment	Environment Variables	[DONE]	LLM_PROVIDER, API keys	main.py	os.getenv() checks
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# COMMUNICATION - Inter-Agent Messaging
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Communication	Event Bus	[PARTIAL]	asyncio-based pub/sub	infrastructure/event_bus.py	Basic implementation
+Communication	CloudEvents Schema	[FUTURE]	Standard event format	.blueprint/event_bus.schema	Message structure
+Communication	Request/Response	[DONE]	Direct method calls between components	agents/generic_agent.py	Synchronous calls
+Communication	Redis Pub/Sub	[FUTURE]	Distributed messaging	infrastructure/redis_bus.py	For multi-process
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+# PROTOCOLS - Structured Agent Output
+# ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+Protocols	UnifiedAgentOutput	[DONE]	Standard output format for all agents	core/protocols.py	Base protocol class
+Protocols	ArchitectOutput	[DONE]	Structured architecture decisions	core/protocols.py	specs, edges, reasoning
+Protocols	BuilderOutput	[DONE]	Code generation output	core/protocols.py	code, file_path, tests
+Protocols	VerifierOutput	[DONE]	Verification decision output	core/protocols.py	approved, issues, signature
+Protocols	SocratesOutput	[DONE]	Clarification questions output	core/protocols.py	questions, gaps, priority
+Protocols	Protocol Validation	[DONE]	Pydantic model validation	core/protocols.py	validate_agent_output()
+Protocols	Tool Schema Generation	[DONE]	Protocol → Anthropic tool format	core/protocols.py	protocol_to_tool_schema()
