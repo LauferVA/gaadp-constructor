@@ -82,7 +82,7 @@ Requirements	Saturation Monitor	[FUTURE]	Stop asking when diminishing returns	re
 # ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 # INPUT/OUTPUT - Materialization & Integration
 # ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-IO	Materializer	[FUTURE]	Graph nodes → filesystem files	infrastructure/materializer.py	Write CODE nodes to disk
+IO	Materializer	[DONE]	Graph nodes → filesystem files	infrastructure/materializer.py	AtomicMaterializer with staging, validation, git
 IO	Git Integration	[FUTURE]	Auto-commit verified nodes	infrastructure/version_control.py	Atomic commits per node
 IO	Test Runner	[FUTURE]	Execute TEST nodes via pytest	infrastructure/test_runner.py	Run and report results
 IO	Visualization	[DONE]	Real-time DAG dashboard via WebSocket	infrastructure/viz_server.py	VizServer class
@@ -94,7 +94,7 @@ IO	MCP Server	[FUTURE]	Claude Code integration via fastmcp	server.py	Tool-based 
 # ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 LLM	Pluggable Providers	[DONE]	Abstract LLMProvider with multiple backends	infrastructure/llm_providers.py	ProviderRegistry
 LLM	Anthropic API	[DONE]	Claude via direct API	infrastructure/llm_providers.py	AnthropicAPIProvider
-LLM	OpenAI API	[FUTURE]	GPT-4 support	infrastructure/openai_provider.py	Create OpenAIProvider
+LLM	OpenAI API	[DONE]	GPT-4o support	infrastructure/openai_provider.py	OpenAIProvider inherits LLMProvider, forced tool_choice
 LLM	Claude SDK	[PARTIAL]	Headless Claude Code integration	infrastructure/llm_providers.py	ClaudeSDKProvider (experimental)
 LLM	Manual Provider	[DONE]	Human-in-the-loop for testing	infrastructure/llm_providers.py	ManualProvider
 LLM	Model Router	[DONE]	Role → Model tier mapping	infrastructure/llm_gateway.py	ROLE_TIER_MAP

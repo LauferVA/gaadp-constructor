@@ -1,14 +1,37 @@
+"""
+OPENAI LLM PROVIDER
+Implements the LLMProvider interface for OpenAI's API (GPT-4o, etc.).
+
+This provider follows the same interface as AnthropicAPIProvider,
+allowing seamless switching between providers via the ProviderRegistry.
+
+Usage:
+    Set OPENAI_API_KEY environment variable, then:
+    - LLM_PROVIDER=openai_api python main.py "requirement"
+
+Or use the registry to auto-detect:
+    registry = create_default_registry()
+    provider = registry.select_provider(preferred="openai_api")
+"""
 import os
 import json
 import logging
 from typing import Dict, List, Optional
 
-import openai  # Using v1.0+ OpenAI library
+from infrastructure.llm_providers import LLMProvider
+
+# Import OpenAI - handle missing dependency gracefully
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    openai = None
 
 logger = logging.getLogger("LLM_Providers")
 
 
-class OpenAIProvider:
+class OpenAIProvider(LLMProvider):
     """
     Provider for OpenAI API (external, costs money).
     Supports GPT-4o and other OpenAI models.
@@ -33,7 +56,7 @@ class OpenAIProvider:
 
     def is_available(self) -> bool:
         """Check if OpenAI API is available."""
-        return self.api_key is not None
+        return OPENAI_AVAILABLE and self.api_key is not None
 
     def get_name(self) -> str:
         return "openai_api"
@@ -76,7 +99,21 @@ class OpenAIProvider:
         # Add tools if provided
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
+            # Check for forced tool_choice (for protocol-based output)
+            tool_choice = model_config.get("tool_choice")
+            if tool_choice:
+                # OpenAI format: {"type": "function", "function": {"name": "tool_name"}}
+                if tool_choice.get("type") == "tool":
+                    # Convert from Anthropic format to OpenAI format
+                    kwargs["tool_choice"] = {
+                        "type": "function",
+                        "function": {"name": tool_choice.get("name")}
+                    }
+                else:
+                    kwargs["tool_choice"] = tool_choice
+                logger.debug(f"Forced tool_choice: {kwargs['tool_choice']}")
+            else:
+                kwargs["tool_choice"] = "auto"
 
         try:
             response = self.client.chat.completions.create(**kwargs)
@@ -121,7 +158,21 @@ class OpenAIProvider:
         # Add tools if provided
         if tools:
             kwargs["tools"] = tools
-            kwargs["tool_choice"] = "auto"
+            # Check for forced tool_choice (for protocol-based output)
+            tool_choice = model_config.get("tool_choice")
+            if tool_choice:
+                # OpenAI format: {"type": "function", "function": {"name": "tool_name"}}
+                if tool_choice.get("type") == "tool":
+                    # Convert from Anthropic format to OpenAI format
+                    kwargs["tool_choice"] = {
+                        "type": "function",
+                        "function": {"name": tool_choice.get("name")}
+                    }
+                else:
+                    kwargs["tool_choice"] = tool_choice
+                logger.debug(f"Forced tool_choice: {kwargs['tool_choice']}")
+            else:
+                kwargs["tool_choice"] = "auto"
 
         try:
             response = self.client.chat.completions.create(**kwargs)
