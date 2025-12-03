@@ -384,16 +384,21 @@ class GraphDB:
 
         return result
 
-    def prune_dead_ends(self):
-        """Garbage Collection for failed branches"""
+    def prune_failed_nodes(self):
+        """Garbage Collection for terminal failure nodes.
+
+        Note: ESCALATION nodes require human intervention and are NOT pruned.
+        This only removes FAILED nodes that have no dependents.
+        """
         to_remove = [
             n for n, d in self.graph.nodes(data=True)
-            if d.get('type') == NodeType.DEAD_END.value
+            if d.get('status') == NodeStatus.FAILED.value
+            and self.graph.out_degree(n) == 0  # No dependents
         ]
         self.graph.remove_nodes_from(to_remove)
         if to_remove:
             self._persist()
-            self.logger.info(f"GC: Removed {len(to_remove)} dead nodes")
+            self.logger.info(f"GC: Removed {len(to_remove)} failed nodes")
 
     def get_materializable_nodes(self) -> List[Dict]:
         nodes = []

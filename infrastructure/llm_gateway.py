@@ -72,15 +72,11 @@ MODEL_MAP = {
 ANTHROPIC_FORCED_MODEL = "claude-3-5-haiku-20241022"
 
 # Role-to-tier mapping: which model tier each agent role should use
+# Note: Only core workflow roles remain in graph-first architecture
 ROLE_TIER_MAP = {
     "ARCHITECT": "heavy",
     "BUILDER": "heavy",
     "VERIFIER": "standard",
-    "CURATOR": "standard",
-    "SENTINEL": "standard",
-    "TREASURER": "standard",
-    "SOCRATES": "heavy",
-    "LIBRARIAN": "standard",
 }
 
 
@@ -169,16 +165,6 @@ class LLMGateway:
                 "VERIFIER": {
                     "model": "standard",
                     "temperature": 0.1,
-                    "max_tokens": 4000
-                },
-                "CURATOR": {
-                    "model": "standard",
-                    "temperature": 0.5,
-                    "max_tokens": 2000
-                },
-                "SOCRATES": {
-                    "model": "heavy",
-                    "temperature": 0.7,
                     "max_tokens": 4000
                 },
             }

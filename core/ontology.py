@@ -25,6 +25,7 @@ import uuid
 
 class NodeType(str, Enum):
     """Types of nodes in the graph."""
+    # Primary workflow types
     REQ = "REQ"                      # User requirement (entry point)
     CLARIFICATION = "CLARIFICATION"  # Ambiguity needing human input
     SPEC = "SPEC"                    # Atomic specification
@@ -33,6 +34,10 @@ class NodeType(str, Enum):
     TEST = "TEST"                    # Verification result
     DOC = "DOC"                      # Documentation artifact
     ESCALATION = "ESCALATION"        # Failure requiring intervention
+    # CPG (Code Property Graph) types for static analysis
+    CLASS = "CLASS"                  # Class definition
+    FUNCTION = "FUNCTION"            # Function/method definition
+    CALL = "CALL"                    # Function call site
 
 
 class EdgeType(str, Enum):

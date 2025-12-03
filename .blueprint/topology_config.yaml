@@ -1,69 +1,46 @@
 # GAADP TOPOLOGY CONFIGURATION
-topology_type: "pair_programming"
+# Execution topology and tool permissions for GenericAgent
 
-ratios:
-  BUILDER:
-    VERIFIER: 1.0
-  BUILDER:
-    ARCHITECT: 0.2
-  GLOBAL:
-    TREASURER: 1
-    LIBRARIAN: 1
-    CURATOR: 1
-    SENTINEL: 1
+topology_type: "graph_first"
 
+# Parallel execution limits (enforced by GraphRuntime)
 parallel_limits:
-  max_concurrent_builders: 10
-  max_concurrent_verifiers: 10
-  max_wavefront_width: 20
+  max_concurrent_agents: 10
+  max_iterations: 100
 
+# Verification requirements
 verification_requirements:
   strict_gating: true
   minimum_verifiers_per_node: 1
-  require_different_llm_provider: true
 
+# Timeouts
 timeouts:
-  plan_execution_seconds: 300
+  agent_processing_seconds: 300
   verification_seconds: 120
 
 # Role-Based Access Control for MCP Tools
+# These permissions are loaded by GenericAgent from agent_manifest.yaml
 tool_permissions:
   # The Architect designs; needs read-only access + web search
   ARCHITECT:
     allowed_servers: ["filesystem", "internet"]
     allowed_tools: ["read_file", "list_directory", "fetch_url", "search_web"]
+    context_radius: 3
 
   # The Builder constructs; needs write access
   BUILDER:
     allowed_servers: ["filesystem"]
     allowed_tools: ["read_file", "write_file", "list_directory"]
+    context_radius: 1
 
   # The Verifier audits; needs read-only access
   VERIFIER:
     allowed_servers: ["filesystem"]
     allowed_tools: ["read_file", "list_directory"]
+    context_radius: 2
 
-  # The Curator manages state; needs Git access
-  CURATOR:
-    allowed_servers: ["git", "filesystem"]
-    allowed_tools: ["git_status", "git_commit", "git_push", "read_file", "list_directory"]
-
-  # The Sentinel protects; needs deep inspection
-  SENTINEL:
-    allowed_servers: ["filesystem"]
-    allowed_tools: ["read_file", "list_directory"]
-
-  # The Treasurer monitors costs; read-only
-  TREASURER:
-    allowed_servers: ["filesystem"]
-    allowed_tools: ["read_file"]
-
-  # The Librarian manages prompts
-  LIBRARIAN:
-    allowed_servers: ["filesystem"]
-    allowed_tools: ["read_file", "write_file", "list_directory"]
-
-  # Socrates researches; needs web access
-  SOCRATES:
-    allowed_servers: ["filesystem", "internet"]
-    allowed_tools: ["read_file", "fetch_url", "search_web"]
+# Note: Governance roles (TREASURER, SENTINEL, CURATOR, etc.) have been removed.
+# Their functionality is now embedded in:
+# - NodeMetadata (cost_limit, security_level, max_attempts)
+# - TransitionMatrix (state transition rules)
+# - GraphRuntime (condition evaluation)

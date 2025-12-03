@@ -1,42 +1,35 @@
 # GAADP LLM ROUTER CONFIGURATION
-# NOTE: All models forced to claude-3-5-haiku-20241022 (only available model)
-# The gateway will override these anyway, but keeping config consistent
+# Model assignments for GenericAgent roles
 
 model_assignments:
+  # Core workflow agents
   ARCHITECT:
     model: "claude-3-5-haiku-20241022"
     temperature: 0.7
     max_tokens: 4000
-  VERIFIER:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.1
-    max_tokens: 4000
+    description: "Decomposes requirements into specifications"
+
   BUILDER:
     model: "claude-3-5-haiku-20241022"
     temperature: 0.5
     max_tokens: 8000
-  SOCRATES:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.7
-    max_tokens: 4000
-  CURATOR:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.1
-    max_tokens: 2000
-  SENTINEL:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.0
-    max_tokens: 2000
-  TREASURER:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.1
-    max_tokens: 2000
-  LIBRARIAN:
-    model: "claude-3-5-haiku-20241022"
-    temperature: 0.3
-    max_tokens: 2000
+    description: "Implements code from specifications"
 
+  VERIFIER:
+    model: "claude-3-5-haiku-20241022"
+    temperature: 0.1
+    max_tokens: 4000
+    description: "Reviews and verifies code implementations"
+
+# Cost governance (enforced via NodeMetadata.cost_limit)
 cost_limits:
   per_node_hard_limit_usd: 0.50
   per_phase_hard_limit_usd: 100.00
   project_total_limit_usd: 500.00
+
+# Note: The following roles have been removed in the graph-first architecture:
+# - SOCRATES: Clarification now handled via CLARIFICATION node type
+# - CURATOR: Graph integrity now handled by GraphRuntime
+# - SENTINEL: Security now embedded in NodeMetadata.security_level
+# - TREASURER: Cost limits now embedded in NodeMetadata.cost_limit
+# - LIBRARIAN: Prompt management now via config/agent_manifest.yaml

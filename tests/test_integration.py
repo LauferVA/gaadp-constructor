@@ -6,7 +6,7 @@ import pytest
 import os
 import shutil
 import asyncio
-from core.ontology import NodeType, EdgeType, NodeStatus, AgentRole
+from core.ontology import NodeType, EdgeType, NodeStatus
 from infrastructure.graph_db import GraphDB
 from infrastructure.sandbox import CodeSandbox
 from infrastructure.version_control import GitController

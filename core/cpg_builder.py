@@ -52,7 +52,7 @@ class CPGBuilder:
             graph.add_node(
                 import_id, 
                 type=NodeType.CODE.value, 
-                status=NodeStatus.COMPLETE.value,
+                status=NodeStatus.VERIFIED.value,
                 content=imp
             )
             graph.add_edge(root_id, import_id, type=EdgeType.DEPENDS_ON.value)
@@ -63,7 +63,7 @@ class CPGBuilder:
             graph.add_node(
                 class_id,
                 type=NodeType.CLASS.value,
-                status=NodeStatus.COMPLETE.value,
+                status=NodeStatus.VERIFIED.value,
                 content=class_details['content'],
                 metadata=class_details
             )
@@ -75,7 +75,7 @@ class CPGBuilder:
             graph.add_node(
                 func_id,
                 type=NodeType.FUNCTION.value,
-                status=NodeStatus.COMPLETE.value,
+                status=NodeStatus.VERIFIED.value,
                 content=func_details['content'],
                 metadata=func_details
             )
@@ -87,7 +87,7 @@ class CPGBuilder:
             graph.add_node(
                 call_id,
                 type=NodeType.CALL.value,
-                status=NodeStatus.COMPLETE.value,
+                status=NodeStatus.VERIFIED.value,
                 content=call_name,
                 metadata=call_details
             )
