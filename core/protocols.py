@@ -16,8 +16,9 @@ Usage:
     schema = ArchitectOutput.model_json_schema()
 """
 from pydantic import BaseModel, Field
-from typing import List, Optional, Literal, Dict, Any
+from typing import List, Optional, Literal, Dict, Any, Union
 from enum import Enum
+from pathlib import Path
 
 from core.ontology import NodeType, EdgeType, NodeStatus
 
@@ -331,6 +332,243 @@ def validate_agent_output(agent_role: str, output: Dict) -> BaseModel:
 
 
 # =============================================================================
+# AGENT CONFIGURATION (For GenericAgent)
+# =============================================================================
+
+class AgentConfig(BaseModel):
+    """
+    Configuration for a GenericAgent loaded from agent_manifest.yaml.
+
+    This replaces hardcoded agent classes with declarative configuration.
+    Adding a new agent type = adding a new entry in the manifest.
+    """
+    role_name: str = Field(
+        description="Agent role identifier (ARCHITECT, BUILDER, etc.)"
+    )
+    description: str = Field(
+        description="Human-readable description of what this agent does"
+    )
+    input_node_types: List[str] = Field(
+        description="Node types that trigger this agent"
+    )
+    output_node_types: List[str] = Field(
+        description="Node types this agent can produce"
+    )
+    dispatch_conditions: List[str] = Field(
+        default_factory=list,
+        description="Conditions from AGENT_DISPATCH that trigger this agent"
+    )
+    system_prompt_path: str = Field(
+        description="Path to system prompt markdown file"
+    )
+    system_prompt_fallback: Optional[str] = Field(
+        default=None,
+        description="Inline prompt used if file not found"
+    )
+    allowed_tools: List[str] = Field(
+        default_factory=list,
+        description="Tools this agent can use"
+    )
+    output_protocol: str = Field(
+        description="Name of the Pydantic output model (e.g., 'ArchitectOutput')"
+    )
+    output_tool_name: str = Field(
+        description="Name of the output tool for forced tool_choice"
+    )
+    default_cost_limit: float = Field(
+        default=1.0,
+        description="Default max USD cost per invocation"
+    )
+    default_max_attempts: int = Field(
+        default=3,
+        description="Default max retry attempts"
+    )
+
+
+class AgentManifest(BaseModel):
+    """Complete agent manifest loaded from YAML."""
+    architect: Optional[AgentConfig] = None
+    builder: Optional[AgentConfig] = None
+    verifier: Optional[AgentConfig] = None
+    socrates: Optional[AgentConfig] = None
+    global_settings: Optional[Dict[str, Any]] = Field(
+        default=None,
+        alias="global"
+    )
+
+    class Config:
+        populate_by_name = True
+
+    def get_config(self, role: str) -> Optional[AgentConfig]:
+        """Get config by role name (case-insensitive)."""
+        role_lower = role.lower()
+        return getattr(self, role_lower, None)
+
+
+# =============================================================================
+# UNIFIED AGENT OUTPUT (For GenericAgent)
+# =============================================================================
+
+class UnifiedAgentOutput(BaseModel):
+    """
+    Standardized output structure for ALL agents via GenericAgent.
+
+    This provides a common interface while allowing agent-specific
+    details in the protocol_output field.
+    """
+    # Reasoning trace
+    thought: Optional[str] = Field(
+        default=None,
+        description="Agent's reasoning process (for debugging/audit)"
+    )
+    plan: Optional[str] = Field(
+        default=None,
+        description="What the agent intends to do"
+    )
+
+    # Graph mutations
+    new_nodes: List[NodeSpec] = Field(
+        default_factory=list,
+        description="Nodes to create in the graph"
+    )
+    new_edges: List[EdgeSpec] = Field(
+        default_factory=list,
+        description="Edges to create in the graph"
+    )
+    status_updates: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Node ID -> new status"
+    )
+
+    # File artifacts
+    artifacts: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Files to write: path -> content"
+    )
+
+    # Original protocol output (for backwards compatibility)
+    protocol_output: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Raw output from agent-specific protocol"
+    )
+
+    # Metadata
+    agent_role: Optional[str] = Field(
+        default=None,
+        description="Which agent produced this output"
+    )
+    cost_incurred: float = Field(
+        default=0.0,
+        description="USD cost of this agent invocation"
+    )
+    tokens_used: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Token counts: input_tokens, output_tokens"
+    )
+
+
+# =============================================================================
+# GRAPH CONTEXT (Passed to Agents)
+# =============================================================================
+
+class GraphContext(BaseModel):
+    """
+    Context from the graph passed to an agent for processing.
+
+    The runtime builds this by querying the graph neighborhood.
+    """
+    # The node being processed
+    node_id: str
+    node_type: str
+    node_content: str
+    node_status: str
+    node_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    # Graph neighborhood
+    parent_nodes: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Nodes this node traces to"
+    )
+    child_nodes: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Nodes that trace to this node"
+    )
+    dependency_nodes: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Nodes this depends on (DEPENDS_ON edges)"
+    )
+
+    # The root requirement
+    requirement_content: Optional[str] = Field(
+        default=None,
+        description="Content of the root REQ node"
+    )
+    requirement_id: Optional[str] = Field(
+        default=None,
+        description="ID of the root REQ node"
+    )
+
+    # Feedback from previous attempts
+    feedback: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="FEEDBACK edges pointing to this node"
+    )
+    previous_attempts: int = Field(
+        default=0,
+        description="How many times this node has been processed"
+    )
+
+
+# =============================================================================
+# MANIFEST LOADING
+# =============================================================================
+
+def load_agent_manifest(path: str = "config/agent_manifest.yaml") -> AgentManifest:
+    """
+    Load agent manifest from YAML file.
+
+    Args:
+        path: Path to agent_manifest.yaml
+
+    Returns:
+        Parsed AgentManifest
+    """
+    import yaml
+
+    manifest_path = Path(path)
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Agent manifest not found: {path}")
+
+    with open(manifest_path) as f:
+        data = yaml.safe_load(f)
+
+    return AgentManifest.model_validate(data)
+
+
+def get_protocol_class(protocol_name: str) -> type[BaseModel]:
+    """
+    Get a protocol class by name.
+
+    Args:
+        protocol_name: Name like 'ArchitectOutput'
+
+    Returns:
+        The Pydantic model class
+    """
+    protocol_map = {
+        "ArchitectOutput": ArchitectOutput,
+        "BuilderOutput": BuilderOutput,
+        "VerifierOutput": VerifierOutput,
+        "SocratesOutput": SocratesOutput,
+    }
+
+    if protocol_name not in protocol_map:
+        raise ValueError(f"Unknown protocol: {protocol_name}")
+
+    return protocol_map[protocol_name]
+
+
+# =============================================================================
 # SCHEMA EXPORT (for debugging / documentation)
 # =============================================================================
 
@@ -348,3 +586,9 @@ if __name__ == "__main__":
 
     print("\n=== TOOL DEFINITION EXAMPLE ===")
     print(json.dumps(get_agent_tools("ARCHITECT"), indent=2))
+
+    print("\n=== AGENT CONFIG SCHEMA ===")
+    print(json.dumps(AgentConfig.model_json_schema(), indent=2))
+
+    print("\n=== UNIFIED AGENT OUTPUT SCHEMA ===")
+    print(json.dumps(UnifiedAgentOutput.model_json_schema(), indent=2))

@@ -1,0 +1,258 @@
+# =============================================================================
+# AGENT MANIFEST
+# =============================================================================
+#
+# This file defines the "personality" of each agent type.
+# GenericAgent loads this configuration at runtime - no hardcoded agent classes.
+#
+# Each agent is defined by:
+#   - What node types trigger it (input_node_types)
+#   - What node types it produces (output_node_types)
+#   - Its system prompt
+#   - Its allowed tools
+#   - Its output protocol (Pydantic model name)
+#
+# Adding a new agent type = adding a new entry here. No Python code changes.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# ARCHITECT
+# -----------------------------------------------------------------------------
+# The Architect decomposes requirements into atomic specifications.
+# Triggered by: REQ nodes needing decomposition, ESCALATION nodes
+# Produces: SPEC, PLAN, CLARIFICATION nodes
+
+architect:
+  role_name: ARCHITECT
+  description: >
+    Decomposes requirements into atomic, implementable specifications.
+    Identifies dependencies between specs. Creates CLARIFICATION nodes
+    when requirements are ambiguous.
+
+  # What triggers this agent
+  input_node_types:
+    - REQ
+    - ESCALATION
+
+  # What this agent can produce
+  output_node_types:
+    - SPEC
+    - PLAN
+    - CLARIFICATION
+
+  # Dispatch conditions (from AGENT_DISPATCH)
+  dispatch_conditions:
+    - needs_decomposition  # REQ with no SPEC children
+    - needs_replan         # ESCALATION pending
+
+  # System prompt location
+  system_prompt_path: .blueprint/prompts/architect.md
+
+  # Fallback inline prompt (used if file not found)
+  system_prompt_fallback: |
+    You are the Architect agent. You decompose requirements into atomic specifications.
+
+    ## Your Role
+    - Analyze requirements and break them into SPEC nodes
+    - Each SPEC must be atomic (implementable by a single Builder)
+    - Identify dependencies between SPECs using DEPENDS_ON edges
+    - If the requirement is ambiguous, create a CLARIFICATION node
+
+    ## Output Format
+    Use the submit_architecture tool to output your plan.
+
+  # Tools this agent can use
+  allowed_tools:
+    - read_file
+    - list_directory
+    - search_web
+    - fetch_url
+
+  # Output validation
+  output_protocol: ArchitectOutput
+  output_tool_name: submit_architecture
+
+  # Governance defaults
+  default_cost_limit: 0.50  # USD per invocation
+  default_max_attempts: 2
+
+
+# -----------------------------------------------------------------------------
+# BUILDER
+# -----------------------------------------------------------------------------
+# The Builder implements code from specifications.
+# Triggered by: SPEC nodes ready for implementation
+# Produces: CODE nodes
+
+builder:
+  role_name: BUILDER
+  description: >
+    Implements code artifacts from specifications. Reads existing code
+    to understand patterns and interfaces. Produces working, tested code.
+
+  input_node_types:
+    - SPEC
+
+  output_node_types:
+    - CODE
+
+  dispatch_conditions:
+    - ready_for_build  # SPEC with dependencies met, no CODE yet
+
+  system_prompt_path: .blueprint/prompts/builder.md
+
+  system_prompt_fallback: |
+    You are the Builder agent. You implement code from specifications.
+
+    ## Your Role
+    - Read the SPEC and implement working code
+    - Examine existing files to match patterns and interfaces
+    - Produce complete, runnable code
+    - Include necessary imports and dependencies
+
+    ## Output Format
+    Use the submit_code tool to output your implementation.
+
+  allowed_tools:
+    - read_file
+    - write_file
+    - list_directory
+
+  output_protocol: BuilderOutput
+  output_tool_name: submit_code
+
+  default_cost_limit: 1.00
+  default_max_attempts: 3
+
+
+# -----------------------------------------------------------------------------
+# VERIFIER
+# -----------------------------------------------------------------------------
+# The Verifier reviews and validates code.
+# Triggered by: CODE nodes needing verification
+# Produces: TEST nodes
+
+verifier:
+  role_name: VERIFIER
+  description: >
+    Reviews code for correctness, security, and spec compliance.
+    Produces TEST nodes with PASS/FAIL verdict.
+
+  input_node_types:
+    - CODE
+
+  output_node_types:
+    - TEST
+
+  dispatch_conditions:
+    - needs_verification  # CODE with no TEST
+
+  system_prompt_path: .blueprint/prompts/verifier.md
+
+  system_prompt_fallback: |
+    You are the Verifier agent. You review and validate code.
+
+    ## Your Role
+    - Check that code correctly implements its specification
+    - Identify bugs, security issues, and missing functionality
+    - Produce a PASS or FAIL verdict with detailed reasoning
+
+    ## Output Format
+    Use the submit_verdict tool to output your verification result.
+
+  allowed_tools:
+    - read_file
+    - list_directory
+
+  output_protocol: VerifierOutput
+  output_tool_name: submit_verdict
+
+  default_cost_limit: 0.30
+  default_max_attempts: 1  # Verification doesn't retry
+
+
+# -----------------------------------------------------------------------------
+# SOCRATES
+# -----------------------------------------------------------------------------
+# Socrates resolves ambiguity through clarifying questions.
+# Triggered by: CLARIFICATION nodes needing resolution
+# Produces: Enriched requirement content (or human handoff)
+
+socrates:
+  role_name: SOCRATES
+  description: >
+    Identifies ambiguity and asks clarifying questions.
+    Can research standards and best practices to inform questions.
+    Resolves CLARIFICATION nodes.
+
+  input_node_types:
+    - CLARIFICATION
+
+  output_node_types:
+    - REQ  # Enriched requirement
+
+  dispatch_conditions:
+    - needs_resolution  # CLARIFICATION not yet answered
+
+  system_prompt_path: .blueprint/prompts/socrates.md
+
+  system_prompt_fallback: |
+    You are Socrates, the philosophical questioner.
+
+    ## Your Role
+    - Analyze the ambiguity in the requirement
+    - Research relevant standards and best practices
+    - Formulate precise clarifying questions
+    - If you can resolve the ambiguity yourself, do so
+
+    ## Output Format
+    Use the submit_questions tool to output your clarifying questions.
+
+  allowed_tools:
+    - read_file
+    - search_web
+    - fetch_url
+
+  output_protocol: SocratesOutput
+  output_tool_name: submit_questions
+
+  default_cost_limit: 0.25
+  default_max_attempts: 2
+
+
+# =============================================================================
+# GLOBAL SETTINGS
+# =============================================================================
+
+global:
+  # Default governance if not specified per-agent
+  default_cost_limit: 1.00
+  default_max_attempts: 3
+  default_timeout_seconds: 300
+
+  # ReAct loop settings
+  max_react_iterations: 5
+
+  # Which LLM provider to use (can be overridden per-agent)
+  default_llm_provider: anthropic
+  default_model: claude-sonnet-4-20250514
+
+
+# =============================================================================
+# FUTURE AGENTS (Placeholder)
+# =============================================================================
+# These can be added without code changes - just define them here.
+
+# curator:
+#   role_name: CURATOR
+#   description: Organizes and maintains documentation
+#   input_node_types: [CODE, DOC]
+#   output_node_types: [DOC]
+#   ...
+
+# sentinel:
+#   role_name: SENTINEL
+#   description: Security scanning and vulnerability detection
+#   input_node_types: [CODE]
+#   output_node_types: [TEST]
+#   ...

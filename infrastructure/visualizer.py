@@ -14,27 +14,20 @@ logger = logging.getLogger("Visualizer")
 
 # Color schemes for node types and statuses
 NODE_COLORS = {
-    # High-level artifacts
-    NodeType.REQ.value: "#FF6B6B",      # Red
-    NodeType.SPEC.value: "#4ECDC4",     # Teal
-    NodeType.PLAN.value: "#45B7D1",     # Blue
-    NodeType.CODE.value: "#96CEB4",     # Green
-    NodeType.TEST.value: "#FFEAA7",     # Yellow
-    NodeType.DOC.value: "#DDA0DD",      # Plum
-    NodeType.STATE.value: "#A0A0A0",    # Gray
-    NodeType.DEAD_END.value: "#696969", # Dark Gray
-    # AST-level types
-    NodeType.CLASS.value: "#9B59B6",    # Purple
-    NodeType.FUNCTION.value: "#3498DB", # Blue
-    NodeType.CALL.value: "#E67E22",     # Orange
-    NodeType.IMPORT.value: "#1ABC9C",   # Turquoise
+    NodeType.REQ.value: "#FF6B6B",           # Red
+    NodeType.CLARIFICATION.value: "#FFB347", # Orange
+    NodeType.SPEC.value: "#4ECDC4",          # Teal
+    NodeType.PLAN.value: "#45B7D1",          # Blue
+    NodeType.CODE.value: "#96CEB4",          # Green
+    NodeType.TEST.value: "#FFEAA7",          # Yellow
+    NodeType.DOC.value: "#DDA0DD",           # Plum
+    NodeType.ESCALATION.value: "#DC143C",    # Crimson
 }
 
 STATUS_SHAPES = {
     NodeStatus.PENDING.value: "ellipse",
-    NodeStatus.IN_PROGRESS.value: "box",
+    NodeStatus.PROCESSING.value: "box",
     NodeStatus.BLOCKED.value: "octagon",
-    NodeStatus.COMPLETE.value: "diamond",
     NodeStatus.VERIFIED.value: "doublecircle",
     NodeStatus.FAILED.value: "triangle",
 }
@@ -46,8 +39,10 @@ EDGE_STYLES = {
     EdgeType.IMPLEMENTS.value: {"color": "#27AE60", "style": "solid"},
     EdgeType.VERIFIES.value: {"color": "#3498DB", "style": "bold"},
     EdgeType.DEFINES.value: {"color": "#9B59B6", "style": "dotted"},
+    EdgeType.BLOCKS.value: {"color": "#DC143C", "style": "bold"},
     EdgeType.FEEDBACK.value: {"color": "#F39C12", "style": "dashed"},
-    # AST-level relationships
+    EdgeType.RESOLVED_BY.value: {"color": "#2ECC71", "style": "solid"},
+    # Extended relationships (AST/CPG)
     EdgeType.CONTAINS.value: {"color": "#2ECC71", "style": "solid"},
     EdgeType.REFERENCES.value: {"color": "#E74C3C", "style": "dashed"},
     EdgeType.INHERITS.value: {"color": "#9B59B6", "style": "bold"},

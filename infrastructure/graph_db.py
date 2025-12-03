@@ -10,10 +10,23 @@ import hashlib
 import os
 import time
 from typing import List, Dict, Any, Optional
+# Core ontology - the physics of the system
 from core.ontology import NodeType, EdgeType, NodeStatus
-from core.state_machine import NodeStateMachine, StateTransitionError
-from core.token_counter import TokenCounter
-from core.context_pruner import ContextPruner
+# Legacy imports - will be removed in Phase 3
+try:
+    from core.state_machine import NodeStateMachine, StateTransitionError
+except ImportError:
+    # Fallback: state machine functionality now in new_ontology TransitionMatrix
+    NodeStateMachine = None
+    StateTransitionError = Exception
+try:
+    from core.token_counter import TokenCounter
+except ImportError:
+    TokenCounter = None
+try:
+    from core.context_pruner import ContextPruner
+except ImportError:
+    ContextPruner = None
 
 # Schema version for persistence format
 SCHEMA_VERSION = "1.0"
@@ -32,9 +45,10 @@ class GraphDB:
             persistence_path = persistence_path.replace('.pkl', '.json')
         self.persistence_path = persistence_path
         self.graph = nx.DiGraph()
-        self._state_machine = NodeStateMachine()
-        self._token_counter = TokenCounter(default_model=model)
-        self._context_pruner = ContextPruner(semantic_memory=semantic_memory)
+        # Legacy components (optional during migration)
+        self._state_machine = NodeStateMachine() if NodeStateMachine else None
+        self._token_counter = TokenCounter(default_model=model) if TokenCounter else None
+        self._context_pruner = ContextPruner(semantic_memory=semantic_memory) if ContextPruner else None
         self._event_bus = event_bus
         self._load()
 
@@ -153,9 +167,9 @@ class GraphDB:
         if not isinstance(node_type, NodeType):
             raise ValueError(f"Invalid Node Type: {node_type}")
 
-        # Count tokens if content is string
+        # Count tokens if content is string (if token counter available)
         token_count = None
-        if isinstance(content, str):
+        if isinstance(content, str) and self._token_counter:
             token_count = self._token_counter.count_tokens(content)
 
         self.graph.add_node(
@@ -237,10 +251,12 @@ class GraphDB:
 
         node_type = NodeType(node_type_str) if node_type_str else None
 
-        # Validate and record transition
-        self._state_machine.transition(
-            node_id, current_status, new_status, node_type, reason
-        )
+        # Validate and record transition (if legacy state machine available)
+        if self._state_machine:
+            self._state_machine.transition(
+                node_id, current_status, new_status, node_type, reason
+            )
+        # Note: In new architecture, validation happens via TransitionMatrix in GraphRuntime
 
         # Apply the change
         self.graph.nodes[node_id]['status'] = new_status.value
@@ -274,7 +290,9 @@ class GraphDB:
 
     def get_status_history(self, node_id: str) -> list:
         """Get the state transition history for a node."""
-        return self._state_machine.get_history(node_id)
+        if self._state_machine:
+            return self._state_machine.get_history(node_id)
+        return []  # No history tracking without legacy state machine
 
     def get_context_neighborhood(self, center_node_id: str, radius: int, filter_domain: str = None, max_tokens: int = 6000) -> Dict:
         """Semantic Relevance-Based Context Pruner with Feedback Integration."""
@@ -294,8 +312,9 @@ class GraphDB:
                         'retry': retry_num,
                         'critique': critique
                     })
-                    # Count feedback critique tokens
-                    feedback_tokens += self._token_counter.count_tokens(critique)
+                    # Count feedback critique tokens (if token counter available)
+                    if self._token_counter:
+                        feedback_tokens += self._token_counter.count_tokens(critique)
 
         # Adjust token budget to account for feedback
         available_tokens = max_tokens - feedback_tokens
@@ -310,14 +329,19 @@ class GraphDB:
                     continue
             candidates.add(v)
 
-        # Use semantic pruner to select most relevant nodes within budget
-        pruned_nodes, total_tokens = self._context_pruner.prune_to_token_budget(
-            candidates=list(candidates),
-            center_node_id=center_node_id,
-            graph=self.graph,
-            token_counter=self._token_counter,
-            max_tokens=available_tokens
-        )
+        # Use semantic pruner to select most relevant nodes within budget (if available)
+        if self._context_pruner and self._token_counter:
+            pruned_nodes, total_tokens = self._context_pruner.prune_to_token_budget(
+                candidates=list(candidates),
+                center_node_id=center_node_id,
+                graph=self.graph,
+                token_counter=self._token_counter,
+                max_tokens=available_tokens
+            )
+        else:
+            # Fallback: use all candidates without pruning
+            pruned_nodes = list(candidates)
+            total_tokens = 0
 
         # Build subgraph from pruned nodes
         subgraph = self.graph.subgraph(pruned_nodes)
@@ -382,3 +406,367 @@ class GraphDB:
                     'content': data['content']
                 })
         return nodes
+
+    # =========================================================================
+    # NEW QUERY METHODS (For GraphRuntime)
+    # =========================================================================
+
+    def get_by_status(self, status: NodeStatus) -> List[str]:
+        """
+        Get all node IDs with a specific status.
+
+        Args:
+            status: The status to filter by (NodeStatus enum or string)
+
+        Returns:
+            List of node IDs
+        """
+        status_value = status.value if isinstance(status, NodeStatus) else status
+        return [
+            n for n, d in self.graph.nodes(data=True)
+            if d.get('status') == status_value
+        ]
+
+    def get_by_type(self, node_type: NodeType) -> List[str]:
+        """
+        Get all node IDs of a specific type.
+
+        Args:
+            node_type: The type to filter by (NodeType enum or string)
+
+        Returns:
+            List of node IDs
+        """
+        type_value = node_type.value if isinstance(node_type, NodeType) else node_type
+        return [
+            n for n, d in self.graph.nodes(data=True)
+            if d.get('type') == type_value
+        ]
+
+    def get_by_type_and_status(self, node_type: NodeType, status: NodeStatus) -> List[str]:
+        """
+        Get all node IDs matching both type and status.
+
+        Args:
+            node_type: The type to filter by
+            status: The status to filter by
+
+        Returns:
+            List of node IDs
+        """
+        type_value = node_type.value if isinstance(node_type, NodeType) else node_type
+        status_value = status.value if isinstance(status, NodeStatus) else status
+        return [
+            n for n, d in self.graph.nodes(data=True)
+            if d.get('type') == type_value and d.get('status') == status_value
+        ]
+
+    def dependencies_met(self, node_id: str) -> bool:
+        """
+        Check if all DEPENDS_ON targets are VERIFIED.
+
+        Args:
+            node_id: The node to check
+
+        Returns:
+            True if all dependencies are met
+        """
+        if node_id not in self.graph:
+            return False
+
+        for pred in self.graph.predecessors(node_id):
+            edge_data = self.graph.edges[pred, node_id]
+            if edge_data.get('type') == EdgeType.DEPENDS_ON.value:
+                pred_status = self.graph.nodes[pred].get('status')
+                if pred_status != NodeStatus.VERIFIED.value:
+                    return False
+        return True
+
+    def is_blocked(self, node_id: str) -> bool:
+        """
+        Check if a node is blocked by CLARIFICATION or ESCALATION.
+
+        Args:
+            node_id: The node to check
+
+        Returns:
+            True if node is blocked
+        """
+        if node_id not in self.graph:
+            return False
+
+        for succ in self.graph.successors(node_id):
+            succ_data = self.graph.nodes[succ]
+            succ_type = succ_data.get('type')
+            succ_status = succ_data.get('status')
+
+            if succ_type in [NodeType.CLARIFICATION.value, NodeType.ESCALATION.value]:
+                if succ_status in [NodeStatus.PENDING.value, NodeStatus.PROCESSING.value]:
+                    return True
+        return False
+
+    def get_children(self, node_id: str, edge_type: EdgeType = None) -> List[str]:
+        """
+        Get child nodes (successors) optionally filtered by edge type.
+
+        Args:
+            node_id: The node to get children for
+            edge_type: Optional edge type to filter by
+
+        Returns:
+            List of child node IDs
+        """
+        if node_id not in self.graph:
+            return []
+
+        children = []
+        for succ in self.graph.successors(node_id):
+            if edge_type:
+                edge_data = self.graph.edges[node_id, succ]
+                if edge_data.get('type') == edge_type.value:
+                    children.append(succ)
+            else:
+                children.append(succ)
+        return children
+
+    def get_parents(self, node_id: str, edge_type: EdgeType = None) -> List[str]:
+        """
+        Get parent nodes (predecessors) optionally filtered by edge type.
+
+        Args:
+            node_id: The node to get parents for
+            edge_type: Optional edge type to filter by
+
+        Returns:
+            List of parent node IDs
+        """
+        if node_id not in self.graph:
+            return []
+
+        parents = []
+        for pred in self.graph.predecessors(node_id):
+            if edge_type:
+                edge_data = self.graph.edges[pred, node_id]
+                if edge_data.get('type') == edge_type.value:
+                    parents.append(pred)
+            else:
+                parents.append(pred)
+        return parents
+
+    def topological_order(self) -> List[str]:
+        """
+        Get nodes in topological order based on DEPENDS_ON edges.
+
+        Returns:
+            List of node IDs in dependency order (dependencies first)
+        """
+        # Build subgraph with only DEPENDS_ON edges
+        dep_graph = nx.DiGraph()
+        for n in self.graph.nodes():
+            dep_graph.add_node(n)
+
+        for u, v, d in self.graph.edges(data=True):
+            if d.get('type') == EdgeType.DEPENDS_ON.value:
+                dep_graph.add_edge(u, v)
+
+        try:
+            return list(nx.topological_sort(dep_graph))
+        except nx.NetworkXUnfeasible:
+            self.logger.warning("Cycle detected in dependency graph")
+            return list(self.graph.nodes())
+
+    def get_execution_waves(self) -> List[List[str]]:
+        """
+        Get PENDING nodes organized into parallel execution waves.
+
+        Nodes in the same wave can be processed in parallel.
+        Each wave depends on previous waves completing.
+
+        Returns:
+            List of waves, each wave is a list of node IDs
+        """
+        # Build dependency subgraph for PENDING nodes only
+        dep_graph = nx.DiGraph()
+        pending = self.get_by_status(NodeStatus.PENDING)
+
+        for node_id in pending:
+            dep_graph.add_node(node_id)
+            for pred in self.graph.predecessors(node_id):
+                edge_data = self.graph.edges[pred, node_id]
+                if edge_data.get('type') == EdgeType.DEPENDS_ON.value:
+                    if pred in pending:
+                        dep_graph.add_edge(pred, node_id)
+
+        try:
+            return list(nx.topological_generations(dep_graph))
+        except nx.NetworkXUnfeasible:
+            self.logger.warning("Cycle detected, returning single wave")
+            return [pending]
+
+    def get_root_requirement(self, node_id: str) -> Optional[str]:
+        """
+        Find the root REQ node for any node.
+
+        Traverses TRACES_TO edges upward to find the originating requirement.
+
+        Args:
+            node_id: Starting node
+
+        Returns:
+            REQ node ID or None
+        """
+        if node_id not in self.graph:
+            return None
+
+        # Check if this is already a REQ
+        if self.graph.nodes[node_id].get('type') == NodeType.REQ.value:
+            return node_id
+
+        # BFS to find REQ ancestor
+        visited = set()
+        queue = [node_id]
+
+        while queue:
+            current = queue.pop(0)
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for pred in self.graph.predecessors(current):
+                pred_data = self.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.REQ.value:
+                    return pred
+                queue.append(pred)
+
+        return None
+
+    def get_full_context(self, node_id: str, max_depth: int = 3) -> Dict[str, Any]:
+        """
+        Get comprehensive context for a node including neighborhood.
+
+        This is used by agents to understand the full context around a node.
+
+        Args:
+            node_id: The center node
+            max_depth: How many hops to include
+
+        Returns:
+            Dict with nodes, edges, and metadata
+        """
+        if node_id not in self.graph:
+            return {}
+
+        # Gather nodes within radius
+        nodes_in_context = {node_id}
+        current_frontier = {node_id}
+
+        for _ in range(max_depth):
+            next_frontier = set()
+            for n in current_frontier:
+                # Add predecessors
+                for pred in self.graph.predecessors(n):
+                    if pred not in nodes_in_context:
+                        nodes_in_context.add(pred)
+                        next_frontier.add(pred)
+                # Add successors
+                for succ in self.graph.successors(n):
+                    if succ not in nodes_in_context:
+                        nodes_in_context.add(succ)
+                        next_frontier.add(succ)
+            current_frontier = next_frontier
+
+        # Build subgraph
+        subgraph = self.graph.subgraph(nodes_in_context)
+
+        # Find root REQ
+        root_req = self.get_root_requirement(node_id)
+        req_content = None
+        if root_req:
+            req_content = self.graph.nodes[root_req].get('content')
+
+        return {
+            'center_node': node_id,
+            'center_data': dict(self.graph.nodes[node_id]),
+            'nodes': {n: dict(d) for n, d in subgraph.nodes(data=True)},
+            'edges': [
+                {
+                    'source': u,
+                    'target': v,
+                    'type': d.get('type'),
+                    'metadata': d
+                }
+                for u, v, d in subgraph.edges(data=True)
+            ],
+            'root_requirement': root_req,
+            'requirement_content': req_content,
+            'node_count': len(nodes_in_context)
+        }
+
+    def apply_agent_output(self, source_node_id: str, output: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Apply agent output to the graph.
+
+        Creates new nodes, edges, and updates statuses as specified.
+
+        Args:
+            source_node_id: The node that was processed
+            output: Dict with new_nodes, new_edges, status_updates, artifacts
+
+        Returns:
+            Mapping of placeholder IDs to real IDs
+        """
+        import uuid
+
+        id_map = {}
+
+        # Create new nodes
+        for node_spec in output.get('new_nodes', []):
+            new_id = uuid.uuid4().hex
+            node_type = node_spec.get('type')
+            id_map[node_type] = new_id  # Simple mapping by type
+
+            self.add_node(
+                node_id=new_id,
+                node_type=NodeType(node_type),
+                content=node_spec.get('content', ''),
+                metadata=node_spec.get('metadata', {})
+            )
+
+            # Create TRACES_TO edge
+            self.add_edge(
+                source_id=new_id,
+                target_id=source_node_id,
+                edge_type=EdgeType.TRACES_TO,
+                signed_by='system',
+                signature=f"auto:{new_id[:8]}"
+            )
+
+        # Create explicit edges
+        for edge_spec in output.get('new_edges', []):
+            src = edge_spec.get('source_id')
+            tgt = edge_spec.get('target_id')
+
+            # Resolve IDs
+            if src in id_map:
+                src = id_map[src]
+            if tgt in id_map:
+                tgt = id_map[tgt]
+
+            if src in self.graph.nodes and tgt in self.graph.nodes:
+                self.add_edge(
+                    source_id=src,
+                    target_id=tgt,
+                    edge_type=EdgeType(edge_spec.get('relation')),
+                    signed_by='system',
+                    signature=f"auto:{src[:8]}"
+                )
+
+        # Apply status updates
+        for update_id, new_status in output.get('status_updates', {}).items():
+            if update_id in self.graph.nodes:
+                try:
+                    self.set_status(update_id, NodeStatus(new_status))
+                except Exception as e:
+                    self.logger.warning(f"Failed to update status: {e}")
+
+        return id_map
