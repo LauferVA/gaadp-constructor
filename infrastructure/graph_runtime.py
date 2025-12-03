@@ -27,6 +27,7 @@ from core.protocols import (
     GraphContext,
 )
 from agents.generic_agent import GenericAgent, create_agent
+from core.telemetry import TelemetryRecorder, get_recorder
 
 
 logger = logging.getLogger("GAADP.GraphRuntime")
@@ -57,6 +58,7 @@ class GraphRuntime:
         self.gateway = llm_gateway
         self._agents: Dict[str, GenericAgent] = {}
         self._viz = viz_server
+        self._telemetry = get_recorder()
 
         logger.info("GraphRuntime initialized")
 
@@ -513,8 +515,12 @@ class GraphRuntime:
 
         # Transition to PROCESSING
         old_status = self.graph.graph.nodes[node_id].get('status', 'PENDING')
+        node_type = self.graph.graph.nodes[node_id].get('type', 'UNKNOWN')
         self.graph.set_status(node_id, NodeStatus.PROCESSING, f"Agent {agent_role} starting")
         await self._emit('on_node_status_changed', node_id, old_status, 'PROCESSING', f"Agent {agent_role} starting")
+
+        # Telemetry: Log state transition
+        self._telemetry.log_state_transition(node_id, node_type, old_status, 'PROCESSING', f"Agent {agent_role}")
 
         # Increment attempts
         node_data = self.graph.graph.nodes[node_id]
@@ -529,6 +535,11 @@ class GraphRuntime:
         # Emit agent started event
         await self._emit('on_agent_started', agent_role, node_id)
 
+        # Telemetry: Log agent start
+        self._telemetry.log_agent_start(agent_role, node_id)
+        import time
+        agent_start_time = time.time()
+
         try:
             output = await agent.process(context)
 
@@ -542,6 +553,10 @@ class GraphRuntime:
             # Emit agent finished event
             await self._emit('on_agent_finished', agent_role, node_id, True, output.cost_incurred)
 
+            # Telemetry: Log agent success
+            duration_ms = (time.time() - agent_start_time) * 1000
+            self._telemetry.log_agent_end(agent_role, node_id, True, output.cost_incurred, duration_ms)
+
             return output
 
         except Exception as e:
@@ -552,6 +567,11 @@ class GraphRuntime:
             # Emit error events
             await self._emit('on_error', node_id, str(e))
             await self._emit('on_agent_finished', agent_role, node_id, False, 0.0)
+
+            # Telemetry: Log agent failure
+            duration_ms = (time.time() - agent_start_time) * 1000
+            self._telemetry.log_agent_end(agent_role, node_id, False, 0.0, duration_ms)
+            self._telemetry.log_agent_error(agent_role, node_id, str(e))
 
             # Check if we should escalate
             if self.evaluate_condition(node_id, "max_attempts_exceeded"):
@@ -773,6 +793,9 @@ class GraphRuntime:
             # Emit iteration event
             await self._emit('on_iteration', iteration + 1, len(processable))
 
+            # Telemetry: Log iteration
+            self._telemetry.increment_step()
+
             # Process nodes (could be parallelized)
             for node_id in processable:
                 try:
@@ -785,6 +808,9 @@ class GraphRuntime:
                     stats['errors'] += 1
                     await self._emit('on_error', node_id, str(e))
 
+            # Telemetry: Log iteration results
+            self._telemetry.log_iteration(iteration + 1, stats['nodes_processed'])
+
             # Check completion
             if self._all_reqs_terminal():
                 logger.info("All requirements reached terminal state")
@@ -792,6 +818,9 @@ class GraphRuntime:
 
         # Emit completion event
         await self._emit('on_complete', stats)
+
+        # Telemetry: Flush session
+        self._telemetry.flush()
 
         return stats
 

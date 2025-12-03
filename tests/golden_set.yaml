@@ -1,0 +1,155 @@
+# =============================================================================
+# GAADP GOLDEN SET - Calibration Data for Regression Testing
+# =============================================================================
+#
+# This file contains 5 carefully curated tasks for benchmarking:
+# - 2x Builder Tasks (SWE-bench Lite style) - Code generation
+# - 2x Architect Tasks (ClassEval style) - Decomposition
+# - 1x Graph Task (CrossCodeEval style) - Multi-file dependencies
+#
+# Each task has:
+# - Deterministic input (the requirement)
+# - Measurable criteria (what defines success)
+# - Cost/cycle limits (for governance testing)
+#
+# These tasks are designed to be:
+# - Cheap to run (~$0.10 each)
+# - Deterministically evaluable
+# - Representative of real usage patterns
+# =============================================================================
+
+version: "1.0"
+created: "2025-12-02"
+
+tasks:
+  # ===========================================================================
+  # BUILDER TASKS (SWE-bench Lite style)
+  # Focus: Code generation with specific requirements
+  # ===========================================================================
+
+  - id: builder_001
+    name: "Fibonacci with Error Handling"
+    type: builder
+    input: |
+      Create a Python file `fib.py` that implements a function `fibonacci(n)` which:
+      1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)
+      2. Raises a `ValueError` with message "n must be non-negative" for negative inputs
+      3. Uses iterative approach (not recursive) for efficiency
+    criteria:
+      - "VERIFIED status"
+      - "contains 'raise ValueError'"
+      - "contains 'def fibonacci'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: builder_002
+    name: "Division with Zero Handling"
+    type: builder
+    input: |
+      Create a Python file `calc.py` with a function `safe_divide(a, b)` that:
+      1. Returns the result of a divided by b
+      2. Raises `ZeroDivisionError` with message "Cannot divide by zero" when b is 0
+      3. DO NOT return infinity or NaN - always raise for division by zero
+    criteria:
+      - "VERIFIED status"
+      - "contains 'raise ZeroDivisionError'"
+      - "contains 'def safe_divide'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  # ===========================================================================
+  # ARCHITECT TASKS (ClassEval style)
+  # Focus: Proper decomposition into specifications
+  # ===========================================================================
+
+  - id: architect_001
+    name: "BankAccount Class Design"
+    type: architect
+    input: |
+      Design a Python class `BankAccount` with the following methods:
+      - `__init__(self, owner: str, initial_balance: float = 0)`
+      - `deposit(self, amount: float) -> float` - adds amount, returns new balance
+      - `withdraw(self, amount: float) -> float` - subtracts amount, returns new balance
+      - `audit(self) -> dict` - returns {"owner": str, "balance": float, "transactions": int}
+
+      The class should track the number of transactions (deposits + withdrawals).
+      Withdrawals should raise ValueError if amount exceeds balance.
+    criteria:
+      - "SPEC node created"
+      - "contains 'deposit'"
+      - "contains 'withdraw'"
+      - "contains 'audit'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_002
+    name: "Stack Data Structure"
+    type: architect
+    input: |
+      Design a Python class `Stack` implementing a LIFO data structure with:
+      - `push(item)` - adds item to top
+      - `pop()` - removes and returns top item, raises IndexError if empty
+      - `peek()` - returns top item without removing, raises IndexError if empty
+      - `is_empty()` - returns True if stack is empty
+      - `size()` - returns number of items
+
+      Use a list internally for storage.
+    criteria:
+      - "SPEC node created"
+      - "contains 'push'"
+      - "contains 'pop'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  # ===========================================================================
+  # GRAPH TASK (CrossCodeEval style)
+  # Focus: Multi-file dependencies with DEPENDS_ON edges
+  # ===========================================================================
+
+  - id: graph_001
+    name: "Utils Module with Importer"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `utils.py` - A utility module containing:
+         - `format_name(first: str, last: str) -> str` that returns "Last, First"
+         - `calculate_age(birth_year: int) -> int` that returns current year minus birth year
+
+      2. `main.py` - A main module that:
+         - Imports from utils.py
+         - Has a function `greet_user(first: str, last: str, birth_year: int) -> str`
+           that uses both utility functions to return a greeting like:
+           "Hello, Smith, John! You are 30 years old."
+
+      The main.py MUST import from utils.py (there should be a dependency).
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+      - "contains 'import'"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+metadata:
+  total_tasks: 5
+  task_types:
+    builder: 2
+    architect: 2
+    graph: 1
+  estimated_cost_usd: 1.15
+  estimated_time_minutes: 15
+
+  # These tasks were designed to test:
+  test_coverage:
+    - "Code generation with error handling"
+    - "Proper class decomposition"
+    - "Multi-file dependency tracking"
+    - "VERIFIED status achievement"
+    - "SPEC node creation"
+    - "Cost governance (max_cost_usd limits)"
+    - "Cycle limits (max_cycles)"
