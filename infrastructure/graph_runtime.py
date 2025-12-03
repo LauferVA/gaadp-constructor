@@ -41,21 +41,32 @@ class GraphRuntime:
     - Evaluates named CONDITIONS against the graph
     - Dispatches to agents based on AGENT_DISPATCH rules
     - Applies agent outputs as graph mutations
+    - Optionally emits events to visualization server
     """
 
-    def __init__(self, graph_db, llm_gateway=None):
+    def __init__(self, graph_db, llm_gateway=None, viz_server=None):
         """
         Initialize the runtime.
 
         Args:
             graph_db: The GraphDB instance
             llm_gateway: Optional LLM gateway for agents
+            viz_server: Optional VizServer for real-time visualization
         """
         self.graph = graph_db
         self.gateway = llm_gateway
         self._agents: Dict[str, GenericAgent] = {}
+        self._viz = viz_server
 
         logger.info("GraphRuntime initialized")
+
+    async def _emit(self, method: str, *args, **kwargs):
+        """Emit an event to the visualization server if connected."""
+        if self._viz and hasattr(self._viz, method):
+            try:
+                await getattr(self._viz, method)(*args, **kwargs)
+            except Exception as e:
+                logger.debug(f"Viz emit error: {e}")
 
     # =========================================================================
     # CONDITION EVALUATION
@@ -501,7 +512,9 @@ class GraphRuntime:
             return None
 
         # Transition to PROCESSING
+        old_status = self.graph.graph.nodes[node_id].get('status', 'PENDING')
         self.graph.set_status(node_id, NodeStatus.PROCESSING, f"Agent {agent_role} starting")
+        await self._emit('on_node_status_changed', node_id, old_status, 'PROCESSING', f"Agent {agent_role} starting")
 
         # Increment attempts
         node_data = self.graph.graph.nodes[node_id]
@@ -513,6 +526,9 @@ class GraphRuntime:
         context = self.build_context(node_id)
         agent = self.get_or_create_agent(agent_role)
 
+        # Emit agent started event
+        await self._emit('on_agent_started', agent_role, node_id)
+
         try:
             output = await agent.process(context)
 
@@ -523,6 +539,9 @@ class GraphRuntime:
             metadata['cost_actual'] = metadata.get('cost_actual', 0.0) + output.cost_incurred
             node_data['metadata'] = metadata
 
+            # Emit agent finished event
+            await self._emit('on_agent_finished', agent_role, node_id, True, output.cost_incurred)
+
             return output
 
         except Exception as e:
@@ -530,9 +549,14 @@ class GraphRuntime:
             metadata['last_error'] = str(e)
             node_data['metadata'] = metadata
 
+            # Emit error events
+            await self._emit('on_error', node_id, str(e))
+            await self._emit('on_agent_finished', agent_role, node_id, False, 0.0)
+
             # Check if we should escalate
             if self.evaluate_condition(node_id, "max_attempts_exceeded"):
                 self.graph.set_status(node_id, NodeStatus.FAILED, str(e))
+                await self._emit('on_node_status_changed', node_id, 'PROCESSING', 'FAILED', str(e))
                 await self._create_escalation(node_id, str(e))
 
             return None
@@ -554,6 +578,9 @@ class GraphRuntime:
                 metadata=node_spec.metadata or {}
             )
 
+            # Emit node created event
+            await self._emit('on_node_created', new_id, node_spec.type, node_spec.content, node_spec.metadata or {})
+
             # Create TRACES_TO edge to source
             signature = output.agent_role or "system"
             self.graph.add_edge(
@@ -563,6 +590,9 @@ class GraphRuntime:
                 signed_by=signature,
                 signature=f"{signature}:{new_id[:8]}"
             )
+
+            # Emit edge created event
+            await self._emit('on_edge_created', new_id, source_node_id, 'TRACES_TO')
 
         # Create edges
         for edge_spec in output.new_edges:
@@ -587,15 +617,21 @@ class GraphRuntime:
                     signature=f"{signature}:{src[:8]}"
                 )
 
+                # Emit edge created event
+                await self._emit('on_edge_created', src, tgt, edge_spec.relation)
+
         # Apply status updates
         for update_node_id, new_status in output.status_updates.items():
             if update_node_id in self.graph.graph.nodes:
                 try:
+                    old_status = self.graph.graph.nodes[update_node_id].get('status', 'PENDING')
                     self.graph.set_status(
                         update_node_id,
                         NodeStatus(new_status),
                         f"Updated by {output.agent_role}"
                     )
+                    # Emit status change event
+                    await self._emit('on_node_status_changed', update_node_id, old_status, new_status, f"Updated by {output.agent_role}")
                 except Exception as e:
                     logger.warning(f"Failed to update status for {update_node_id}: {e}")
 
@@ -734,6 +770,9 @@ class GraphRuntime:
 
             logger.info(f"Iteration {iteration + 1}: {len(processable)} processable nodes")
 
+            # Emit iteration event
+            await self._emit('on_iteration', iteration + 1, len(processable))
+
             # Process nodes (could be parallelized)
             for node_id in processable:
                 try:
@@ -744,11 +783,15 @@ class GraphRuntime:
                 except Exception as e:
                     logger.error(f"Error processing {node_id[:8]}: {e}")
                     stats['errors'] += 1
+                    await self._emit('on_error', node_id, str(e))
 
             # Check completion
             if self._all_reqs_terminal():
                 logger.info("All requirements reached terminal state")
                 break
+
+        # Emit completion event
+        await self._emit('on_complete', stats)
 
         return stats
 

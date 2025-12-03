@@ -7,7 +7,9 @@ This is the new graph-first entry point that uses:
 - GenericAgent (universal agent)
 - TransitionMatrix (the physics)
 
-~50 lines replacing ~500+ lines of orchestration code.
+Usage:
+    python main.py "your requirement here"
+    python main.py --viz "your requirement here"  # With real-time visualization
 """
 import asyncio
 import logging
@@ -29,25 +31,42 @@ logging.basicConfig(
 logger = logging.getLogger("GAADP.Main")
 
 
-async def main(requirement: str = None) -> dict:
+async def main(requirement: str = None, enable_viz: bool = False) -> dict:
     """
     Main entry point for GAADP.
 
     Args:
         requirement: The user requirement to process.
-                    If None, uses a default test requirement.
+        enable_viz: If True, start the visualization server.
 
     Returns:
         Execution statistics
     """
+    viz_server = None
+
+    # Start visualization server if requested
+    if enable_viz:
+        try:
+            from infrastructure.viz_server import start_viz_server
+            logger.info("Starting visualization server...")
+            viz_server = await start_viz_server()
+            logger.info("Dashboard: http://localhost:8766")
+            # Give browser time to open
+            await asyncio.sleep(1)
+        except ImportError as e:
+            logger.warning(f"Visualization not available: {e}")
+            logger.warning("Install websockets: pip install websockets")
+
     logger.info("=" * 60)
     logger.info("GAADP - Graph-First Architecture")
+    if enable_viz:
+        logger.info("Real-time visualization enabled")
     logger.info("=" * 60)
 
     # Initialize components
     graph_db = GraphDB(persistence_path=".gaadp/graph.json")
     gateway = LLMGateway()
-    runtime = GraphRuntime(graph_db=graph_db, llm_gateway=gateway)
+    runtime = GraphRuntime(graph_db=graph_db, llm_gateway=gateway, viz_server=viz_server)
 
     # Create initial REQ node if requirement provided
     if requirement:
@@ -64,6 +83,13 @@ async def main(requirement: str = None) -> dict:
         )
         logger.info(f"Created REQ node: {req_id[:8]}")
         logger.info(f"Requirement: {requirement[:100]}...")
+
+        # Emit to visualization
+        if viz_server:
+            await viz_server.on_node_created(
+                req_id, 'REQ', requirement,
+                {'cost_limit': 5.0, 'max_attempts': 3}
+            )
 
     # Show initial state
     pending = graph_db.get_by_status("PENDING")
@@ -95,6 +121,17 @@ async def main(requirement: str = None) -> dict:
         for node in code_nodes:
             logger.info(f"  - {node['file_path']}")
 
+    # Keep visualization running if enabled
+    if viz_server and stats['nodes_processed'] > 0:
+        logger.info("\nVisualization server still running. Press Ctrl+C to exit.")
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Shutting down visualization server...")
+            from infrastructure.viz_server import stop_viz_server
+            await stop_viz_server()
+
     return stats
 
 
@@ -103,7 +140,14 @@ def cli():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="GAADP - Graph-Aware Autonomous Development Platform"
+        description="GAADP - Graph-Aware Autonomous Development Platform",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py "Create a hello world function"
+  python main.py --viz "Create a REST API for user management"
+  python main.py -f requirements.txt --viz
+        """
     )
     parser.add_argument(
         "requirement",
@@ -119,6 +163,11 @@ def cli():
         action="store_true",
         help="Enable debug logging"
     )
+    parser.add_argument(
+        "--viz",
+        action="store_true",
+        help="Enable real-time visualization dashboard"
+    )
 
     args = parser.parse_args()
 
@@ -133,10 +182,12 @@ def cli():
         requirement = args.requirement
 
     # Run
-    stats = asyncio.run(main(requirement))
-
-    # Exit code based on errors
-    sys.exit(1 if stats['errors'] > 0 else 0)
+    try:
+        stats = asyncio.run(main(requirement, enable_viz=args.viz))
+        sys.exit(1 if stats['errors'] > 0 else 0)
+    except KeyboardInterrupt:
+        logger.info("\nInterrupted by user")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
