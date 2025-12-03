@@ -2,6 +2,7 @@
 GAADP Infrastructure Layer
 """
 from infrastructure.graph_db import GraphDB
+from infrastructure.graph_runtime import GraphRuntime
 from infrastructure.llm_gateway import LLMGateway, LLMGatewayError
 from infrastructure.llm_providers import (
     LLMProvider,
@@ -29,6 +30,7 @@ from infrastructure.metrics_subscriber import MetricsSubscriber
 
 __all__ = [
     'GraphDB',
+    'GraphRuntime',
     'LLMGateway',
     'LLMGatewayError',
     'LLMProvider',
