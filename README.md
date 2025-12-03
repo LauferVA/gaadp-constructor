@@ -8,9 +8,9 @@ GAADP is a **factory for building software**. It treats code generation as a gra
 - **Nodes** represent artifacts (requirements, specs, code, tests)
 - **Edges** represent relationships (traces to, implements, verifies)
 - **Agents** transform nodes according to strict rules
-- **Governance** enforces constraints at the infrastructure level
+- **Governance** enforced as physics in node metadata
 
-The key insight: **Policy as Physics, not Prompts**. Budget limits, security rules, and state transitions are enforced by the runtime, not by asking LLMs nicely.
+The key insight: **Policy as Physics, not Prompts**. Budget limits, security rules, and state transitions are enforced by the runtime via the TransitionMatrix, not by asking LLMs nicely.
 
 ## Architecture
 
@@ -25,19 +25,10 @@ The key insight: **Policy as Physics, not Prompts**. Budget limits, security rul
           │                │                     │
           ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                       ORCHESTRATION                             │
+│                       GRAPH RUNTIME                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Scheduler   │  │  Feedback    │  │  Alert Handler       │  │
-│  │  (Workers)   │  │  Controller  │  │  (Escalation)        │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-          │                │                     │
-          ▼                ▼                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       GOVERNANCE (PHYSICS)                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Treasurer   │  │  Sentinel    │  │  Curator             │  │
-│  │  (Budget)    │  │  (Security)  │  │  (Integrity)         │  │
+│  │ Transition   │  │  Generic     │  │  Visualization       │  │
+│  │ Matrix       │  │  Agent       │  │  Server              │  │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
           │                │                     │
@@ -46,7 +37,7 @@ The key insight: **Policy as Physics, not Prompts**. Budget limits, security rul
 │                       INFRASTRUCTURE                            │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
 │  │  GraphDB     │  │  LLM Gateway │  │  Materializer        │  │
-│  │  (State)     │  │  (litellm)   │  │  (Filesystem)        │  │
+│  │  (State)     │  │  (Providers) │  │  (Filesystem)        │  │
 │  └──────────────┘  └──────────────┘  └──────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -73,38 +64,57 @@ export OPENAI_API_KEY="your-key"
 
 ## Usage
 
-### Mode 1: Standalone Engine (Headless Automation)
+### Mode 1: CLI with Real-Time Visualization
 
-Run the factory autonomously with litellm:
+```bash
+# Basic usage
+python main.py "Create a REST API for user authentication"
+
+# With real-time DAG visualization dashboard
+python main.py --viz "Create a sorting algorithm"
+
+# From file
+python main.py -f requirements.txt --viz
+```
+
+The `--viz` flag opens a browser dashboard showing:
+- Force-directed graph of nodes and edges
+- Agent status (working/idle)
+- Real-time event log
+- Cost and iteration statistics
+
+### Mode 2: Programmatic
 
 ```python
 import asyncio
-from orchestration import GADPEngine, run_factory
-from agents.concrete_agents import RealArchitect, RealBuilder, RealVerifier
-from core.ontology import AgentRole
+from infrastructure.graph_db import GraphDB
+from infrastructure.graph_runtime import GraphRuntime
+from infrastructure.llm_gateway import LLMGateway
+from core.ontology import NodeType
 
 async def main():
-    engine = GADPEngine(persistence_path=".gaadp/live_graph.pkl")
+    graph_db = GraphDB(persistence_path=".gaadp/graph.json")
+    gateway = LLMGateway()
+    runtime = GraphRuntime(graph_db=graph_db, llm_gateway=gateway)
 
-    # Register agents
-    engine.register_agents({
-        AgentRole.ARCHITECT: RealArchitect("arch_01", AgentRole.ARCHITECT, engine.db),
-        AgentRole.BUILDER: RealBuilder("build_01", AgentRole.BUILDER, engine.db),
-        AgentRole.VERIFIER: RealVerifier("verif_01", AgentRole.VERIFIER, engine.db),
-    })
+    # Create initial requirement
+    import uuid
+    req_id = uuid.uuid4().hex
+    graph_db.add_node(
+        node_id=req_id,
+        node_type=NodeType.REQ,
+        content="Create a function to validate email addresses",
+        metadata={'cost_limit': 5.0}
+    )
 
-    # Inject requirement and run
-    engine.inject_requirement("Create a REST API for user authentication with JWT tokens")
-    await engine.run_until_complete(timeout=300)
-
-    print(engine.get_status())
+    # Run until complete
+    stats = await runtime.run_until_complete(max_iterations=50)
+    print(f"Processed {stats['nodes_processed']} nodes, cost: ${stats['total_cost']:.4f}")
 
 asyncio.run(main())
 ```
 
-### Mode 2: MCP Server (Claude Code Integration)
-
-Expose GAADP as tools for Claude Code:
+### Mode 3: MCP Server (Claude Code Integration)
 
 ```bash
 # Start the MCP server
@@ -123,17 +133,6 @@ Configure in `.claude/mcp.json`:
 }
 ```
 
-Then in Claude Code, you can use tools like:
-- `mcp__gaadp-core__create_node(node_type="SPEC", content="...")`
-- `mcp__gaadp-core__link_nodes(source_id, target_id, edge_type="IMPLEMENTS")`
-- `mcp__gaadp-core__run_verification_sandbox(code_node_id)`
-
-### Mode 3: Interactive CLI
-
-```bash
-python production_main.py
-```
-
 ## Core Concepts
 
 ### Ontology
@@ -142,12 +141,13 @@ python production_main.py
 | Type | Description |
 |------|-------------|
 | `REQ` | Root requirement from user |
+| `CLARIFICATION` | Questions/clarifications needed |
 | `SPEC` | Atomic specification (decomposed from REQ) |
 | `PLAN` | Execution plan |
 | `CODE` | Implementation |
 | `TEST` | Test cases |
 | `DOC` | Documentation |
-| `DEAD_END` | Failed/abandoned node |
+| `ESCALATION` | Issues requiring human intervention |
 
 **Edge Types:**
 | Type | Description |
@@ -162,135 +162,85 @@ python production_main.py
 | Status | Description |
 |--------|-------------|
 | `PENDING` | Ready for processing |
-| `IN_PROGRESS` | Currently being worked on |
+| `PROCESSING` | Currently being worked on |
 | `BLOCKED` | Waiting on dependency or governance |
-| `COMPLETE` | Successfully processed |
 | `VERIFIED` | Passed verification (terminal for CODE) |
 | `FAILED` | Processing failed |
 
-### Prime Directives
+### TransitionMatrix (The Physics)
 
-The 17 immutable laws in `.blueprint/prime_directives.md` govern all agent behavior:
-
-1. Graph is source of truth, not filesystem
-2. No node without parent edge
-3. Cryptographic signatures on all edges
-4. Merkle chaining for tamper detection
-5. Context radius limits per role
-6. Multi-agent verification required
-7. ...and more
-
-### Governance as Physics
-
-Constraints are enforced at the infrastructure level:
+State transitions are defined in `core/ontology.py`:
 
 ```python
-# This CANNOT exceed budget - the API call will fail
-await treasurer.pre_hook(task)  # Returns False if over budget
-
-# This CANNOT write insecure code - the DB rejects it
-await sentinel.post_hook(task, result)  # Returns False if eval() detected
-
-# This CANNOT create invalid state transitions
-db.set_status(node_id, "VERIFIED")  # Raises StateTransitionError if invalid
+TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
+    (NodeStatus.PENDING.value, NodeType.SPEC.value): [
+        TransitionRule(
+            target_status=NodeStatus.PROCESSING,
+            required_conditions=["cost_under_limit", "dependencies_verified", "not_blocked"],
+            priority=10
+        ),
+    ],
+    # ... more rules
+}
 ```
 
-## Configuration
+The runtime **cannot** violate these rules - they are physics, not suggestions.
 
-### `.blueprint/topology_config.yaml`
+### NodeMetadata (Governance as Data)
 
-```yaml
-parallel_limits:
-  max_concurrent_builders: 10
-  max_concurrent_verifiers: 10
-  max_wavefront_width: 20
-
-tool_permissions:
-  ARCHITECT:
-    allowed_tools: ["read_file", "list_directory", "search_web"]
-  BUILDER:
-    allowed_tools: ["read_file", "write_file", "list_directory"]
-  VERIFIER:
-    allowed_tools: ["read_file", "list_directory"]
+```python
+class NodeMetadata(BaseModel):
+    cost_limit: Optional[float] = None      # Max cost for this node
+    cost_actual: float = 0.0                # Actual cost incurred
+    security_level: int = 0                 # Required security clearance
+    attempts: int = 0                       # Retry count
+    max_attempts: int = 3                   # Max retries before failure
 ```
 
-### `.blueprint/llm_router.yaml`
+Budget and security are **embedded in the data**, not middleware that can be bypassed.
+
+### GenericAgent
+
+One universal agent class that loads personality from YAML:
 
 ```yaml
-model_assignments:
-  ARCHITECT:
-    model: "claude-3-sonnet-20240229"
-    temperature: 0.7
-  BUILDER:
-    model: "claude-3-haiku-20240307"
-    temperature: 0.3
-  VERIFIER:
-    model: "gpt-4-turbo"  # Different provider for diversity
-    temperature: 0.1
-
-cost_limits:
-  project_total_limit_usd: 10.0
-  per_node_limit_usd: 0.50
+# config/agent_manifest.yaml
+agents:
+  architect:
+    system_prompt_file: ".prompts/architect_system.md"
+    output_protocol: "ArchitectOutput"
+    context_radius: 3
+    tools_allowed: ["read_file", "list_directory", "search_web"]
 ```
 
 ## Key Components
 
-### TaskScheduler
-Discovers ready nodes, dispatches to worker pool with concurrency limits.
+### GraphRuntime
+The execution engine that consults TransitionMatrix and dispatches agents.
 
 ```python
-scheduler = TaskScheduler(db, event_bus)
-scheduler.register_agent(AgentRole.BUILDER, builder)
-await scheduler.start(num_workers=5)
+runtime = GraphRuntime(graph_db=graph_db, llm_gateway=gateway)
+stats = await runtime.run_until_complete(max_iterations=100)
 ```
 
-### FeedbackController
-Handles reject → replan → rebuild cycles.
+### GraphDB
+Enhanced graph database with 12+ query methods:
+- `get_by_status()`, `get_by_type()`
+- `dependencies_met()`, `is_blocked()`
+- `get_children()`, `get_parents()`
+- `topological_order()`, `get_execution_waves()`
+
+### VizServer
+WebSocket server for real-time visualization:
 
 ```python
-# When Verifier returns FAIL:
-# 1. Creates FEEDBACK edge with critique
-# 2. Resets SPEC to PENDING
-# 3. Builder sees critique in context on retry
-# 4. After N failures, escalates to Architect
-```
-
-### Governance Middleware
-- **Treasurer**: Pre-hook checking budget before LLM calls
-- **Sentinel**: Post-hook scanning code for security issues
-- **Curator**: Background daemon pruning dead-ends, checking integrity
-
-### AlertHandler
-Subscribes to governance alerts, escalates critical issues to human.
-
-```python
-# CRITICAL alerts trigger human approval:
-# - "Acknowledge & Continue"
-# - "Pause Pipeline"
-# - "Abort"
-```
-
-### AtomicMaterializer
-Writes verified code to filesystem atomically.
-
-```python
-materializer = AtomicMaterializer(db, output_dir="./output")
-result = materializer.materialize(dry_run=False)
-# Stages to temp → validates → atomic move → git commit
-```
-
-### CheckpointManager
-Save and restore execution state.
-
-```python
-checkpoint_mgr = CheckpointManager(db)
-checkpoint_mgr.create_checkpoint("before_risky_change", "Pre-refactor snapshot")
-# ... something goes wrong ...
-checkpoint_mgr.restore_checkpoint("before_risky_change")
+from infrastructure.viz_server import start_viz_server
+viz_server = await start_viz_server()
+runtime = GraphRuntime(graph_db, gateway, viz_server=viz_server)
 ```
 
 ### GraphVisualizer
-Export graph to various formats.
+Export graph to various formats:
 
 ```python
 viz = GraphVisualizer(db)
@@ -299,58 +249,44 @@ viz.export("graph.dot", format="dot")    # Graphviz
 viz.export("graph.md", format="mermaid") # Markdown diagrams
 ```
 
-## MCP Tools Reference
-
-| Tool | Description |
-|------|-------------|
-| `create_node` | Create REQ/SPEC/CODE/TEST node |
-| `link_nodes` | Create edge (with cycle detection) |
-| `get_node` | Retrieve node content/metadata |
-| `query_graph` | Find nodes by type/status |
-| `run_verification_sandbox` | Execute CODE node safely |
-| `update_node_status` | Change node status (validated) |
-| `git_commit_work` | Commit with traceability |
-| `get_graph_stats` | Node/edge counts, status distribution |
-
 ## Project Structure
 
 ```
 gaadp-constructor/
-├── .blueprint/              # Configuration files
-│   ├── prime_directives.md  # Immutable laws
-│   ├── topology_config.yaml # Concurrency, RBAC
-│   ├── llm_router.yaml      # Model assignments
-│   └── prompt_templates.yaml
+├── main.py                     # CLI entry point (--viz flag)
+├── server.py                   # MCP Server
 ├── core/
-│   ├── ontology.py          # Type definitions
-│   ├── state_machine.py     # Status transitions
-│   └── token_counter.py     # Real token counting
-├── infrastructure/
-│   ├── graph_db.py          # Persistence, queries
-│   ├── llm_gateway.py       # LLM calls via litellm
-│   ├── materializer.py      # Atomic file writes
-│   ├── checkpoint.py        # Save/restore state
-│   └── visualizer.py        # Graph export
-├── orchestration/
-│   ├── engine.py            # Main GADPEngine
-│   ├── scheduler.py         # Task dispatch
-│   ├── feedback.py          # Retry loops
-│   ├── governance.py        # Treasurer/Sentinel/Curator
-│   ├── human_loop.py        # Pause points
-│   └── alerts.py            # Escalation
+│   ├── ontology.py             # TransitionMatrix, NodeMetadata, enums
+│   └── protocols.py            # UnifiedAgentOutput, GraphContext
 ├── agents/
-│   ├── base_agent.py        # Crypto, RBAC, tools
-│   ├── concrete_agents.py   # Architect/Builder/Verifier
-│   └── governance.py        # Treasurer/Sentinel agents
-├── server.py                # MCP Server
-├── production_main.py       # CLI entry point
+│   └── generic_agent.py        # Universal agent (loads from YAML)
+├── config/
+│   └── agent_manifest.yaml     # Agent personalities
+├── infrastructure/
+│   ├── graph_db.py             # Persistence, queries
+│   ├── graph_runtime.py        # Execution engine
+│   ├── llm_gateway.py          # LLM abstraction
+│   ├── llm_providers.py        # Anthropic, OpenAI, Claude SDK providers
+│   ├── viz_server.py           # WebSocket visualization server
+│   ├── viz_dashboard.html      # D3.js interactive dashboard
+│   ├── materializer.py         # Atomic file writes
+│   ├── checkpoint.py           # Save/restore state
+│   └── visualizer.py           # Graph export (DOT, JSON, HTML)
+├── orchestration/
+│   ├── feedback.py             # Retry loops
+│   ├── human_loop.py           # Pause points
+│   ├── alerts.py               # Escalation
+│   └── consensus.py            # Multi-agent consensus
+├── .blueprint/
+│   ├── prime_directives.md     # Immutable laws
+│   └── topology_config.yaml    # Concurrency, RBAC
 └── requirements.txt
 ```
 
 ## Design Principles
 
 1. **Graph is Truth**: Filesystem is a view, not source of truth
-2. **Policy as Physics**: Constraints enforced by infrastructure, not prompts
+2. **Policy as Physics**: Constraints enforced by TransitionMatrix, not prompts
 3. **Fail Loud**: Invalid operations raise exceptions, not warnings
 4. **Dual Mode**: Headless automation + interactive control
 5. **Merkle Everything**: Cryptographic chain of custody

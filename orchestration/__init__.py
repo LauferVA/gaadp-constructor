@@ -1,15 +1,17 @@
 """
 GAADP Orchestration Layer
+
+Note: The core orchestration (scheduler, engine, governance, janitor) has been
+replaced by the graph-first architecture. See infrastructure/graph_runtime.py.
+
+Remaining components:
+- feedback: Reject/replan/rebuild cycles
+- human_loop: Pause points and human approval
+- alerts: Alert handling and escalation
+- consensus: Multi-agent consensus
+- wavefront: Wavefront processing
 """
-from orchestration.scheduler import TaskScheduler, Task, TaskType, SchedulerConfig
 from orchestration.feedback import FeedbackController, FeedbackConfig
-from orchestration.governance import (
-    TreasurerMiddleware,
-    SentinelMiddleware,
-    CuratorDaemon,
-    create_governance_middleware
-)
-from orchestration.engine import GADPEngine, run_factory
 from orchestration.human_loop import (
     HumanLoopController,
     HumanRequest,
@@ -19,21 +21,10 @@ from orchestration.human_loop import (
 )
 from orchestration.alerts import AlertHandler, Alert
 from orchestration.consensus import ConsensusManager, ConsensusResult, ConsensusVerdict
-from orchestration.janitor import JanitorDaemon, JanitorConfig
 
 __all__ = [
-    'TaskScheduler',
-    'Task',
-    'TaskType',
-    'SchedulerConfig',
     'FeedbackController',
     'FeedbackConfig',
-    'TreasurerMiddleware',
-    'SentinelMiddleware',
-    'CuratorDaemon',
-    'create_governance_middleware',
-    'GADPEngine',
-    'run_factory',
     'HumanLoopController',
     'HumanRequest',
     'InteractionType',
@@ -44,6 +35,4 @@ __all__ = [
     'ConsensusManager',
     'ConsensusResult',
     'ConsensusVerdict',
-    'JanitorDaemon',
-    'JanitorConfig',
 ]

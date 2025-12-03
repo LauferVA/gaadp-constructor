@@ -531,7 +531,7 @@ class ManualProvider(LLMProvider):
 
     Usage:
         export LLM_PROVIDER=manual
-        python production_main.py
+        python main.py
     """
 
     def __init__(self):

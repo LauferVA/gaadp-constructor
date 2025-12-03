@@ -429,8 +429,8 @@ async def test_dependency_ordering():
 
 #### Test 6.1: Full Production Main
 ```bash
-# Run production_main.py with batch mode
-python production_main.py --batch "Create a function to validate email addresses"
+# Run main.py with batch mode
+python main.py --batch "Create a function to validate email addresses"
 ```
 
 **Success Criteria:**
@@ -498,7 +498,7 @@ pytest tests/test_orchestration.py -v
 pytest tests/test_e2e_agents.py -v -m slow
 
 # 7. Production smoke test
-python production_main.py --batch "Create a sorting algorithm"
+python main.py --batch "Create a sorting algorithm"
 ```
 
 **Time:** ~30 minutes
@@ -513,7 +513,7 @@ python production_main.py --batch "Create a sorting algorithm"
 - [ ] Docker security enforced (Test 2.1)
 - [ ] LLM Gateway connects to Claude API (Test 3.1)
 - [ ] Simple E2E pipeline produces verified code (Test 4.1)
-- [ ] No unhandled exceptions in production_main.py (Test 6.1)
+- [ ] No unhandled exceptions in main.py (Test 6.1)
 
 ### Production Ready (Should Pass ⚙️)
 - [ ] Janitor cleans orphaned nodes (Test 2.3)

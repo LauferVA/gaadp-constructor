@@ -19,7 +19,7 @@ from typing import Dict, List, Any
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from production_main import main as run_gaadp
+from main import main as run_gaadp
 
 
 # Test cases with expected outcomes

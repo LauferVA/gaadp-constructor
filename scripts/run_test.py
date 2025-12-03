@@ -33,7 +33,7 @@ def run_pipeline(timeout: int = 300) -> dict:
 
     try:
         result = subprocess.run(
-            [sys.executable, "production_main.py"],
+            [sys.executable, "main.py"],
             capture_output=True,
             text=True,
             timeout=timeout,
