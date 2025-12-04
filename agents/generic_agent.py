@@ -101,18 +101,8 @@ class GenericAgent:
         return self._gateway
 
     def _load_system_prompt(self) -> str:
-        """Load system prompt from file or fallback."""
-        prompt_path = Path(self.config.system_prompt_path)
-
-        if prompt_path.exists():
-            return prompt_path.read_text()
-        elif self.config.system_prompt_fallback:
-            logger.warning(f"Prompt file not found, using fallback: {prompt_path}")
-            return self.config.system_prompt_fallback
-        else:
-            raise FileNotFoundError(
-                f"System prompt not found and no fallback: {prompt_path}"
-            )
+        """Load system prompt from config (inline in YAML)."""
+        return self.config.system_prompt
 
     def _build_tools_schema(self) -> List[Dict]:
         """Build tool schemas for this agent."""
@@ -221,12 +211,36 @@ class GenericAgent:
                 ""
             ])
 
+        # Add research artifact (for Architect to use during decomposition)
+        if context.research_artifact:
+            prompt_parts.extend([
+                f"## Research Artifact",
+                f"The following research artifact was verified for this requirement.",
+                f"Use this to guide your architectural decisions:",
+                f"```json",
+                json.dumps(context.research_artifact, indent=2)[:5000],  # Limit size
+                f"```",
+                ""
+            ])
+
         # Add dependency context
         if context.dependency_nodes:
             prompt_parts.append("## Dependencies (already completed)")
             for dep in context.dependency_nodes:
                 prompt_parts.append(f"- {dep.get('id', 'unknown')[:8]}: {dep.get('type', 'unknown')}")
             prompt_parts.append("")
+
+            # Include actual verified CODE from dependencies for the Builder
+            if context.dependency_code:
+                prompt_parts.append("## Dependency Code (import from these modules)")
+                prompt_parts.append("You MUST import and use the classes/functions defined below:")
+                prompt_parts.append("")
+                for file_path, code_content in context.dependency_code.items():
+                    prompt_parts.append(f"### {file_path}")
+                    prompt_parts.append("```python")
+                    prompt_parts.append(code_content)
+                    prompt_parts.append("```")
+                    prompt_parts.append("")
 
         # Add feedback from previous attempts
         if context.feedback:
@@ -278,6 +292,9 @@ class GenericAgent:
             # Force protocol output on final iteration
             force_output = iteration == MAX_REACT_ITERATIONS - 1
 
+            # Track cost before call
+            cost_before = self.gateway.get_session_cost()
+
             # Call LLM
             response = self.gateway.call_model(
                 role=self.role,
@@ -287,7 +304,12 @@ class GenericAgent:
                 force_tool=self.config.output_tool_name if force_output else None
             )
 
-            # Track tokens/cost (if available)
+            # Track cost after call (delta)
+            cost_after = self.gateway.get_session_cost()
+            call_cost = cost_after - cost_before
+            total_cost += call_cost
+
+            # Track tokens (if available)
             if hasattr(response, 'usage'):
                 total_tokens["input"] += getattr(response.usage, 'input_tokens', 0)
                 total_tokens["output"] += getattr(response.usage, 'output_tokens', 0)
@@ -308,6 +330,7 @@ class GenericAgent:
                 # Check if this is the output tool
                 if tool_name == self.config.output_tool_name:
                     # Extract and validate output
+                    # With proper tool_choice, args should already be a parsed dict
                     args = tc.get("input") or tc.get("arguments") or {}
                     if isinstance(args, str):
                         args = json.loads(args)
@@ -408,35 +431,56 @@ class GenericAgent:
         if hasattr(protocol_output, 'new_edges') and protocol_output.new_edges:
             output.new_edges = protocol_output.new_edges
 
-        # Extract code artifact (Builder)
-        if hasattr(protocol_output, 'code'):
-            code = protocol_output.code
-            output.artifacts[code.file_path] = code.content
+        # Extract code artifact (Builder - flat structure)
+        if hasattr(protocol_output, 'file_path') and hasattr(protocol_output, 'content'):
+            output.artifacts[protocol_output.file_path] = protocol_output.content
             # Create CODE node
             output.new_nodes.append(NodeSpec(
                 type="CODE",
-                content=code.content,
+                content=protocol_output.content,
                 metadata={
-                    "file_path": code.file_path,
-                    "language": code.language,
-                    "dependencies": code.dependencies
+                    "file_path": protocol_output.file_path,
+                    "language": getattr(protocol_output, 'language', 'python'),
+                    "dependencies": getattr(protocol_output, 'dependencies', None)
                 }
             ))
 
-        # Extract verdict (Verifier)
+        # Extract verdict (Verifier and Research Verifier)
         if hasattr(protocol_output, 'verdict'):
             verdict = protocol_output.verdict
-            # Update the CODE node status based on verdict
+            # Update the node status based on verdict
             if verdict == "PASS":
                 output.status_updates[context.node_id] = NodeStatus.VERIFIED.value
             else:
                 output.status_updates[context.node_id] = NodeStatus.FAILED.value
 
-            # Create TEST node
+            # Create TEST node only for CODE verification (not RESEARCH verification)
+            if context.node_type == NodeType.CODE.value:
+                output.new_nodes.append(NodeSpec(
+                    type="TEST",
+                    content=json.dumps(protocol_output.model_dump()),
+                    metadata={"verdict": verdict}
+                ))
+            elif context.node_type == NodeType.RESEARCH.value:
+                # For RESEARCH_VERIFIER, store verification details in metadata
+                # The status update above handles VERIFIED/FAILED transition
+                # CRITICAL FIX: Also set REQ back to PENDING so ARCHITECT can be dispatched
+                if verdict == "PASS" and context.requirement_id:
+                    output.status_updates[context.requirement_id] = NodeStatus.PENDING.value
+                    logger.info(f"RESEARCH verified - setting REQ {context.requirement_id[:8]} back to PENDING for ARCHITECT")
+
+        # Extract research artifact (Researcher) - create RESEARCH node
+        if hasattr(protocol_output, 'maturity_level') and hasattr(protocol_output, 'task_category'):
+            # This is a ResearcherOutput - create RESEARCH node
+            artifact_content = json.dumps(protocol_output.model_dump(), indent=2)
             output.new_nodes.append(NodeSpec(
-                type="TEST",
-                content=json.dumps(protocol_output.model_dump()),
-                metadata={"verdict": verdict}
+                type="RESEARCH",
+                content=artifact_content,
+                metadata={
+                    "maturity_level": protocol_output.maturity_level,
+                    "completeness_score": protocol_output.completeness_score,
+                    "task_category": protocol_output.task_category,
+                }
             ))
 
         return output

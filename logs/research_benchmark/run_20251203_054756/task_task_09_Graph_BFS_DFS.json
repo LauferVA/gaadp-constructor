@@ -1,0 +1,12 @@
+{
+  "task_id": "task_09",
+  "task_name": "Graph BFS/DFS",
+  "success": false,
+  "research_output": null,
+  "verification_output": null,
+  "attempts": 1,
+  "total_cost": 0.0,
+  "total_tokens": {},
+  "duration_seconds": 0.000391,
+  "error": "'NoneType' object has no attribute 'messages'"
+}

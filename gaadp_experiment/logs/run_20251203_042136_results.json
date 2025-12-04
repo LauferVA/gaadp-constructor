@@ -1,0 +1,47 @@
+[
+  {
+    "task_id": "task_01_d9367413",
+    "task_name": "smart_csv",
+    "status": "FAILED",
+    "attempts": 1,
+    "total_cost": 0.0,
+    "total_tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "duration_seconds": 0.292734,
+    "error": "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011CVjWRVy9pbZbbs4iGMh5o'}",
+    "artifact": null,
+    "verification": null
+  },
+  {
+    "task_id": "task_02_08e0280e",
+    "task_name": "ls_replica",
+    "status": "FAILED",
+    "attempts": 1,
+    "total_cost": 0.0,
+    "total_tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "duration_seconds": 0.177957,
+    "error": "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011CVjWRWjYEqvmjALzoa2Wk'}",
+    "artifact": null,
+    "verification": null
+  },
+  {
+    "task_id": "task_03_de6da6c9",
+    "task_name": "euler_collatz",
+    "status": "FAILED",
+    "attempts": 1,
+    "total_cost": 0.0,
+    "total_tokens": {
+      "input": 0,
+      "output": 0
+    },
+    "duration_seconds": 0.106703,
+    "error": "Error code: 404 - {'type': 'error', 'error': {'type': 'not_found_error', 'message': 'model: claude-3-5-sonnet-20241022'}, 'request_id': 'req_011CVjWRXVS5ZG71JTnV2TiL'}",
+    "artifact": null,
+    "verification": null
+  }
+]

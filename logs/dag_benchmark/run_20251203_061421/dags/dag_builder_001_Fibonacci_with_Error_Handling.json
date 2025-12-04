@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "task_id": "builder_001",
+    "task_name": "Fibonacci with Error Handling",
+    "task_type": "builder",
+    "requirement": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+    "exported_at": "2025-12-03T06:14:54.563098",
+    "duration_seconds": 33.527249,
+    "stats": {
+      "total_nodes": 5,
+      "total_edges": 2,
+      "total_cost": 0.058629
+    }
+  },
+  "nodes": [
+    {
+      "id": "be89dcbd8d0e4f96bbe614aea136e4b9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a function to calculate factorial",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3
+      }
+    },
+    {
+      "id": "69a33c94934545a3850c63765f3c8b96",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036524999999999995
+      }
+    },
+    {
+      "id": "ce547a4946f04bfca5028171b91807b1",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative integers\",\n      \"test_method\": \"Verify fibonacci(n) returns correct sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"c",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036573
+      }
+    },
+    {
+      "id": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution for mathematical computations.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify fibonacci(n) returns correct Fibonacci sequence values\",\n      \"is_",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.022056
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "ce547a4946f04bfca5028171b91807b1",
+      "target": "69a33c94934545a3850c63765f3c8b96",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "target": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "TRACES_TO"
+    }
+  ]
+}

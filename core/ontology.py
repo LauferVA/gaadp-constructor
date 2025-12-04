@@ -27,11 +27,13 @@ class NodeType(str, Enum):
     """Types of nodes in the graph."""
     # Primary workflow types
     REQ = "REQ"                      # User requirement (entry point)
+    RESEARCH = "RESEARCH"            # Research artifact (Research Standard v1.0)
     CLARIFICATION = "CLARIFICATION"  # Ambiguity needing human input
     SPEC = "SPEC"                    # Atomic specification
     PLAN = "PLAN"                    # Decomposition strategy
     CODE = "CODE"                    # Implementation artifact
-    TEST = "TEST"                    # Verification result
+    TEST = "TEST"                    # Verification result (legacy)
+    TEST_SUITE = "TEST_SUITE"        # Gen-2 TDD: Comprehensive test results from TESTER
     DOC = "DOC"                      # Documentation artifact
     ESCALATION = "ESCALATION"        # Failure requiring intervention
     # CPG (Code Property Graph) types for static analysis
@@ -46,10 +48,12 @@ class EdgeType(str, Enum):
     DEPENDS_ON = "DEPENDS_ON"        # Ordering: SPEC -> SPEC (must complete first)
     IMPLEMENTS = "IMPLEMENTS"        # Realization: CODE -> SPEC
     VERIFIES = "VERIFIES"            # Validation: TEST -> CODE
+    TESTS = "TESTS"                  # TDD: TEST_SUITE -> CODE (Gen-2)
     DEFINES = "DEFINES"              # Decomposition: PLAN -> SPEC
     BLOCKS = "BLOCKS"                # Blocking: any -> CLARIFICATION/ESCALATION
-    FEEDBACK = "FEEDBACK"            # Critique: failed CODE -> SPEC
+    FEEDBACK = "FEEDBACK"            # Critique: failed CODE -> SPEC (or Tester -> Builder)
     RESOLVED_BY = "RESOLVED_BY"      # Answer: CLARIFICATION -> response
+    RESEARCH_FOR = "RESEARCH_FOR"    # Research artifact for: RESEARCH -> REQ
     # Extended relationships (for AST/CPG features)
     CONTAINS = "CONTAINS"            # Containment: parent -> child
     REFERENCES = "REFERENCES"        # Reference: caller -> callee
@@ -61,6 +65,8 @@ class NodeStatus(str, Enum):
     PENDING = "PENDING"              # Waiting to be processed
     PROCESSING = "PROCESSING"        # Currently being processed
     BLOCKED = "BLOCKED"              # Waiting on another node
+    TESTING = "TESTING"              # Being tested by TESTER (Gen-2 TDD)
+    TESTED = "TESTED"                # Tests passed, awaiting verification
     VERIFIED = "VERIFIED"            # Successfully completed
     FAILED = "FAILED"                # Terminal failure
 
@@ -297,10 +303,17 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
             required_conditions=["cost_under_limit", "not_blocked"],
             priority=10
         ),
+        # Block only for BLOCKING clarifications (not clarifying-only)
         TransitionRule(
             target_status=NodeStatus.BLOCKED,
-            required_conditions=["has_pending_clarification"],
+            required_conditions=["has_blocking_clarifications"],
             priority=20  # Check blocking first
+        ),
+        # Proceed even with clarifying-only ambiguities (use defaults)
+        TransitionRule(
+            target_status=NodeStatus.PROCESSING,
+            required_conditions=["has_clarifying_only", "cost_under_limit"],
+            priority=15
         ),
     ],
 
@@ -311,19 +324,26 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
             required_conditions=["all_specs_verified"],
             priority=10
         ),
+        # Block only for BLOCKING clarifications
         TransitionRule(
             target_status=NodeStatus.BLOCKED,
-            required_conditions=["has_pending_clarification"],
+            required_conditions=["has_blocking_clarifications"],
             priority=20
         ),
     ],
 
-    # REQ: BLOCKED -> PENDING (clarification resolved)
+    # REQ: BLOCKED -> PENDING (all blocking clarifications resolved)
     (NodeStatus.BLOCKED.value, NodeType.REQ.value): [
         TransitionRule(
             target_status=NodeStatus.PENDING,
-            required_conditions=["no_pending_clarifications"],
+            required_conditions=["all_blocking_resolved"],
             priority=10
+        ),
+        # Legacy: also unblock if no clarifications at all
+        TransitionRule(
+            target_status=NodeStatus.PENDING,
+            required_conditions=["no_pending_clarifications"],
+            priority=5
         ),
     ],
 
@@ -373,19 +393,62 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
     # No transition rule - FAILED is terminal, but triggers escalation node creation
 
     # =========================================================================
-    # CODE Transitions
+    # CODE Transitions (Gen-2: TDD Loop)
     # =========================================================================
 
-    # CODE: PENDING -> PROCESSING (Verifier starts review)
+    # CODE: PENDING -> TESTING (Tester starts, NOT directly to Verifier)
     (NodeStatus.PENDING.value, NodeType.CODE.value): [
         TransitionRule(
-            target_status=NodeStatus.PROCESSING,
-            required_conditions=["cost_under_limit"],
+            target_status=NodeStatus.TESTING,
+            required_conditions=["cost_under_limit", "needs_testing"],
             priority=10
         ),
     ],
 
-    # CODE: PROCESSING -> VERIFIED/FAILED
+    # CODE: TESTING -> TESTED/PENDING/FAILED (TDD Feedback Loop)
+    (NodeStatus.TESTING.value, NodeType.CODE.value): [
+        # PASS: Tests passed, move to TESTED (awaits Verifier)
+        TransitionRule(
+            target_status=NodeStatus.TESTED,
+            required_conditions=["tests_passed"],
+            priority=10
+        ),
+        # NEEDS_REVISION + under max attempts: Back to PENDING (Builder retry)
+        TransitionRule(
+            target_status=NodeStatus.PENDING,
+            required_conditions=["tests_need_revision", "under_max_attempts"],
+            priority=15  # Higher priority - check retry before fail
+        ),
+        # NEEDS_REVISION + max attempts exceeded: FAILED (escalate)
+        TransitionRule(
+            target_status=NodeStatus.FAILED,
+            required_conditions=["tests_need_revision", "max_attempts_exceeded"],
+            priority=10
+        ),
+        # FAIL (critical/security): Immediate FAILED
+        TransitionRule(
+            target_status=NodeStatus.FAILED,
+            required_conditions=["tests_failed_critical"],
+            priority=20  # Highest priority - security issues block immediately
+        ),
+    ],
+
+    # CODE: TESTED -> VERIFIED/FAILED (Verifier final review)
+    (NodeStatus.TESTED.value, NodeType.CODE.value): [
+        TransitionRule(
+            target_status=NodeStatus.VERIFIED,
+            required_edge_types=[EdgeType.VERIFIES],
+            required_conditions=["verification_passed"],
+            priority=10
+        ),
+        TransitionRule(
+            target_status=NodeStatus.FAILED,
+            required_conditions=["verification_failed"],
+            priority=10
+        ),
+    ],
+
+    # CODE: PROCESSING -> VERIFIED/FAILED (Legacy path for non-TDD)
     (NodeStatus.PROCESSING.value, NodeType.CODE.value): [
         TransitionRule(
             target_status=NodeStatus.VERIFIED,
@@ -420,13 +483,40 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
         ),
     ],
 
-    # CLARIFICATION: PROCESSING -> VERIFIED (answered)
+    # CLARIFICATION: PROCESSING -> VERIFIED (answered by user or agent)
     (NodeStatus.PROCESSING.value, NodeType.CLARIFICATION.value): [
         TransitionRule(
             target_status=NodeStatus.VERIFIED,
             required_edge_types=[EdgeType.RESOLVED_BY],
             required_conditions=["has_resolution"],
             priority=10
+        ),
+        # User requested pause - move to BLOCKED
+        TransitionRule(
+            target_status=NodeStatus.BLOCKED,
+            required_conditions=["user_requested_pause"],
+            priority=5
+        ),
+        # Non-blocking clarification timed out - use default and verify
+        TransitionRule(
+            target_status=NodeStatus.VERIFIED,
+            required_conditions=["clarification_timed_out", "can_use_default"],
+            priority=3
+        ),
+    ],
+
+    # CLARIFICATION: BLOCKED -> PROCESSING (user ready to resume)
+    (NodeStatus.BLOCKED.value, NodeType.CLARIFICATION.value): [
+        TransitionRule(
+            target_status=NodeStatus.PROCESSING,
+            required_conditions=["user_ready_to_answer"],
+            priority=10
+        ),
+        # Timeout on blocked clarification - escalate or use default
+        TransitionRule(
+            target_status=NodeStatus.FAILED,
+            required_conditions=["clarification_timed_out"],
+            priority=5
         ),
     ],
 
@@ -453,6 +543,33 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
         TransitionRule(
             target_status=NodeStatus.FAILED,
             required_conditions=["max_escalations_exceeded"],
+            priority=5
+        ),
+    ],
+
+    # =========================================================================
+    # RESEARCH Transitions (Research Standard v1.0)
+    # =========================================================================
+
+    # RESEARCH: PENDING -> PROCESSING (Researcher transforms raw prompt)
+    (NodeStatus.PENDING.value, NodeType.RESEARCH.value): [
+        TransitionRule(
+            target_status=NodeStatus.PROCESSING,
+            required_conditions=["cost_under_limit"],
+            priority=10
+        ),
+    ],
+
+    # RESEARCH: PROCESSING -> VERIFIED/FAILED
+    (NodeStatus.PROCESSING.value, NodeType.RESEARCH.value): [
+        TransitionRule(
+            target_status=NodeStatus.VERIFIED,
+            required_conditions=["research_verified"],
+            priority=10
+        ),
+        TransitionRule(
+            target_status=NodeStatus.FAILED,
+            required_conditions=["max_attempts_exceeded"],
             priority=5
         ),
     ],
@@ -493,20 +610,67 @@ TRANSITION_MATRIX: Dict[Tuple[str, str], List[TransitionRule]] = {
 # This replaces hardcoded "if node.type == CODE: use Verifier" logic
 
 AGENT_DISPATCH: Dict[Tuple[str, str], str] = {
-    # REQ with no specs -> Architect decomposes
+    # ==========================================================================
+    # DIALECTIC PIPELINE (Pre-Research Ambiguity Detection)
+    # ==========================================================================
+
+    # REQ that hasn't been analyzed for ambiguity -> Dialector checks first
+    (NodeType.REQ.value, "needs_dialectic"): "DIALECTOR",
+
+    # ==========================================================================
+    # RESEARCH PIPELINE (Gen-2: Sequential, not parallel)
+    # ==========================================================================
+
+    # REQ with no research artifact (and dialectic passed) -> Researcher transforms
+    (NodeType.REQ.value, "needs_research"): "RESEARCHER",
+
+    # RESEARCH needs verification -> Research Verifier
+    (NodeType.RESEARCH.value, "needs_research_verification"): "RESEARCH_VERIFIER",
+
+    # CRITICAL FIX (Gen-2): Verified RESEARCH triggers SPEC generation
+    # This was the missing link that caused Gen-1 to stop at RESEARCH
+    (NodeType.RESEARCH.value, "needs_spec_generation"): "ARCHITECT",
+
+    # ==========================================================================
+    # SPEC → CODE PIPELINE
+    # ==========================================================================
+
+    # REQ with no specs (legacy path, kept for non-research tasks)
     (NodeType.REQ.value, "needs_decomposition"): "ARCHITECT",
 
     # SPEC ready for implementation -> Builder
     (NodeType.SPEC.value, "ready_for_build"): "BUILDER",
 
-    # CODE needs verification -> Verifier
+    # ==========================================================================
+    # TDD LOOP (Gen-2: Builder ↔ Tester feedback loop)
+    # ==========================================================================
+
+    # CODE needs testing -> Tester (Gen-2 TDD)
+    (NodeType.CODE.value, "needs_testing"): "TESTER",
+
+    # CODE passed tests, needs final verification -> Verifier
     (NodeType.CODE.value, "needs_verification"): "VERIFIER",
 
-    # CLARIFICATION pending -> Socrates (or human)
+    # ==========================================================================
+    # CLARIFICATION & ESCALATION
+    # ==========================================================================
+
+    # CLARIFICATION pending -> Socrates (or human via VizServer)
     (NodeType.CLARIFICATION.value, "needs_resolution"): "SOCRATES",
+
+    # CLARIFICATION answered by user -> Socrates confirms/processes answer
+    (NodeType.CLARIFICATION.value, "user_provided_answer"): "SOCRATES",
 
     # ESCALATION -> Architect re-plans
     (NodeType.ESCALATION.value, "needs_replan"): "ARCHITECT",
+
+    # ==========================================================================
+    # Graph-Native Socratic Q&A Dispatch
+    # ==========================================================================
+
+    # REQ blocked by clarifications -> hold for SOCRATES to manage Q&A
+    # (SOCRATES will ask questions via VizServer and process answers)
+    (NodeType.REQ.value, "has_blocking_clarifications"): "SOCRATES",
 }
 
 
@@ -519,38 +683,94 @@ AGENT_DISPATCH: Dict[Tuple[str, str], str] = {
 # This set allows validation that rules only use known conditions.
 
 KNOWN_CONDITIONS: Set[str] = {
+    # ==========================================================================
     # Cost governance
+    # ==========================================================================
     "cost_under_limit",           # metadata.cost_actual < metadata.cost_limit
 
+    # ==========================================================================
     # Dependency tracking
+    # ==========================================================================
     "dependencies_verified",      # All DEPENDS_ON targets are VERIFIED
     "has_unmet_dependencies",     # Has DEPENDS_ON edges to non-VERIFIED nodes
 
+    # ==========================================================================
     # Blocking
+    # ==========================================================================
     "not_blocked",                # No BLOCKS edges to PENDING nodes
     "has_pending_clarification",  # Has CLARIFICATION child in PENDING/PROCESSING
 
+    # ==========================================================================
     # Completion checks
+    # ==========================================================================
     "all_specs_verified",         # All SPEC children are VERIFIED
     "implementation_verified",    # CODE implementing this SPEC is VERIFIED
     "verification_passed",        # Verifier verdict is PASS
     "verification_failed",        # Verifier verdict is FAIL
 
+    # ==========================================================================
     # Retry/escalation
+    # ==========================================================================
     "max_attempts_exceeded",      # metadata.attempts >= metadata.max_attempts
     "max_escalations_exceeded",   # Too many escalation attempts
+    "under_max_attempts",         # metadata.attempts < metadata.max_attempts (TDD loop)
 
+    # ==========================================================================
     # Resolution
+    # ==========================================================================
     "has_resolution",             # CLARIFICATION has RESOLVED_BY edge
     "no_pending_clarifications",  # No unresolved CLARIFICATION nodes
     "replan_produced",            # Architect produced new SPEC nodes
 
-    # Dispatch conditions
+    # ==========================================================================
+    # Dispatch conditions (original)
+    # ==========================================================================
     "needs_decomposition",        # REQ has no SPEC children
     "ready_for_build",            # SPEC dependencies met, no CODE yet
-    "needs_verification",         # CODE has no TEST
+    "needs_verification",         # CODE passed tests, needs final review
     "needs_resolution",           # CLARIFICATION not yet answered
     "needs_replan",               # ESCALATION not yet addressed
+
+    # ==========================================================================
+    # Research Standard v1.0 conditions
+    # ==========================================================================
+    "needs_research",             # REQ has no RESEARCH artifact yet
+    "needs_research_verification", # RESEARCH artifact needs verification
+    "research_verified",          # RESEARCH artifact passed 8/10 criteria
+
+    # ==========================================================================
+    # Gen-2 Pipeline Gap Fix
+    # ==========================================================================
+    "needs_spec_generation",      # RESEARCH is VERIFIED but no SPEC created yet
+    "has_verified_research",      # REQ has a VERIFIED RESEARCH child
+
+    # ==========================================================================
+    # Gen-2 TDD Loop conditions
+    # ==========================================================================
+    "needs_testing",              # CODE created, needs TESTER review
+    "tests_passed",               # TESTER verdict is PASS
+    "tests_need_revision",        # TESTER verdict is NEEDS_REVISION (retry)
+    "tests_failed_critical",      # TESTER verdict is FAIL (security/critical)
+    "code_tested",                # CODE has passed all tests (status=TESTED)
+
+    # ==========================================================================
+    # Dialectic Pipeline conditions (Pre-Research Ambiguity Detection)
+    # ==========================================================================
+    "needs_dialectic",            # REQ hasn't been analyzed for ambiguity yet
+    "dialectic_passed",           # Dialector found no blocking ambiguities
+    "dialectic_blocked",          # Dialector found blocking ambiguities, waiting for user
+
+    # ==========================================================================
+    # Graph-Native Socratic Q&A conditions
+    # ==========================================================================
+    "has_blocking_clarifications",     # Has CLARIFICATION children with impact_level="blocking"
+    "has_clarifying_only",             # Has only non-blocking CLARIFICATION children
+    "all_blocking_resolved",           # All blocking CLARIFICATIONs are VERIFIED
+    "user_provided_answer",            # VizServer received user response for this CLARIFICATION
+    "user_requested_pause",            # User asked to defer answering this CLARIFICATION
+    "user_ready_to_answer",            # User signaled ready to resume paused CLARIFICATION
+    "clarification_timed_out",         # Timeout expired waiting for user response
+    "can_use_default",                 # CLARIFICATION is non-blocking, default can be used
 }
 
 

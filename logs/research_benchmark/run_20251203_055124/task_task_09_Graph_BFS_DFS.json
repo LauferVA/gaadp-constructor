@@ -1,0 +1,368 @@
+{
+  "task_id": "task_09",
+  "task_name": "Graph BFS/DFS",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.95,
+    "task_category": "algorithmic",
+    "why": "Graph traversal algorithms are fundamental building blocks for many applications including pathfinding, network analysis, dependency resolution, social network analysis, and AI search algorithms. BFS and DFS provide different traversal orders that are optimal for different use cases.",
+    "success_criteria": [
+      {
+        "criterion": "BFS visits nodes in correct breadth-first order",
+        "test_method": "Test with known graph structure and verify visit order matches expected BFS sequence",
+        "is_automated": true
+      },
+      {
+        "criterion": "DFS visits nodes in correct depth-first order",
+        "test_method": "Test with known graph structure and verify visit order matches expected DFS sequence",
+        "is_automated": true
+      },
+      {
+        "criterion": "Both algorithms handle disconnected graphs correctly",
+        "test_method": "Test with graph having multiple components, verify all reachable nodes are visited",
+        "is_automated": true
+      },
+      {
+        "criterion": "Both algorithms avoid infinite loops on cyclic graphs",
+        "test_method": "Test with graphs containing cycles, verify each node visited at most once",
+        "is_automated": true
+      },
+      {
+        "criterion": "Both algorithms handle empty and single-node graphs",
+        "test_method": "Test edge cases with empty graph and single node graph",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "graph",
+        "type": "Dict[str, List[str]]",
+        "validation": "isinstance(graph, dict) and all(isinstance(k, str) and isinstance(v, list) and all(isinstance(neighbor, str) for neighbor in v) for k, v in graph.items())",
+        "trust_boundary": "untrusted"
+      },
+      {
+        "name": "start_node",
+        "type": "str",
+        "validation": "isinstance(start_node, str) and len(start_node) > 0",
+        "trust_boundary": "untrusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "bfs_order",
+        "type": "List[str]",
+        "postcondition": "isinstance(bfs_order, list) and all(isinstance(node, str) for node in bfs_order) and len(set(bfs_order)) == len(bfs_order)"
+      },
+      {
+        "name": "dfs_order",
+        "type": "List[str]",
+        "postcondition": "isinstance(dfs_order, list) and all(isinstance(node, str) for node in dfs_order) and len(set(dfs_order)) == len(dfs_order)"
+      }
+    ],
+    "happy_path_examples": [
+      {
+        "input": {
+          "graph": {
+            "A": [
+              "B",
+              "C"
+            ],
+            "B": [
+              "D"
+            ],
+            "C": [
+              "D"
+            ],
+            "D": []
+          },
+          "start_node": "A"
+        },
+        "expected_output": {
+          "bfs_order": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "dfs_order": [
+            "A",
+            "B",
+            "D",
+            "C"
+          ]
+        },
+        "explanation": "Simple directed acyclic graph demonstrating different traversal orders"
+      },
+      {
+        "input": {
+          "graph": {
+            "1": [
+              "2",
+              "3"
+            ],
+            "2": [
+              "1",
+              "4"
+            ],
+            "3": [
+              "1"
+            ],
+            "4": [
+              "2"
+            ]
+          },
+          "start_node": "1"
+        },
+        "expected_output": {
+          "bfs_order": [
+            "1",
+            "2",
+            "3",
+            "4"
+          ],
+          "dfs_order": [
+            "1",
+            "2",
+            "4",
+            "3"
+          ]
+        },
+        "explanation": "Undirected graph with cycles showing cycle handling"
+      }
+    ],
+    "edge_case_examples": [
+      {
+        "input": {
+          "graph": {
+            "A": []
+          },
+          "start_node": "A"
+        },
+        "expected_output": {
+          "bfs_order": [
+            "A"
+          ],
+          "dfs_order": [
+            "A"
+          ]
+        },
+        "why_edge": "Single isolated node with no connections"
+      },
+      {
+        "input": {
+          "graph": {
+            "A": [
+              "B"
+            ],
+            "B": [
+              "A"
+            ],
+            "C": [
+              "D"
+            ],
+            "D": [
+              "C"
+            ]
+          },
+          "start_node": "A"
+        },
+        "expected_output": {
+          "bfs_order": [
+            "A",
+            "B"
+          ],
+          "dfs_order": [
+            "A",
+            "B"
+          ]
+        },
+        "why_edge": "Disconnected graph - only visits nodes reachable from start"
+      },
+      {
+        "input": {
+          "graph": {
+            "A": [
+              "A"
+            ]
+          },
+          "start_node": "A"
+        },
+        "expected_output": {
+          "bfs_order": [
+            "A"
+          ],
+          "dfs_order": [
+            "A"
+          ]
+        },
+        "why_edge": "Self-loop should not cause infinite recursion"
+      }
+    ],
+    "error_case_examples": [
+      {
+        "input": {
+          "graph": {
+            "A": [
+              "B"
+            ],
+            "B": []
+          },
+          "start_node": "C"
+        },
+        "expected_exception": "ValueError: Start node 'C' not found in graph",
+        "explanation": "Start node must exist in the graph"
+      },
+      {
+        "input": {
+          "graph": {},
+          "start_node": "A"
+        },
+        "expected_exception": "ValueError: Start node 'A' not found in graph",
+        "explanation": "Empty graph with any start node should raise error"
+      },
+      {
+        "input": {
+          "graph": {
+            "A": [
+              "B"
+            ]
+          },
+          "start_node": ""
+        },
+        "expected_exception": "ValueError: Start node cannot be empty",
+        "explanation": "Empty string is not a valid node identifier"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "What order should neighbors be visited when multiple neighbors exist?",
+        "options": [
+          "Alphabetical order",
+          "Order they appear in adjacency list",
+          "Random order"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Order they appear in adjacency list",
+        "rationale": "Preserves the input structure and is most predictable for testing"
+      },
+      {
+        "description": "Should the algorithm return only reachable nodes or attempt to visit all nodes?",
+        "options": [
+          "Only reachable nodes from start",
+          "All nodes in graph",
+          "Raise error if not all reachable"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Only reachable nodes from start",
+        "rationale": "Standard graph traversal behavior - only visits what's reachable from starting point"
+      },
+      {
+        "description": "How should we handle nodes referenced as neighbors but not defined as keys?",
+        "options": [
+          "Ignore them",
+          "Treat as leaf nodes",
+          "Raise error"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Treat as leaf nodes",
+        "rationale": "Most flexible approach - allows for graphs where not all nodes have explicit neighbor lists"
+      }
+    ],
+    "complexity_time": "O(V + E)",
+    "complexity_space": "O(V)",
+    "complexity_justification": "V = number of vertices, E = number of edges. Both algorithms visit each vertex once and examine each edge once. Space complexity is O(V) for the visited set and queue/stack data structures.",
+    "unit_tests": [
+      {
+        "name": "test_bfs_order_correctness",
+        "assertion": "bfs({'A': ['B', 'C'], 'B': ['D'], 'C': ['D'], 'D': []}, 'A') == ['A', 'B', 'C', 'D']",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_dfs_order_correctness",
+        "assertion": "dfs({'A': ['B', 'C'], 'B': ['D'], 'C': ['D'], 'D': []}, 'A') == ['A', 'B', 'D', 'C']",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_disconnected_graph_handling",
+        "assertion": "len(bfs({'A': ['B'], 'B': [], 'C': ['D'], 'D': []}, 'A')) == 2",
+        "traces_to_criterion": 2,
+        "priority": "high"
+      },
+      {
+        "name": "test_cycle_handling_bfs",
+        "assertion": "set(bfs({'A': ['B'], 'B': ['A']}, 'A')) == {'A', 'B'} and len(bfs({'A': ['B'], 'B': ['A']}, 'A')) == 2",
+        "traces_to_criterion": 3,
+        "priority": "critical"
+      },
+      {
+        "name": "test_cycle_handling_dfs",
+        "assertion": "set(dfs({'A': ['B'], 'B': ['A']}, 'A')) == {'A', 'B'} and len(dfs({'A': ['B'], 'B': ['A']}, 'A')) == 2",
+        "traces_to_criterion": 3,
+        "priority": "critical"
+      },
+      {
+        "name": "test_single_node_graph",
+        "assertion": "bfs({'A': []}, 'A') == ['A'] and dfs({'A': []}, 'A') == ['A']",
+        "traces_to_criterion": 4,
+        "priority": "medium"
+      },
+      {
+        "name": "test_start_node_not_found",
+        "assertion": "raises(ValueError, lambda: bfs({'A': []}, 'B'))",
+        "traces_to_criterion": 4,
+        "priority": "high"
+      }
+    ],
+    "forbidden_patterns": [
+      "eval(",
+      "exec(",
+      "import os",
+      "import subprocess",
+      "open("
+    ],
+    "trust_boundary": "untrusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "graph_traversal.py",
+        "purpose": "Main module containing BFS and DFS implementations with input validation"
+      }
+    ],
+    "entry_point": "graph_traversal.py",
+    "dependencies": [],
+    "reasoning": "Analyzed this as an algorithmic task requiring implementation of two classic graph traversal algorithms. Key design decisions included: (1) Using adjacency list representation as Dict[str, List[str]] for simplicity and JSON compatibility, (2) Resolving ambiguity about neighbor visit order by preserving input order, (3) Handling disconnected graphs by only visiting reachable nodes, (4) Treating referenced but undefined nodes as leaf nodes for flexibility. Both algorithms need cycle detection via visited sets to avoid infinite loops. The implementation should be pure algorithmic code with no external dependencies."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": true,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": true,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": true,
+    "issues": null,
+    "suggestions": null,
+    "reasoning": "This Research Artifact meets all 10 criteria with high quality. All input types have proper Python annotations and executable validation expressions. Output types are fully specified with postconditions. The artifact includes comprehensive examples covering happy path, edge cases (single node, disconnected graph, self-loop), and error cases. Complexity analysis is complete with time/space bounds and justification. Security posture is properly defined with forbidden patterns and trust boundary. File structure is mapped appropriately for a single-file task. Unit tests are well-defined with proper traceability to success criteria. The reasoning section provides thorough documentation of design decisions. All text content avoids ambiguous pronouns and maintains clear referents throughout.",
+    "verification_method": "llm",
+    "deterministic_score": 10,
+    "llm_score": 10
+  },
+  "attempts": 1,
+  "total_cost": 0.17377200000000004,
+  "total_tokens": {
+    "input": 189302,
+    "output": 61764
+  },
+  "duration_seconds": 46.393861,
+  "error": null
+}

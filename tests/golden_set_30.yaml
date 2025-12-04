@@ -1,0 +1,552 @@
+# =============================================================================
+# GAADP GOLDEN SET v2.0 - 30 Tasks for Full DAG Benchmark
+# =============================================================================
+#
+# 30 tasks organized into 3 categories:
+# - 10x Builder Tasks (code generation with specific requirements)
+# - 10x Architect Tasks (class/module design and decomposition)
+# - 10x Graph Tasks (multi-file dependencies)
+#
+# =============================================================================
+
+version: "2.0"
+created: "2025-12-03"
+
+tasks:
+  # ===========================================================================
+  # BUILDER TASKS (1-10): Code generation with specific requirements
+  # ===========================================================================
+
+  - id: builder_001
+    name: "Fibonacci with Error Handling"
+    type: builder
+    input: |
+      Create a Python file `fib.py` that implements a function `fibonacci(n)` which:
+      1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)
+      2. Raises a `ValueError` with message "n must be non-negative" for negative inputs
+      3. Uses iterative approach (not recursive) for efficiency
+    criteria:
+      - "VERIFIED status"
+      - "contains 'raise ValueError'"
+      - "contains 'def fibonacci'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: builder_002
+    name: "Division with Zero Handling"
+    type: builder
+    input: |
+      Create a Python file `calc.py` with a function `safe_divide(a, b)` that:
+      1. Returns the result of a divided by b
+      2. Raises `ZeroDivisionError` with message "Cannot divide by zero" when b is 0
+      3. DO NOT return infinity or NaN - always raise for division by zero
+    criteria:
+      - "VERIFIED status"
+      - "contains 'raise ZeroDivisionError'"
+      - "contains 'def safe_divide'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_003
+    name: "Palindrome Checker"
+    type: builder
+    input: |
+      Create a Python file `palindrome.py` with a function `is_palindrome(s)` that:
+      1. Returns True if the string s is a palindrome (reads same forwards and backwards)
+      2. Ignores case and non-alphanumeric characters
+      3. Returns False for empty strings
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def is_palindrome'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_004
+    name: "Prime Number Checker"
+    type: builder
+    input: |
+      Create a Python file `primes.py` with a function `is_prime(n)` that:
+      1. Returns True if n is a prime number, False otherwise
+      2. Returns False for numbers less than 2
+      3. Uses efficient algorithm (check divisibility up to sqrt(n))
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def is_prime'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_005
+    name: "Binary Search Implementation"
+    type: builder
+    input: |
+      Create a Python file `search.py` with a function `binary_search(arr, target)` that:
+      1. Returns the index of target in sorted array arr
+      2. Returns -1 if target is not found
+      3. Assumes arr is already sorted in ascending order
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def binary_search'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_006
+    name: "String Reversal"
+    type: builder
+    input: |
+      Create a Python file `strings.py` with a function `reverse_words(sentence)` that:
+      1. Reverses the order of words in a sentence
+      2. Preserves whitespace between words (single space)
+      3. Returns empty string for empty input
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def reverse_words'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_007
+    name: "Factorial Calculator"
+    type: builder
+    input: |
+      Create a Python file `math_funcs.py` with a function `factorial(n)` that:
+      1. Returns the factorial of n (n!)
+      2. Raises ValueError for negative numbers
+      3. Returns 1 for n=0
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def factorial'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_008
+    name: "Anagram Detector"
+    type: builder
+    input: |
+      Create a Python file `anagram.py` with a function `are_anagrams(s1, s2)` that:
+      1. Returns True if s1 and s2 are anagrams of each other
+      2. Ignores case and whitespace
+      3. Returns False if either string is empty
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def are_anagrams'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  - id: builder_009
+    name: "List Flattener"
+    type: builder
+    input: |
+      Create a Python file `flatten.py` with a function `flatten_list(nested)` that:
+      1. Flattens a nested list to a single-level list
+      2. Works with any depth of nesting
+      3. Preserves order of elements
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def flatten_list'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: builder_010
+    name: "GCD Calculator"
+    type: builder
+    input: |
+      Create a Python file `gcd.py` with a function `gcd(a, b)` that:
+      1. Returns the greatest common divisor of a and b
+      2. Uses Euclidean algorithm
+      3. Handles zero inputs correctly (gcd(0, n) = n)
+    criteria:
+      - "VERIFIED status"
+      - "contains 'def gcd'"
+    max_cycles: 6
+    max_cost_usd: 0.15
+
+  # ===========================================================================
+  # ARCHITECT TASKS (11-20): Class/module design and decomposition
+  # ===========================================================================
+
+  - id: architect_001
+    name: "BankAccount Class Design"
+    type: architect
+    input: |
+      Design a Python class `BankAccount` with the following methods:
+      - `__init__(self, owner: str, initial_balance: float = 0)`
+      - `deposit(self, amount: float) -> float` - adds amount, returns new balance
+      - `withdraw(self, amount: float) -> float` - subtracts amount, returns new balance
+      - `audit(self) -> dict` - returns {"owner": str, "balance": float, "transactions": int}
+
+      The class should track the number of transactions (deposits + withdrawals).
+      Withdrawals should raise ValueError if amount exceeds balance.
+    criteria:
+      - "SPEC node created"
+      - "contains 'deposit'"
+      - "contains 'withdraw'"
+      - "contains 'audit'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_002
+    name: "Stack Data Structure"
+    type: architect
+    input: |
+      Design a Python class `Stack` implementing a LIFO data structure with:
+      - `push(item)` - adds item to top
+      - `pop()` - removes and returns top item, raises IndexError if empty
+      - `peek()` - returns top item without removing, raises IndexError if empty
+      - `is_empty()` - returns True if stack is empty
+      - `size()` - returns number of items
+    criteria:
+      - "SPEC node created"
+      - "contains 'push'"
+      - "contains 'pop'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: architect_003
+    name: "Queue Data Structure"
+    type: architect
+    input: |
+      Design a Python class `Queue` implementing a FIFO data structure with:
+      - `enqueue(item)` - adds item to back
+      - `dequeue()` - removes and returns front item, raises IndexError if empty
+      - `front()` - returns front item without removing
+      - `is_empty()` - returns True if queue is empty
+      - `size()` - returns number of items
+    criteria:
+      - "SPEC node created"
+      - "contains 'enqueue'"
+      - "contains 'dequeue'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: architect_004
+    name: "LinkedList Node"
+    type: architect
+    input: |
+      Design a Python class `LinkedList` with:
+      - `append(value)` - adds node to end
+      - `prepend(value)` - adds node to beginning
+      - `find(value)` - returns node with value or None
+      - `delete(value)` - removes first node with value
+      - `to_list()` - returns Python list of all values
+    criteria:
+      - "SPEC node created"
+      - "contains 'append'"
+      - "contains 'find'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_005
+    name: "HashTable Implementation"
+    type: architect
+    input: |
+      Design a Python class `HashTable` with:
+      - `put(key, value)` - stores key-value pair
+      - `get(key)` - returns value for key, raises KeyError if not found
+      - `remove(key)` - removes key-value pair
+      - `contains(key)` - returns True if key exists
+      - `keys()` - returns list of all keys
+    criteria:
+      - "SPEC node created"
+      - "contains 'put'"
+      - "contains 'get'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_006
+    name: "Binary Tree Node"
+    type: architect
+    input: |
+      Design a Python class `BinaryTree` with:
+      - `insert(value)` - inserts value maintaining BST property
+      - `search(value)` - returns True if value exists
+      - `inorder()` - returns list of values in-order
+      - `preorder()` - returns list of values pre-order
+      - `height()` - returns height of tree
+    criteria:
+      - "SPEC node created"
+      - "contains 'insert'"
+      - "contains 'search'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_007
+    name: "PriorityQueue"
+    type: architect
+    input: |
+      Design a Python class `PriorityQueue` with:
+      - `push(item, priority)` - adds item with priority (lower = higher priority)
+      - `pop()` - removes and returns highest priority item
+      - `peek()` - returns highest priority item without removing
+      - `is_empty()` - returns True if empty
+    criteria:
+      - "SPEC node created"
+      - "contains 'push'"
+      - "contains 'pop'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  - id: architect_008
+    name: "Graph Adjacency List"
+    type: architect
+    input: |
+      Design a Python class `Graph` with:
+      - `add_vertex(v)` - adds a vertex
+      - `add_edge(v1, v2, weight=1)` - adds edge between vertices
+      - `get_neighbors(v)` - returns list of neighbors
+      - `has_path(start, end)` - returns True if path exists (BFS)
+    criteria:
+      - "SPEC node created"
+      - "contains 'add_vertex'"
+      - "contains 'add_edge'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_009
+    name: "LRU Cache"
+    type: architect
+    input: |
+      Design a Python class `LRUCache` with:
+      - `__init__(capacity)` - creates cache with max capacity
+      - `get(key)` - returns value, moves to most recent
+      - `put(key, value)` - adds/updates, evicts least recent if full
+      - `size()` - returns current number of items
+    criteria:
+      - "SPEC node created"
+      - "contains 'get'"
+      - "contains 'put'"
+    max_cycles: 10
+    max_cost_usd: 0.25
+
+  - id: architect_010
+    name: "Event Emitter"
+    type: architect
+    input: |
+      Design a Python class `EventEmitter` with:
+      - `on(event_name, callback)` - registers callback for event
+      - `off(event_name, callback)` - removes callback
+      - `emit(event_name, *args)` - triggers all callbacks for event
+      - `once(event_name, callback)` - registers one-time callback
+    criteria:
+      - "SPEC node created"
+      - "contains 'on'"
+      - "contains 'emit'"
+    max_cycles: 8
+    max_cost_usd: 0.20
+
+  # ===========================================================================
+  # GRAPH TASKS (21-30): Multi-file dependencies
+  # ===========================================================================
+
+  - id: graph_001
+    name: "Utils Module with Importer"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `utils.py` - A utility module containing:
+         - `format_name(first: str, last: str) -> str` that returns "Last, First"
+         - `calculate_age(birth_year: int) -> int` that returns current year minus birth year
+
+      2. `main.py` - A main module that:
+         - Imports from utils.py
+         - Has a function `greet_user(first: str, last: str, birth_year: int) -> str`
+           that uses both utility functions to return a greeting
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+      - "contains 'import'"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_002
+    name: "Config and Logger"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `config.py` - Configuration module with:
+         - `LOG_LEVEL = "INFO"`
+         - `APP_NAME = "MyApp"`
+         - `get_config() -> dict` returning all config as dict
+
+      2. `logger.py` - Logger module that:
+         - Imports config.py
+         - `setup_logger()` - configures logging using config values
+         - `log(message)` - logs message with APP_NAME prefix
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 10
+    max_cost_usd: 0.30
+
+  - id: graph_003
+    name: "Model and Repository"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `models.py` - Data models:
+         - `User` class with `id`, `name`, `email` attributes
+         - `to_dict()` method
+
+      2. `repository.py` - Data access:
+         - Imports User from models.py
+         - `UserRepository` class with `add(user)`, `find(id)`, `all()` methods
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_004
+    name: "Validator and Form"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `validators.py` - Validation functions:
+         - `validate_email(email)` - returns True if valid email format
+         - `validate_phone(phone)` - returns True if valid phone format
+
+      2. `forms.py` - Form handling:
+         - Imports validators
+         - `ContactForm` class that uses validators to validate input
+         - `is_valid()` method that checks all fields
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_005
+    name: "Database and Service"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `database.py` - Database abstraction:
+         - `Database` class with `connect()`, `execute(query)`, `close()`
+         - Simulates a database connection (can use dict storage)
+
+      2. `service.py` - Business logic:
+         - Imports Database
+         - `ProductService` class using database for CRUD operations
+         - Methods: `create(product)`, `get(id)`, `update(id, data)`, `delete(id)`
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 14
+    max_cost_usd: 0.40
+
+  - id: graph_006
+    name: "Auth and Middleware"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `auth.py` - Authentication:
+         - `generate_token(user_id)` - creates simple token
+         - `verify_token(token)` - verifies and returns user_id or None
+
+      2. `middleware.py` - Request middleware:
+         - Imports auth functions
+         - `AuthMiddleware` class with `process(request)` method
+         - Extracts and verifies token from request headers
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_007
+    name: "Parser and Transformer"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `parser.py` - Data parser:
+         - `parse_csv(text)` - parses CSV text into list of dicts
+         - `parse_json(text)` - parses JSON text into Python object
+
+      2. `transformer.py` - Data transformation:
+         - Imports parser functions
+         - `DataTransformer` class with methods to convert between formats
+         - `csv_to_json(csv_text)`, `json_to_csv(json_text)`
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_008
+    name: "Cache and Store"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `cache.py` - Caching layer:
+         - `Cache` class with `get(key)`, `set(key, value, ttl)`, `delete(key)`
+         - Simple in-memory implementation with TTL support
+
+      2. `store.py` - Data store with caching:
+         - Imports Cache
+         - `CachedStore` class that wraps storage with caching
+         - `read(key)` checks cache first, `write(key, value)` updates both
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_009
+    name: "Events and Handlers"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `events.py` - Event definitions:
+         - `Event` base class with `name`, `data` attributes
+         - `UserCreatedEvent`, `UserDeletedEvent` subclasses
+
+      2. `handlers.py` - Event handlers:
+         - Imports event classes
+         - `EventHandler` base class
+         - `UserEventHandler` with `handle(event)` method
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 12
+    max_cost_usd: 0.35
+
+  - id: graph_010
+    name: "CLI and Commands"
+    type: graph
+    input: |
+      Create two Python files:
+
+      1. `commands.py` - Command implementations:
+         - `Command` base class with `execute()` abstract method
+         - `ListCommand`, `CreateCommand`, `DeleteCommand` implementations
+
+      2. `cli.py` - CLI interface:
+         - Imports command classes
+         - `CLI` class that parses arguments and dispatches to commands
+         - `run(args)` method that executes appropriate command
+    criteria:
+      - "VERIFIED status"
+      - "DEPENDS_ON edge exists"
+    max_cycles: 14
+    max_cost_usd: 0.40
+
+
+# =============================================================================
+# METADATA
+# =============================================================================
+
+metadata:
+  total_tasks: 30
+  task_types:
+    builder: 10
+    architect: 10
+    graph: 10
+  estimated_cost_usd: 7.50
+  estimated_time_minutes: 60

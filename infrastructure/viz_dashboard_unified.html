@@ -1,0 +1,3000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAADP Mission Control</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            overflow-y: auto;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           LAYOUT MODES: Single (Production) vs Dual (Comparison)
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Production mode: vertical stack layout */
+        .container.single-mode {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #0d1117;
+            overflow: hidden;
+        }
+
+        /* Comparison mode: vertical stack with side-by-side sections */
+        .container.comparison-mode {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #0d1117;
+            overflow: hidden;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           HEADER
+           ═══════════════════════════════════════════════════════════════ */
+
+        .header {
+            background: #161b22;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 50px;
+            flex-shrink: 0;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #58a6ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header h1 span {
+            color: #8b949e;
+            font-weight: 400;
+        }
+
+        .mode-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .mode-badge.production { background: #3fb950; color: #0d1117; }
+        .mode-badge.comparison { background: #f0883e; color: #0d1117; }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f85149;
+        }
+
+        .status-dot.connected {
+            background: #3fb950;
+            box-shadow: 0 0 8px #3fb950;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MAIN CONTENT AREA - Vertical sections with scrolling
+           ═══════════════════════════════════════════════════════════════ */
+
+        #mainContentArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            min-height: 0;
+        }
+
+        /* Custom scrollbar styling */
+        #mainContentArea::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #mainContentArea::-webkit-scrollbar-track {
+            background: #0d1117;
+            border-left: 1px solid #30363d;
+        }
+
+        #mainContentArea::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 5px;
+        }
+
+        #mainContentArea::-webkit-scrollbar-thumb:hover {
+            background: #58a6ff;
+        }
+
+        /* Section row - for horizontal split in comparison mode */
+        .section-row {
+            display: flex;
+            flex-shrink: 0;
+        }
+
+        /* DAG section - gets the most space */
+        .section-row.dag-row {
+            flex: 1;
+            min-height: 200px;
+        }
+
+        /* Half-width sections for comparison mode */
+        .section-row .half {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .container.single-mode .section-row .half {
+            /* In single mode, half still takes full width */
+        }
+
+        /* Full-width sections */
+        .section-row.full-width {
+            width: 100%;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PANEL TYPES - DAG, Legend, Metrics, Events
+           ═══════════════════════════════════════════════════════════════ */
+
+        .dag-panel {
+            display: flex;
+            flex-direction: column;
+            background: #0d1117;
+            min-height: 0;
+            height: 100%;
+        }
+
+        /* Ensure dag panels fill parent in comparison mode */
+        .container.comparison-mode .dag-panel.half {
+            height: 100%;
+        }
+
+        .legend-panel {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+        }
+
+        .metrics-panel {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+        }
+
+        .events-panel {
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            height: 180px;
+            min-height: 80px;
+        }
+
+        /* Half-width panels for comparison mode */
+        .half {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* In comparison mode, add borders between halves */
+        .container.comparison-mode .section-row .half:first-child {
+            border-right: 1px solid #30363d;
+        }
+
+        /* DAG section takes most space - now resizable */
+        #dagSection {
+            min-height: 300px;
+            height: 400px;
+            flex-shrink: 0;
+        }
+
+        /* Fixed height sections */
+        #legendSection {
+            flex-shrink: 0;
+        }
+
+        #metricsSection {
+            flex-shrink: 0;
+        }
+
+        #eventsSection {
+            height: 200px;
+            min-height: 100px;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           PRODUCTION METRICS DASHBOARD
+           ═══════════════════════════════════════════════════════════════ */
+
+        .prod-metrics-dashboard {
+            background: #161b22;
+            border-top: 2px solid #58a6ff;
+            padding: 12px 16px;
+        }
+
+        .prod-metrics-dashboard h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #58a6ff;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prod-metrics-dashboard h3::before {
+            content: '📊';
+        }
+
+        .prod-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+
+        .prod-metric-card {
+            background: #21262d;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border-left: 3px solid #30363d;
+            transition: border-color 0.2s;
+        }
+
+        .prod-metric-card:hover {
+            border-left-color: #58a6ff;
+        }
+
+        .prod-metric-label {
+            font-size: 9px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .prod-metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #c9d1d9;
+            line-height: 1.2;
+        }
+
+        .prod-metric-trend {
+            font-size: 9px;
+            margin-top: 2px;
+        }
+
+        .prod-metric-trend.positive { color: #3fb950; }
+        .prod-metric-trend.negative { color: #f85149; }
+        .prod-metric-trend.neutral { color: #6e7681; }
+
+        /* Color variants for metrics */
+        .prod-metric-card.success-rate { border-left-color: #3fb950; }
+        .prod-metric-card.success-rate .prod-metric-value { color: #3fb950; }
+
+        .prod-metric-card.failure-rate { border-left-color: #f85149; }
+        .prod-metric-card.failure-rate .prod-metric-value { color: #f85149; }
+
+        .prod-metric-card.coverage { border-left-color: #a371f7; }
+        .prod-metric-card.coverage .prod-metric-value { color: #a371f7; }
+
+        .prod-metric-card.quality { border-left-color: #58a6ff; }
+        .prod-metric-card.quality .prod-metric-value { color: #58a6ff; }
+
+        .prod-metric-card.time { border-left-color: #f0883e; }
+        .prod-metric-card.time .prod-metric-value { color: #f0883e; }
+
+        .prod-metric-card.cost { border-left-color: #79c0ff; }
+        .prod-metric-card.cost .prod-metric-value { color: #79c0ff; }
+
+        .prod-metric-card.edges { border-left-color: #8b949e; }
+        .prod-metric-card.edges .prod-metric-value { color: #8b949e; }
+
+        .prod-metric-card.api { border-left-color: #a371f7; }
+        .prod-metric-card.api .prod-metric-value { color: #a371f7; }
+
+        /* Comparison Table Styles */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .comparison-table thead th {
+            background: #21262d;
+            color: #8b949e;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            text-align: center;
+        }
+
+        .comparison-table thead th.metric-col {
+            text-align: left;
+            width: 35%;
+        }
+
+        .comparison-table thead th.baseline-col,
+        .comparison-table thead th.treatment-col {
+            width: 22%;
+        }
+
+        .comparison-table thead th.delta-col {
+            width: 21%;
+        }
+
+        .comparison-table tbody tr {
+            border-bottom: 1px solid #21262d;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: #21262d;
+        }
+
+        .comparison-table td {
+            padding: 8px 12px;
+            vertical-align: middle;
+        }
+
+        .comparison-table .metric-name {
+            color: #c9d1d9;
+            font-weight: 500;
+        }
+
+        .comparison-table .baseline-val,
+        .comparison-table .treatment-val {
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: #8b949e;
+        }
+
+        .comparison-table .baseline-val {
+            color: #f0883e;
+        }
+
+        .comparison-table .treatment-val {
+            color: #58a6ff;
+        }
+
+        .comparison-table .delta-val {
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        .comparison-table .delta-val.positive {
+            color: #3fb950;
+        }
+
+        .comparison-table .delta-val.negative {
+            color: #f85149;
+        }
+
+        .comparison-table .delta-val.neutral {
+            color: #6e7681;
+        }
+
+        /* Resize handle for DAG section */
+        .dag-resize-handle {
+            height: 6px;
+            background: #30363d;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .dag-resize-handle:hover {
+            background: #58a6ff;
+        }
+
+        .dag-resize-handle::after {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: #6e7681;
+            border-radius: 2px;
+        }
+
+        /* Legend header */
+        .legend-header {
+            margin: 0 0 8px 0;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        /* Stats legend section in new layout */
+        .legend-panel .stats-legend-section {
+            height: auto;
+            min-height: auto;
+            padding: 8px 12px;
+        }
+
+        /* Metrics bar in new layout */
+        .metrics-panel .metrics-bar {
+            border-bottom: none;
+        }
+
+        /* Event log in new layout */
+        .events-panel .event-log {
+            height: 100%;
+            border-top: none;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           COCKPIT PANEL - The reusable component
+           ═══════════════════════════════════════════════════════════════ */
+
+        .cockpit-panel {
+            flex: 1;
+            background: #0d1117;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cockpit-panel.baseline {
+            border-right: 1px solid #30363d;
+        }
+
+        /* Panel header with label */
+        .panel-header {
+            background: #21262d;
+            padding: 8px 16px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .panel-header h2 {
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-label {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .panel-label.baseline { background: #6e7681; color: #f0f6fc; }
+        .panel-label.treatment { background: #3fb950; color: #0d1117; }
+        .panel-label.single { background: #58a6ff; color: #0d1117; }
+
+        .panel-status {
+            color: #8b949e;
+            font-size: 11px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           METRICS BAR - Extended metrics display
+           ═══════════════════════════════════════════════════════════════ */
+
+        .metrics-bar {
+            background: #161b22;
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+        .metric-item {
+            background: #21262d;
+            padding: 6px 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 70px;
+        }
+
+        .metric-icon {
+            font-size: 12px;
+        }
+
+        .metric-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .metric-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #c9d1d9;
+            line-height: 1;
+        }
+
+        .metric-label {
+            font-size: 8px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Metric color variants */
+        .metric-item.nodes .metric-value { color: #58a6ff; }
+        .metric-item.code .metric-value { color: #3fb950; }
+        .metric-item.verified .metric-value { color: #3fb950; }
+        .metric-item.failed .metric-value { color: #f85149; }
+        .metric-item.cost .metric-value { color: #f0883e; }
+        .metric-item.iterations .metric-value { color: #a371f7; }
+        .metric-item.edges .metric-value { color: #79c0ff; }
+        .metric-item.pending .metric-value { color: #6e7681; }
+        .metric-item.testing .metric-value { color: #f0883e; }
+        .metric-item.time .metric-value { color: #8b949e; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MAIN CONTENT AREA - Graph + Events with resizable divider
+           ═══════════════════════════════════════════════════════════════ */
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .graph-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 150px;
+        }
+
+        .graph-wrapper svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Resizable divider between graph and events */
+        .resize-handle {
+            height: 6px;
+            background: #30363d;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .resize-handle:hover {
+            background: #58a6ff;
+        }
+
+        .resize-handle::after {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: #6e7681;
+            border-radius: 2px;
+        }
+
+        .event-log {
+            height: 180px;
+            min-height: 80px;
+            background: #161b22;
+            border-top: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .event-log-header {
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .event-log-header h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #8b949e;
+            letter-spacing: 0.5px;
+        }
+
+        .event-count {
+            font-size: 10px;
+            color: #6e7681;
+        }
+
+        .event-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 10px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 10px;
+        }
+
+        .event-item {
+            padding: 3px 0;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .event-time {
+            color: #6e7681;
+            white-space: nowrap;
+            min-width: 55px;
+        }
+
+        .event-type {
+            color: #8b949e;
+            min-width: 70px;
+            font-weight: 500;
+        }
+
+        .event-type.node_created { color: #3fb950; }
+        .event-type.status_change { color: #58a6ff; }
+        .event-type.edge_created { color: #6e7681; }
+        .event-type.agent_started { color: #f0883e; }
+        .event-type.agent_finished { color: #a371f7; }
+        .event-type.iteration { color: #79c0ff; }
+        .event-type.error { color: #f85149; }
+        .event-type.complete { color: #3fb950; }
+        .event-type.system { color: #8b949e; }
+
+        .event-message {
+            color: #c9d1d9;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           STATS + LEGEND SECTION - Below events with resizable divider
+           ═══════════════════════════════════════════════════════════════ */
+
+        .resize-handle-stats {
+            height: 6px;
+            background: #30363d;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .resize-handle-stats:hover {
+            background: #58a6ff;
+        }
+
+        .resize-handle-stats::after {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: #6e7681;
+            border-radius: 2px;
+        }
+
+        .stats-legend-section {
+            height: 140px;
+            min-height: 60px;
+            background: #161b22;
+            padding: 8px 12px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        /* Legend rows */
+        .legend-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+        }
+
+        .legend-section {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 6px;
+            background: #21262d;
+            border-radius: 4px;
+        }
+
+        .legend-title {
+            font-size: 8px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-right: 4px;
+        }
+
+        .legend-items {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+            color: #8b949e;
+        }
+
+        /* Shape legend */
+        .legend-shape {
+            width: 12px;
+            height: 12px;
+        }
+
+        .legend-shape svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Status color legend */
+        .legend-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        .legend-status.PENDING { background: #6e7681; }
+        .legend-status.PROCESSING { background: #58a6ff; }
+        .legend-status.TESTING { background: #f0883e; }
+        .legend-status.VERIFIED { background: #3fb950; }
+        .legend-status.FAILED { background: #f85149; }
+
+        /* Agent stroke legend */
+        .legend-agent {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #21262d;
+            border: 2px solid;
+        }
+
+        /* Edge line samples */
+        .legend-edge-line {
+            width: 20px;
+            height: 10px;
+        }
+
+        .legend-edge-line svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .edge-count {
+            font-weight: 600;
+            color: #58a6ff;
+            font-size: 8px;
+            margin-left: 2px;
+        }
+
+        /* Shared legend in comparison mode - full width, horizontal layout */
+        .shared-legend {
+            width: 100%;
+            border-bottom: none;
+        }
+
+        .legend-row-horizontal {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: nowrap;
+        }
+
+        .legend-row-horizontal .legend-section {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 2px 4px;
+        }
+
+        .legend-row-horizontal .legend-items {
+            flex-wrap: wrap;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           METRICS COMPARISON (Comparison mode only) - Card Grid Layout
+           ═══════════════════════════════════════════════════════════════ */
+
+        .metrics-comparison {
+            grid-column: 1 / -1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin: 8px;
+        }
+
+        .metrics-comparison h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #f0883e;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metrics-comparison h3::before {
+            content: 'vs';
+            font-weight: 700;
+            background: #f0883e;
+            color: #0d1117;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+        }
+
+        /* Grid layout for 10 metric cards */
+        /* Split-view comparison: baseline left, treatment right */
+        .comparison-metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .comparison-side {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            padding: 4px 8px;
+        }
+
+        .comparison-side.baseline {
+            border-right: 1px solid #30363d;
+        }
+
+        .comparison-stat {
+            text-align: center;
+        }
+
+        .comparison-stat .stat-label {
+            font-size: 8px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 2px;
+        }
+
+        .comparison-stat .stat-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .comparison-side.baseline .stat-value {
+            color: #8b949e;
+        }
+
+        .comparison-side.treatment .stat-value {
+            color: #c9d1d9;
+        }
+
+        .comparison-stat .stat-delta {
+            font-size: 8px;
+            font-weight: 600;
+            margin-top: 1px;
+        }
+
+        .comparison-stat .stat-delta.positive {
+            color: #3fb950;
+        }
+        .comparison-stat .stat-delta.negative {
+            color: #f85149;
+        }
+        .comparison-stat .stat-delta.neutral {
+            color: #484f58;
+        }
+
+        /* Legacy table styles kept for backwards compatibility */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            display: none; /* Hidden by default - using grid now */
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 6px 10px;
+            background: #21262d;
+            color: #8b949e;
+            font-weight: 500;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .comparison-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .comparison-table tr:hover {
+            background: #21262d;
+        }
+
+        .comparison-table .metric-name { font-weight: 500; }
+        .comparison-table .baseline-val { color: #8b949e; }
+        .comparison-table .treatment-val { color: #c9d1d9; }
+        .comparison-table .delta { font-weight: 600; }
+        .comparison-table .delta.positive { color: #3fb950; }
+        .comparison-table .delta.negative { color: #f85149; }
+        .comparison-table .delta.neutral { color: #8b949e; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           GRAPH ELEMENTS
+           ═══════════════════════════════════════════════════════════════ */
+
+        .node {
+            cursor: pointer;
+        }
+
+        .node path, .node circle {
+            stroke-width: 2px;
+            transition: all 0.2s;
+        }
+
+        .node:hover path, .node:hover circle {
+            stroke-width: 4px;
+            filter: brightness(1.2);
+        }
+
+        .node.processing path, .node.processing circle {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { stroke-opacity: 1; }
+            50% { stroke-opacity: 0.4; }
+        }
+
+        .node text {
+            font-size: 9px;
+            font-weight: 600;
+            fill: #ffffff;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .link {
+            stroke-opacity: 0.6;
+            fill: none;
+            stroke-width: 1.5px;
+            cursor: pointer;
+            transition: stroke-opacity 0.2s, stroke-width 0.2s;
+        }
+
+        .link:hover {
+            stroke-opacity: 1;
+            stroke-width: 3px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           ZOOM CONTROLS
+           ═══════════════════════════════════════════════════════════════ */
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            display: flex;
+            gap: 3px;
+        }
+
+        .zoom-btn {
+            width: 22px;
+            height: 22px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .zoom-btn:hover {
+            background: #30363d;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           TOOLTIP
+           ═══════════════════════════════════════════════════════════════ */
+
+        .tooltip {
+            position: absolute;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 11px;
+            max-width: 260px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .tooltip-type {
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .tooltip-status {
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        .tooltip-status.PENDING { background: #6e7681; }
+        .tooltip-status.PROCESSING { background: #58a6ff; }
+        .tooltip-status.TESTING { background: #f0883e; }
+        .tooltip-status.TESTED { background: #79c0ff; }
+        .tooltip-status.VERIFIED { background: #3fb950; }
+        .tooltip-status.FAILED { background: #f85149; }
+
+        .tooltip-content {
+            color: #8b949e;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .tooltip-id {
+            font-family: 'SF Mono', monospace;
+            color: #6e7681;
+            margin-top: 6px;
+            font-size: 9px;
+        }
+
+        .tooltip-agent {
+            margin-top: 4px;
+            font-size: 10px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           CHAT PANEL - Full-width top section
+           ═══════════════════════════════════════════════════════════════ */
+
+        .chat-panel {
+            background: #161b22;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            height: 200px;
+            min-height: 120px;
+            flex-shrink: 0;
+        }
+
+        /* Resize handle for chat panel */
+        .chat-resize-handle {
+            height: 6px;
+            background: #30363d;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .chat-resize-handle:hover {
+            background: #58a6ff;
+        }
+
+        .chat-resize-handle::after {
+            content: '';
+            width: 30px;
+            height: 3px;
+            background: #6e7681;
+            border-radius: 2px;
+        }
+
+        /* No minimize transform for integrated panel */
+        .chat-panel.minimized {
+            /* Keep visible but collapsed in future if needed */
+        }
+
+        .chat-header {
+            padding: 10px 14px;
+            background: #21262d;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chat-header h3 {
+            font-size: 12px;
+            font-weight: 600;
+            color: #c9d1d9;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header h3::before {
+            content: '💬';
+            font-size: 14px;
+        }
+
+        .chat-status {
+            font-size: 10px;
+            color: #6e7681;
+        }
+
+        .chat-status.waiting {
+            color: #f0883e;
+        }
+
+        .chat-toggle {
+            background: none;
+            border: none;
+            color: #8b949e;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px;
+        }
+
+        .chat-toggle:hover {
+            color: #c9d1d9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 0; /* Allow flex shrinking */
+        }
+
+        .chat-message {
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.5;
+            max-width: 90%;
+        }
+
+        .chat-message.user {
+            background: #238636;
+            color: #ffffff;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-message.agent {
+            background: #21262d;
+            color: #c9d1d9;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid #30363d;
+        }
+
+        .chat-message.agent.question {
+            background: #1c2128;
+            border-color: #58a6ff;
+            border-left: 3px solid #58a6ff;
+        }
+
+        .chat-message.system {
+            background: transparent;
+            color: #6e7681;
+            font-size: 10px;
+            text-align: center;
+            align-self: center;
+            padding: 4px 8px;
+        }
+
+        .message-agent-label {
+            font-size: 9px;
+            color: #8b949e;
+            margin-bottom: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .message-agent-label.architect { color: #f778ba; }
+        .message-agent-label.socrates { color: #a371f7; }
+        .message-agent-label.researcher { color: #79c0ff; }
+        .message-agent-label.builder { color: #3fb950; }
+        .message-agent-label.verifier { color: #f0883e; }
+
+        .message-content {
+            word-wrap: break-word;
+        }
+
+        /* Question options */
+        .question-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .option-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: #30363d;
+            border-color: #58a6ff;
+        }
+
+        .option-btn.selected {
+            background: #388bfd;
+            border-color: #58a6ff;
+            color: #ffffff;
+        }
+
+        /* Chat input */
+        .chat-input-container {
+            padding: 10px;
+            border-top: 1px solid #30363d;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 20px;
+            padding: 8px 14px;
+            color: #c9d1d9;
+            font-size: 12px;
+            outline: none;
+            resize: none;
+            min-height: 36px;
+            max-height: 100px;
+        }
+
+        .chat-input:focus {
+            border-color: #58a6ff;
+        }
+
+        .chat-input::placeholder {
+            color: #6e7681;
+        }
+
+        .chat-send-btn {
+            background: #238636;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            color: #ffffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .chat-send-btn:hover {
+            background: #2ea043;
+        }
+
+        .chat-send-btn:disabled {
+            background: #21262d;
+            color: #6e7681;
+            cursor: not-allowed;
+        }
+
+        /* Routing selector */
+        .chat-routing {
+            padding: 6px 10px;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #6e7681;
+            flex-shrink: 0;
+        }
+
+        .routing-label {
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .routing-select {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            font-size: 10px;
+            padding: 3px 6px;
+            outline: none;
+        }
+
+        .routing-select:focus {
+            border-color: #58a6ff;
+        }
+
+        /* Notification badge - inline in header for integrated panel */
+        .chat-badge {
+            background: #f85149;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: none;
+            margin-left: 8px;
+        }
+
+        .chat-badge.visible {
+            display: inline-block;
+            animation: pulse-badge 1s infinite;
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="container">
+        <!-- Header - always present -->
+        <div class="header">
+            <h1>
+                GAADP <span>Mission Control</span>
+                <span class="mode-badge" id="modeBadge">Production</span>
+            </h1>
+            <div class="connection-status">
+                <div class="status-dot" id="connectionDot"></div>
+                <span id="connectionText">Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Chat Panel - Full width at top -->
+        <div class="chat-panel" id="chatPanel">
+            <div class="chat-header" id="chatHeader">
+                <h3>Agent Chat <span class="chat-badge" id="chatBadge">1</span></h3>
+                <span class="chat-status" id="chatStatus">Ready</span>
+            </div>
+            <div class="chat-routing">
+                <span class="routing-label">Route to:</span>
+                <select class="routing-select" id="chatRouting">
+                    <option value="auto">Auto (context-aware)</option>
+                    <option value="architect">Architect</option>
+                    <option value="socrates">Socrates (Q&A)</option>
+                    <option value="researcher">Researcher</option>
+                    <option value="builder">Builder</option>
+                    <option value="system">System Query</option>
+                </select>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message agent">
+                    <div class="message-agent-label researcher">SYSTEM</div>
+                    <div class="message-content">Hello! Based on your prompt, I understand you want to build a project. I will begin working on it and visualize progress as a graph below.<br><br>I'll ask clarifying questions to make sure I'm building the right thing, so please check back frequently at the outset.</div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <textarea class="chat-input" id="chatInput" placeholder="Ask a question or respond to an agent..." rows="1"></textarea>
+                <button class="chat-send-btn" id="chatSend">&#10148;</button>
+            </div>
+        </div>
+        <div class="chat-resize-handle" id="chatResizeHandle"></div>
+
+        <!-- Main Content Area - DAG, Legend, Metrics, Events -->
+        <div id="mainContentArea">
+            <!-- DAG Section -->
+            <div class="section-row dag-row" id="dagSection"></div>
+
+            <!-- Legend Section -->
+            <div class="section-row" id="legendSection"></div>
+
+            <!-- DAG Resize Handle -->
+            <div class="dag-resize-handle" id="dagResizeHandle"></div>
+
+            <!-- Reliability Comparison Table -->
+            <div class="prod-metrics-dashboard" id="prodMetricsDashboard">
+                <h3>Reliability Comparison</h3>
+                <table class="comparison-table" id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th class="baseline-col">BASELINE</th>
+                            <th class="metric-col">METRIC</th>
+                            <th class="treatment-col">TREATMENT</th>
+                            <th class="delta-col">DELTA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="baseline-val" id="metricVerifyRateBaseline">—</td>
+                            <td class="metric-name">Verification Rate</td>
+                            <td class="treatment-val" id="metricVerifyRateTreatment">—</td>
+                            <td class="delta-val" id="metricVerifyRateDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricFailRateBaseline">—</td>
+                            <td class="metric-name">Failure Rate</td>
+                            <td class="treatment-val" id="metricFailRateTreatment">—</td>
+                            <td class="delta-val" id="metricFailRateDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricFirstPassBaseline">—</td>
+                            <td class="metric-name">First-Pass Success</td>
+                            <td class="treatment-val" id="metricFirstPassTreatment">—</td>
+                            <td class="delta-val" id="metricFirstPassDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricCycleTimeBaseline">—</td>
+                            <td class="metric-name">Avg Cycle Time</td>
+                            <td class="treatment-val" id="metricCycleTimeTreatment">—</td>
+                            <td class="delta-val" id="metricCycleTimeDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricRetriesBaseline">—</td>
+                            <td class="metric-name">Retry Count</td>
+                            <td class="treatment-val" id="metricRetriesTreatment">—</td>
+                            <td class="delta-val" id="metricRetriesDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricCoverageBaseline">—</td>
+                            <td class="metric-name">Test Coverage</td>
+                            <td class="treatment-val" id="metricCoverageTreatment">—</td>
+                            <td class="delta-val" id="metricCoverageDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricApiCallsBaseline">—</td>
+                            <td class="metric-name">API Calls</td>
+                            <td class="treatment-val" id="metricApiCallsTreatment">—</td>
+                            <td class="delta-val" id="metricApiCallsDelta">—</td>
+                        </tr>
+                        <tr>
+                            <td class="baseline-val" id="metricQualityBaseline">—</td>
+                            <td class="metric-name">Code Quality</td>
+                            <td class="treatment-val" id="metricQualityTreatment">—</td>
+                            <td class="delta-val" id="metricQualityDelta">—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Metrics Section (comparison mode only in comparison view) -->
+            <div class="section-row" id="metricsSection">
+                <div class="metrics-comparison" id="metricsComparison" style="display: none;">
+                    <h3>Baseline vs Treatment Comparison</h3>
+                    <div class="comparison-metrics-grid" id="comparisonGrid">
+                        <!-- 10 metric cards populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Section -->
+            <div class="section-row" id="eventsSection"></div>
+        </div>
+    </div>
+
+    <!-- Tooltip (shared) -->
+    <div class="tooltip" id="tooltip"></div>
+
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ═══════════════════════════════════════════════════════════════════
+
+        const WS_URL = `ws://${window.location.hostname}:8765`;
+
+        // Detect mode from URL parameter or default to single
+        const urlParams = new URLSearchParams(window.location.search);
+        const MODE = urlParams.get('mode') || 'single'; // 'single' or 'comparison'
+
+        // NODE SHAPES - what kind of artifact
+        const NODE_SHAPES = {
+            REQ: d3.symbolStar,
+            RESEARCH: d3.symbolCircle,
+            SPEC: d3.symbolSquare,
+            PLAN: d3.symbolSquare,
+            CODE: d3.symbolDiamond,
+            TEST_SUITE: d3.symbolTriangle,
+            TEST: d3.symbolTriangle,
+            DOC: d3.symbolCircle,
+            CLARIFICATION: d3.symbolCross,
+            ESCALATION: d3.symbolWye
+        };
+
+        // STATUS COLORS - what state the node is in
+        const STATUS_COLORS = {
+            PENDING: '#6e7681',
+            PROCESSING: '#58a6ff',
+            TESTING: '#f0883e',
+            TESTED: '#79c0ff',
+            VERIFIED: '#3fb950',
+            FAILED: '#f85149'
+        };
+
+        // EDGE STYLES
+        const EDGE_STYLES = {
+            TRACES_TO: { dasharray: 'none', marker: 'arrow', color: '#8b949e' },
+            DEPENDS_ON: { dasharray: '8,4', marker: 'arrow', color: '#8b949e' },
+            IMPLEMENTS: { dasharray: 'none', marker: 'arrow-filled', color: '#8b949e', width: 2.5 },
+            TESTS: { dasharray: '3,3', marker: 'diamond', color: '#8b949e' },
+            FEEDBACK: { dasharray: '12,4,4,4', marker: 'arrow-loop', color: '#f0883e' },
+            VERIFIES: { dasharray: 'none', marker: 'arrow-filled', color: '#3fb950', width: 2 },
+            DEFINES: { dasharray: '2,2', marker: 'arrow', color: '#a371f7' },
+            RESEARCH_FOR: { dasharray: '4,4', marker: 'arrow', color: '#79c0ff' }
+        };
+
+        // AGENT STROKES
+        const AGENT_STROKES = {
+            RESEARCHER: { color: '#a371f7', width: 3 },
+            ARCHITECT: { color: '#f778ba', width: 3 },
+            BUILDER: { color: '#79c0ff', width: 3 },
+            TESTER: { color: '#f0883e', width: 3 },
+            VERIFIER: { color: '#3fb950', width: 3 },
+            NONE: { color: '#ffffff', width: 2 }
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════════════════
+
+        const panels = {};
+        let ws = null;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // COCKPIT PANEL CLASS - Renders into section containers
+        // ═══════════════════════════════════════════════════════════════════
+
+        class CockpitPanel {
+            constructor(panelId, label, sections) {
+                this.panelId = panelId;
+                this.label = label;
+                this.sections = sections; // { dag, legend, metrics, events }
+                this.graphData = { nodes: [], links: [] };
+                this.stats = {
+                    nodes: 0, code: 0, verified: 0, failed: 0, cost: 0,
+                    iterations: 0, edges: 0, pending: 0, testing: 0
+                };
+                this.edges = { TRACES_TO: 0, DEPENDS_ON: 0, IMPLEMENTS: 0, TESTS: 0, FEEDBACK: 0 };
+                this.startTime = Date.now();
+
+                this.svg = null;
+                this.g = null;
+                this.linkGroup = null;
+                this.nodeGroup = null;
+                this.zoom = null;
+                this.simulation = null;
+
+                this.render();
+                this.initGraph();
+                this.initResizeHandles();
+            }
+
+            render() {
+                const labelClass = this.label === 'BASELINE' ? 'baseline' :
+                                   this.label === 'TREATMENT' ? 'treatment' : 'single';
+
+                // Render DAG section
+                const dagContainer = document.getElementById(this.sections.dag);
+                dagContainer.insertAdjacentHTML('beforeend', `
+                    <div class="dag-panel half" id="dagPanel-${this.panelId}">
+                        <div class="panel-header">
+                            <h2>
+                                <span class="panel-label ${labelClass}">${this.label}</span>
+                                <span id="panelTitle-${this.panelId}">Pipeline</span>
+                            </h2>
+                            <span class="panel-status" id="panelStatus-${this.panelId}">Waiting...</span>
+                        </div>
+                        <div class="graph-wrapper" id="graphWrapper-${this.panelId}">
+                            <svg id="graph-${this.panelId}"></svg>
+                            <div class="zoom-controls">
+                                <button class="zoom-btn" onclick="panels['${this.panelId}'].zoomIn()">+</button>
+                                <button class="zoom-btn" onclick="panels['${this.panelId}'].zoomOut()">-</button>
+                                <button class="zoom-btn" onclick="panels['${this.panelId}'].resetZoom()">R</button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                // Render Legend section - shared legend (only render once), then per-panel stats
+                const legendContainer = document.getElementById(this.sections.legend);
+
+                // Only render shared legend once (check if it exists)
+                if (!document.getElementById('sharedLegend')) {
+                    legendContainer.insertAdjacentHTML('beforeend', `
+                        <div class="legend-panel shared-legend" id="sharedLegend">
+                            <h4 class="legend-header">Legend and Statistics</h4>
+                            <div class="legend-row-horizontal">
+                                <div class="legend-section">
+                                    <span class="legend-title">Type</span>
+                                    <div class="legend-items">
+                                        <div class="legend-item">
+                                            <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-5L1.5,-1.5L5.5,-1.5L2.1,1L3.5,5L0,2.5L-3.5,5L-2.1,1L-5.5,-1.5L-1.5,-1.5Z" fill="#8b949e" stroke="#fff" stroke-width="0.8"/></svg></span>
+                                            REQ
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-shape"><svg viewBox="-7 -7 14 14"><circle r="4" fill="#8b949e" stroke="#fff" stroke-width="0.8"/></svg></span>
+                                            RES
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-shape"><svg viewBox="-7 -7 14 14"><rect x="-4" y="-4" width="8" height="8" fill="#8b949e" stroke="#fff" stroke-width="0.8"/></svg></span>
+                                            SPEC
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-5L5,0L0,5L-5,0Z" fill="#8b949e" stroke="#fff" stroke-width="0.8"/></svg></span>
+                                            CODE
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-4L4.6,4L-4.6,4Z" fill="#8b949e" stroke="#fff" stroke-width="0.8"/></svg></span>
+                                            TEST
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="legend-section">
+                                    <span class="legend-title">Status</span>
+                                    <div class="legend-items">
+                                        <div class="legend-item"><span class="legend-status PENDING"></span>Pend</div>
+                                        <div class="legend-item"><span class="legend-status PROCESSING"></span>Act</div>
+                                        <div class="legend-item"><span class="legend-status TESTING"></span>Test</div>
+                                        <div class="legend-item"><span class="legend-status VERIFIED"></span>OK</div>
+                                        <div class="legend-item"><span class="legend-status FAILED"></span>Fail</div>
+                                    </div>
+                                </div>
+                                <div class="legend-section">
+                                    <span class="legend-title">Agent</span>
+                                    <div class="legend-items">
+                                        <div class="legend-item"><span class="legend-agent" style="border-color: #a371f7;"></span>Res</div>
+                                        <div class="legend-item"><span class="legend-agent" style="border-color: #f778ba;"></span>Arch</div>
+                                        <div class="legend-item"><span class="legend-agent" style="border-color: #79c0ff;"></span>Build</div>
+                                        <div class="legend-item"><span class="legend-agent" style="border-color: #f0883e;"></span>Test</div>
+                                        <div class="legend-item"><span class="legend-agent" style="border-color: #3fb950;"></span>Ver</div>
+                                    </div>
+                                </div>
+                                <div class="legend-section">
+                                    <span class="legend-title">Edges</span>
+                                    <div class="legend-items">
+                                        <div class="legend-item">
+                                            <span class="legend-edge-line"><svg viewBox="0 0 20 10"><line x1="0" y1="5" x2="14" y2="5" stroke="#8b949e" stroke-width="1.5"/><path d="M12,2L18,5L12,8" fill="none" stroke="#8b949e" stroke-width="1"/></svg></span>
+                                            Trace
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-edge-line"><svg viewBox="0 0 20 10"><line x1="0" y1="5" x2="14" y2="5" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="3,2"/><path d="M12,2L18,5L12,8" fill="none" stroke="#8b949e" stroke-width="1"/></svg></span>
+                                            Dep
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-edge-line"><svg viewBox="0 0 20 10"><line x1="0" y1="5" x2="12" y2="5" stroke="#8b949e" stroke-width="2"/><path d="M10,2L18,5L10,8Z" fill="#8b949e"/></svg></span>
+                                            Impl
+                                        </div>
+                                        <div class="legend-item">
+                                            <span class="legend-edge-line"><svg viewBox="0 0 20 10"><line x1="0" y1="5" x2="14" y2="5" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="5,2,2,2"/><path d="M12,2L18,5L12,8" fill="none" stroke="#f0883e" stroke-width="1"/></svg></span>
+                                            FB
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+
+                // Render Metrics section
+                const metricsContainer = document.getElementById(this.sections.metrics);
+                metricsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="metrics-panel half" id="metricsPanel-${this.panelId}">
+                        <div class="metrics-bar" id="metricsBar-${this.panelId}">
+                            <div class="metric-item nodes">
+                                <span class="metric-icon">&#9679;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricNodes-${this.panelId}">0</span>
+                                    <span class="metric-label">Nodes</span>
+                                </div>
+                            </div>
+                            <div class="metric-item code">
+                                <span class="metric-icon">&#9670;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricCode-${this.panelId}">0</span>
+                                    <span class="metric-label">Code</span>
+                                </div>
+                            </div>
+                            <div class="metric-item verified">
+                                <span class="metric-icon">&#10003;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricVerified-${this.panelId}">0</span>
+                                    <span class="metric-label">Verified</span>
+                                </div>
+                            </div>
+                            <div class="metric-item failed">
+                                <span class="metric-icon">&#10007;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricFailed-${this.panelId}">0</span>
+                                    <span class="metric-label">Failed</span>
+                                </div>
+                            </div>
+                            <div class="metric-item pending">
+                                <span class="metric-icon">&#8987;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricPending-${this.panelId}">0</span>
+                                    <span class="metric-label">Pending</span>
+                                </div>
+                            </div>
+                            <div class="metric-item testing">
+                                <span class="metric-icon">&#9881;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricTesting-${this.panelId}">0</span>
+                                    <span class="metric-label">Testing</span>
+                                </div>
+                            </div>
+                            <div class="metric-item edges">
+                                <span class="metric-icon">&#8594;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricEdges-${this.panelId}">0</span>
+                                    <span class="metric-label">Edges</span>
+                                </div>
+                            </div>
+                            <div class="metric-item iterations">
+                                <span class="metric-icon">&#8635;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricIterations-${this.panelId}">0</span>
+                                    <span class="metric-label">Cycles</span>
+                                </div>
+                            </div>
+                            <div class="metric-item cost">
+                                <span class="metric-icon">$</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricCost-${this.panelId}">0.00</span>
+                                    <span class="metric-label">Cost</span>
+                                </div>
+                            </div>
+                            <div class="metric-item time">
+                                <span class="metric-icon">&#9201;</span>
+                                <div class="metric-content">
+                                    <span class="metric-value" id="metricTime-${this.panelId}">0s</span>
+                                    <span class="metric-label">Time</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+
+                // Render Events section
+                const eventsContainer = document.getElementById(this.sections.events);
+                eventsContainer.insertAdjacentHTML('beforeend', `
+                    <div class="events-panel half" id="eventsPanel-${this.panelId}">
+                        <div class="event-log" id="eventLog-${this.panelId}">
+                            <div class="event-log-header">
+                                <h3>Events</h3>
+                                <span class="event-count" id="eventCount-${this.panelId}">0 events</span>
+                            </div>
+                            <div class="event-list" id="eventList-${this.panelId}"></div>
+                        </div>
+                    </div>
+                `);
+            }
+
+            initGraph() {
+                const wrapper = document.getElementById(`graphWrapper-${this.panelId}`);
+                // Use fallback dimensions if layout hasn't computed yet (0 dimensions)
+                const width = wrapper.clientWidth || 400;
+                const height = wrapper.clientHeight || 300;
+
+                this.svg = d3.select(`#graph-${this.panelId}`)
+                    .attr('width', width)
+                    .attr('height', height);
+
+                // Schedule a resize after browser layout completes to get actual dimensions
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => this.handleResize());
+                });
+
+                this.zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on('zoom', (event) => {
+                        this.g.attr('transform', event.transform);
+                    });
+
+                this.svg.call(this.zoom);
+                this.g = this.svg.append('g');
+
+                // Create markers
+                const defs = this.svg.append('defs');
+                this.createMarkers(defs);
+
+                this.linkGroup = this.g.append('g').attr('class', 'links');
+                this.nodeGroup = this.g.append('g').attr('class', 'nodes');
+
+                this.simulation = d3.forceSimulation()
+                    .force('link', d3.forceLink().id(d => d.id).distance(70))
+                    .force('charge', d3.forceManyBody().strength(-180))
+                    .force('center', d3.forceCenter(width / 2, height / 2))
+                    .force('collision', d3.forceCollide().radius(25));
+
+                // Handle resize
+                window.addEventListener('resize', () => this.handleResize());
+            }
+
+            createMarkers(defs) {
+                const id = this.panelId;
+
+                // Arrow marker
+                defs.append('marker')
+                    .attr('id', `arrow-${id}`)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 18)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 5)
+                    .attr('markerHeight', 5)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('fill', '#8b949e')
+                    .attr('d', 'M0,-4L10,0L0,4');
+
+                // Filled arrow
+                defs.append('marker')
+                    .attr('id', `arrow-filled-${id}`)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 18)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('fill', '#8b949e')
+                    .attr('d', 'M0,-5L10,0L0,5Z');
+
+                // Diamond
+                defs.append('marker')
+                    .attr('id', `diamond-${id}`)
+                    .attr('viewBox', '-5 -5 10 10')
+                    .attr('refX', 18)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 6)
+                    .attr('markerHeight', 6)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('fill', '#8b949e')
+                    .attr('d', 'M-4,0L0,-3L4,0L0,3Z');
+
+                // Loop arrow (feedback)
+                defs.append('marker')
+                    .attr('id', `arrow-loop-${id}`)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 20)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 7)
+                    .attr('markerHeight', 7)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('fill', '#f0883e')
+                    .attr('d', 'M0,-4L8,0L0,4');
+            }
+
+            initResizeHandles() {
+                // No internal resize handles in new layout - sections are separate
+                // Resize is handled globally for chat panel
+            }
+
+            setupResize(handle, topEl, bottomEl, topMin, bottomMin, inverse = false) {
+                let isResizing = false;
+                let startY, startTopHeight, startBottomHeight;
+
+                handle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startY = e.clientY;
+                    startTopHeight = topEl.offsetHeight;
+                    startBottomHeight = bottomEl.offsetHeight;
+                    document.body.style.cursor = 'ns-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+                    const delta = e.clientY - startY;
+                    const newTopHeight = startTopHeight + delta;
+                    const newBottomHeight = startBottomHeight - delta;
+
+                    if (newTopHeight >= topMin && newBottomHeight >= bottomMin) {
+                        if (inverse) {
+                            topEl.style.flex = 'none';
+                            topEl.style.height = newTopHeight + 'px';
+                        } else {
+                            topEl.style.flex = 'none';
+                            topEl.style.height = newTopHeight + 'px';
+                        }
+                        bottomEl.style.height = newBottomHeight + 'px';
+                        this.handleResize();
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            }
+
+            handleResize() {
+                const wrapper = document.getElementById(`graphWrapper-${this.panelId}`);
+                const width = wrapper.clientWidth;
+                const height = wrapper.clientHeight;
+
+                this.svg.attr('width', width).attr('height', height);
+                this.simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                this.simulation.alpha(0.3).restart();
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // DATA METHODS
+            // ═══════════════════════════════════════════════════════════════
+
+            loadState(state) {
+                this.graphData = { nodes: [], links: [] };
+
+                Object.values(state.nodes).forEach(node => {
+                    this.graphData.nodes.push({
+                        id: node.id,
+                        type: node.type,
+                        status: node.status,
+                        content: node.content,
+                        metadata: node.metadata,
+                        agent: node.agent
+                    });
+                });
+
+                state.edges.forEach(edge => {
+                    this.graphData.links.push({
+                        source: edge.source,
+                        target: edge.target,
+                        type: edge.type
+                    });
+                });
+
+                // Reset edge counts
+                this.edges = { TRACES_TO: 0, DEPENDS_ON: 0, IMPLEMENTS: 0, TESTS: 0, FEEDBACK: 0 };
+                state.edges.forEach(edge => {
+                    if (this.edges.hasOwnProperty(edge.type)) {
+                        this.edges[edge.type]++;
+                    }
+                });
+
+                // Update stats
+                this.stats.nodes = Object.keys(state.nodes).length;
+                this.stats.code = Object.values(state.nodes).filter(n => n.type === 'CODE').length;
+                this.stats.verified = state.stats?.nodes_verified || 0;
+                this.stats.failed = state.stats?.nodes_failed || 0;
+                this.stats.cost = state.stats?.total_cost || 0;
+                this.stats.iterations = state.stats?.iterations || 0;
+                this.stats.edges = state.edges.length;
+                this.stats.pending = Object.values(state.nodes).filter(n => n.status === 'PENDING').length;
+                this.stats.testing = Object.values(state.nodes).filter(n => n.status === 'TESTING').length;
+
+                this.updateDisplay();
+                this.updateGraph();
+
+                // Load events
+                if (state.events) {
+                    state.events.forEach(event => {
+                        this.addEvent(event.type, event.message, new Date(event.timestamp));
+                    });
+                }
+            }
+
+            addNode(node) {
+                const existing = this.graphData.nodes.find(n => n.id === node.id);
+                if (existing) {
+                    Object.assign(existing, node);
+                } else {
+                    this.graphData.nodes.push({
+                        id: node.id,
+                        type: node.type,
+                        status: node.status,
+                        content: node.content,
+                        metadata: node.metadata
+                    });
+                }
+
+                this.recalculateStats();
+                this.updateDisplay();
+                this.updateGraph();
+            }
+
+            updateNodeStatus(nodeId, newStatus) {
+                const node = this.graphData.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    node.status = newStatus;
+                    this.recalculateStats();
+                    this.updateDisplay();
+                    this.updateGraph();
+                }
+            }
+
+            setNodeAgent(nodeId, agentRole) {
+                const node = this.graphData.nodes.find(n => n.id === nodeId);
+                if (node) {
+                    node.agent = agentRole;
+                    this.updateGraph();
+                }
+            }
+
+            addEdge(edge) {
+                this.graphData.links.push({
+                    source: edge.source,
+                    target: edge.target,
+                    type: edge.type
+                });
+                if (this.edges.hasOwnProperty(edge.type)) {
+                    this.edges[edge.type]++;
+                }
+                this.stats.edges = this.graphData.links.length;
+                this.updateDisplay();
+                this.updateGraph();
+            }
+
+            addCost(cost) {
+                if (cost) {
+                    this.stats.cost += cost;
+                    this.updateDisplay();
+                }
+            }
+
+            setIteration(iteration) {
+                this.stats.iterations = iteration;
+                document.getElementById(`panelStatus-${this.panelId}`).textContent = `Iteration ${iteration}`;
+                this.updateDisplay();
+            }
+
+            setComplete() {
+                document.getElementById(`panelStatus-${this.panelId}`).textContent = 'Complete';
+            }
+
+            recalculateStats() {
+                this.stats.nodes = this.graphData.nodes.length;
+                this.stats.code = this.graphData.nodes.filter(n => n.type === 'CODE').length;
+                this.stats.verified = this.graphData.nodes.filter(n => n.status === 'VERIFIED').length;
+                this.stats.failed = this.graphData.nodes.filter(n => n.status === 'FAILED').length;
+                this.stats.pending = this.graphData.nodes.filter(n => n.status === 'PENDING').length;
+                this.stats.testing = this.graphData.nodes.filter(n => n.status === 'TESTING').length;
+            }
+
+            updateDisplay() {
+                const id = this.panelId;
+                document.getElementById(`metricNodes-${id}`).textContent = this.stats.nodes;
+                document.getElementById(`metricCode-${id}`).textContent = this.stats.code;
+                document.getElementById(`metricVerified-${id}`).textContent = this.stats.verified;
+                document.getElementById(`metricFailed-${id}`).textContent = this.stats.failed;
+                document.getElementById(`metricPending-${id}`).textContent = this.stats.pending;
+                document.getElementById(`metricTesting-${id}`).textContent = this.stats.testing;
+                document.getElementById(`metricEdges-${id}`).textContent = this.stats.edges;
+                document.getElementById(`metricIterations-${id}`).textContent = this.stats.iterations;
+                document.getElementById(`metricCost-${id}`).textContent = this.stats.cost.toFixed(2);
+
+                // Time elapsed
+                const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+                document.getElementById(`metricTime-${id}`).textContent = `${elapsed}s`;
+
+                // Edge counts in legend
+                document.getElementById(`edgeTracesTo-${id}`).textContent = this.edges.TRACES_TO || 0;
+                document.getElementById(`edgeDependsOn-${id}`).textContent = this.edges.DEPENDS_ON || 0;
+                document.getElementById(`edgeImplements-${id}`).textContent = this.edges.IMPLEMENTS || 0;
+                document.getElementById(`edgeFeedback-${id}`).textContent = this.edges.FEEDBACK || 0;
+            }
+
+            addEvent(type, message, timestamp = new Date()) {
+                const eventList = document.getElementById(`eventList-${this.panelId}`);
+                const eventEl = document.createElement('div');
+                eventEl.className = 'event-item';
+
+                const timeStr = timestamp.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                eventEl.innerHTML = `
+                    <span class="event-time">${timeStr}</span>
+                    <span class="event-type ${type}">${type}</span>
+                    <span class="event-message">${message}</span>
+                `;
+
+                eventList.insertBefore(eventEl, eventList.firstChild);
+
+                const count = eventList.children.length;
+                document.getElementById(`eventCount-${this.panelId}`).textContent = `${count} events`;
+
+                while (eventList.children.length > 50) {
+                    eventList.removeChild(eventList.lastChild);
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // GRAPH RENDERING
+            // ═══════════════════════════════════════════════════════════════
+
+            updateGraph() {
+                const id = this.panelId;
+
+                // Update links
+                this.linkGroup.selectAll('.link').remove();
+
+                const getEdgeStyle = (type) => EDGE_STYLES[type] || EDGE_STYLES.TRACES_TO;
+
+                this.linkGroup.selectAll('.link')
+                    .data(this.graphData.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`)
+                    .enter().append('line')
+                    .attr('class', d => `link link-${d.type}`)
+                    .attr('stroke', d => getEdgeStyle(d.type).color)
+                    .attr('stroke-width', d => getEdgeStyle(d.type).width || 1.5)
+                    .attr('stroke-dasharray', d => getEdgeStyle(d.type).dasharray)
+                    .attr('marker-end', d => `url(#${getEdgeStyle(d.type).marker}-${id})`)
+                    .on('mouseover', (e, d) => this.showEdgeTooltip(e, d))
+                    .on('mouseout', () => hideTooltip());
+
+                // Update nodes
+                const node = this.nodeGroup.selectAll('.node')
+                    .data(this.graphData.nodes, d => d.id);
+
+                node.exit().remove();
+
+                const getNodeShape = (type) => NODE_SHAPES[type] || d3.symbolCircle;
+                const getAgentStroke = (agent) => AGENT_STROKES[agent] || AGENT_STROKES.NONE;
+
+                const nodeEnter = node.enter().append('g')
+                    .attr('class', d => `node ${d.status === 'PROCESSING' ? 'processing' : ''}`)
+                    .call(d3.drag()
+                        .on('start', (e, d) => this.dragstarted(e, d))
+                        .on('drag', (e, d) => this.dragged(e, d))
+                        .on('end', (e, d) => this.dragended(e, d)))
+                    .on('mouseover', (e, d) => this.showTooltip(e, d))
+                    .on('mouseout', () => hideTooltip());
+
+                nodeEnter.append('path')
+                    .attr('d', d => d3.symbol().type(getNodeShape(d.type)).size(450)())
+                    .attr('fill', d => STATUS_COLORS[d.status] || '#6e7681')
+                    .attr('stroke', d => getAgentStroke(d.agent).color)
+                    .attr('stroke-width', d => getAgentStroke(d.agent).width);
+
+                nodeEnter.append('text')
+                    .attr('dy', 3)
+                    .text(d => d.type.charAt(0));
+
+                // Update existing nodes
+                this.nodeGroup.selectAll('.node')
+                    .attr('class', d => `node ${d.status === 'PROCESSING' ? 'processing' : ''}`)
+                    .select('path')
+                    .attr('fill', d => STATUS_COLORS[d.status] || '#6e7681')
+                    .attr('stroke', d => getAgentStroke(d.agent).color)
+                    .attr('stroke-width', d => getAgentStroke(d.agent).width);
+
+                // Update simulation
+                this.simulation.nodes(this.graphData.nodes);
+                this.simulation.force('link').links(this.graphData.links);
+                this.simulation.alpha(0.3).restart();
+
+                this.simulation.on('tick', () => {
+                    this.linkGroup.selectAll('.link')
+                        .attr('x1', d => d.source.x)
+                        .attr('y1', d => d.source.y)
+                        .attr('x2', d => d.target.x)
+                        .attr('y2', d => d.target.y);
+
+                    this.nodeGroup.selectAll('.node')
+                        .attr('transform', d => `translate(${d.x}, ${d.y})`);
+                });
+            }
+
+            showTooltip(event, d) {
+                const tooltip = document.getElementById('tooltip');
+                const agentStyle = AGENT_STROKES[d.agent] || AGENT_STROKES.NONE;
+                const agentLabel = d.agent ?
+                    `<span style="color: ${agentStyle.color}; font-weight: 600;">${d.agent}</span>` :
+                    '<span style="color: #6e7681;">Not processed</span>';
+
+                tooltip.innerHTML = `
+                    <div class="tooltip-header">
+                        <span class="tooltip-type">${d.type}</span>
+                        <span class="tooltip-status ${d.status}">${d.status}</span>
+                    </div>
+                    <div class="tooltip-content">${d.content ? d.content.substring(0, 120) + '...' : 'No content'}</div>
+                    <div class="tooltip-id">ID: ${d.id}</div>
+                    <div class="tooltip-agent">Agent: ${agentLabel}</div>
+                `;
+                tooltip.style.left = (event.pageX + 12) + 'px';
+                tooltip.style.top = (event.pageY + 12) + 'px';
+                tooltip.classList.add('visible');
+            }
+
+            showEdgeTooltip(event, d) {
+                const tooltip = document.getElementById('tooltip');
+                const sourceId = d.source.id || d.source;
+                const targetId = d.target.id || d.target;
+                const style = EDGE_STYLES[d.type] || EDGE_STYLES.TRACES_TO;
+
+                tooltip.innerHTML = `
+                    <div class="tooltip-header">
+                        <span class="tooltip-type" style="color: ${style.color}">${d.type.replace('_', ' ')}</span>
+                    </div>
+                    <div class="tooltip-id">
+                        From: ${sourceId.substring(0, 8)}<br>
+                        To: ${targetId.substring(0, 8)}
+                    </div>
+                `;
+                tooltip.style.left = (event.pageX + 12) + 'px';
+                tooltip.style.top = (event.pageY + 12) + 'px';
+                tooltip.classList.add('visible');
+            }
+
+            dragstarted(event, d) {
+                if (!event.active) this.simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+
+            dragended(event, d) {
+                if (!event.active) this.simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+
+            zoomIn() {
+                this.svg.transition().duration(300).call(this.zoom.scaleBy, 1.3);
+            }
+
+            zoomOut() {
+                this.svg.transition().duration(300).call(this.zoom.scaleBy, 0.7);
+            }
+
+            resetZoom() {
+                this.svg.transition().duration(300).call(this.zoom.transform, d3.zoomIdentity);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GLOBAL FUNCTIONS
+        // ═══════════════════════════════════════════════════════════════════
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function updateComparison() {
+            if (MODE !== 'comparison') return;
+
+            const b = panels.baseline?.stats || { nodes: 0, code: 0, verified: 0, failed: 0, pending: 0, testing: 0, edges: 0, cycles: 0, cost: 0, elapsed: 0 };
+            const t = panels.treatment?.stats || { nodes: 0, code: 0, verified: 0, failed: 0, pending: 0, testing: 0, edges: 0, cycles: 0, cost: 0, elapsed: 0 };
+
+            const grid = document.getElementById('comparisonGrid');
+            if (!grid) return;
+
+            // 10 metric cards
+            const metrics = [
+                { key: 'nodes', label: 'Nodes', bVal: b.nodes, tVal: t.nodes, format: v => v, higherBetter: true },
+                { key: 'code', label: 'Code', bVal: b.code, tVal: t.code, format: v => v, higherBetter: true },
+                { key: 'verified', label: 'Verified', bVal: b.verified, tVal: t.verified, format: v => v, higherBetter: true },
+                { key: 'failed', label: 'Failed', bVal: b.failed, tVal: t.failed, format: v => v, higherBetter: false },
+                { key: 'pending', label: 'Pending', bVal: b.pending || 0, tVal: t.pending || 0, format: v => v, higherBetter: null },
+                { key: 'testing', label: 'Testing', bVal: b.testing || 0, tVal: t.testing || 0, format: v => v, higherBetter: null },
+                { key: 'edges', label: 'Edges', bVal: b.edges || 0, tVal: t.edges || 0, format: v => v, higherBetter: null },
+                { key: 'cycles', label: 'Cycles', bVal: b.cycles || 0, tVal: t.cycles || 0, format: v => v, higherBetter: null },
+                { key: 'cost', label: 'Cost', bVal: b.cost, tVal: t.cost, format: v => `$${v.toFixed(2)}`, higherBetter: false },
+                { key: 'time', label: 'Time', bVal: b.elapsed || 0, tVal: t.elapsed || 0, format: v => `${v.toFixed(0)}s`, higherBetter: false }
+            ];
+
+            // Split view: baseline stats on left, treatment stats on right
+            const renderSide = (side, values) => {
+                return metrics.map(m => {
+                    const val = side === 'baseline' ? m.bVal : m.tVal;
+                    const delta = m.tVal - m.bVal;
+                    let cls = 'neutral';
+                    if (m.higherBetter === true) {
+                        cls = delta > 0 ? 'positive' : delta < 0 ? 'negative' : 'neutral';
+                    } else if (m.higherBetter === false) {
+                        cls = delta < 0 ? 'positive' : delta > 0 ? 'negative' : 'neutral';
+                    }
+                    // Only show delta on treatment side
+                    const deltaStr = side === 'treatment' ?
+                        (delta > 0 ? `+${m.format(delta)}` : delta < 0 ? m.format(delta) : '-') : '';
+                    return `
+                        <div class="comparison-stat">
+                            <div class="stat-label">${m.label}</div>
+                            <div class="stat-value">${m.format(val)}</div>
+                            ${side === 'treatment' ? `<div class="stat-delta ${cls}">${deltaStr}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            };
+
+            grid.innerHTML = `
+                <div class="comparison-side baseline">${renderSide('baseline')}</div>
+                <div class="comparison-side treatment">${renderSide('treatment')}</div>
+            `;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════════
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('container');
+            const modeBadge = document.getElementById('modeBadge');
+
+            // Section container IDs for each panel type
+            const sectionIds = {
+                dag: 'dagSection',
+                legend: 'legendSection',
+                metrics: 'metricsSection',
+                events: 'eventsSection'
+            };
+
+            if (MODE === 'comparison') {
+                container.className = 'container comparison-mode';
+                modeBadge.textContent = 'Comparison';
+                modeBadge.className = 'mode-badge comparison';
+                // metricsComparison panel removed - info already in legend/stats boxes
+
+                // Create baseline and treatment panels - both render into the same sections
+                panels.baseline = new CockpitPanel('baseline', 'BASELINE', sectionIds);
+                panels.treatment = new CockpitPanel('treatment', 'TREATMENT', sectionIds);
+            } else {
+                container.className = 'container single-mode';
+                modeBadge.textContent = 'Production';
+                modeBadge.className = 'mode-badge production';
+
+                // Create single panel
+                panels.single = new CockpitPanel('single', 'LIVE', sectionIds);
+            }
+
+            // Initialize resize handles
+            initChatResize();
+            initDagResize();
+
+            // Initialize production metrics panel visibility
+            initProdMetrics();
+
+            // Update time and metrics every second
+            setInterval(() => {
+                Object.values(panels).forEach(p => p.updateDisplay());
+                // Update metrics panel in both modes
+                if (MODE === 'comparison' && panels.baseline && panels.treatment) {
+                    updateProdMetrics(panels.treatment); // Will aggregate both panels
+                } else if (panels.single) {
+                    updateProdMetrics(panels.single);
+                }
+            }, 1000);
+
+            connectWebSocket();
+        });
+
+        function initChatResize() {
+            const chatPanel = document.getElementById('chatPanel');
+            const chatResizeHandle = document.getElementById('chatResizeHandle');
+
+            let isResizing = false;
+            let startY, startHeight;
+
+            chatResizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = chatPanel.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const delta = e.clientY - startY;
+                const newHeight = startHeight + delta;
+                if (newHeight >= 120 && newHeight <= 500) {
+                    chatPanel.style.height = newHeight + 'px';
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
+        function initDagResize() {
+            const dagSection = document.getElementById('dagSection');
+            const dagResizeHandle = document.getElementById('dagResizeHandle');
+
+            let isResizing = false;
+            let startY, startHeight;
+
+            dagResizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = dagSection.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const delta = e.clientY - startY;
+                const newHeight = startHeight + delta;
+                if (newHeight >= 200 && newHeight <= 800) {
+                    dagSection.style.height = newHeight + 'px';
+                    // Trigger resize on all panel SVGs
+                    Object.values(panels).forEach(p => {
+                        if (p.svg) {
+                            const wrapper = document.getElementById(`graphWrapper-${p.panelId}`);
+                            if (wrapper) {
+                                p.svg.attr('width', wrapper.clientWidth);
+                                p.svg.attr('height', wrapper.clientHeight);
+                            }
+                        }
+                    });
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
+        function initProdMetrics() {
+            const prodMetricsPanel = document.getElementById('prodMetricsDashboard');
+            const dagResizeHandle = document.getElementById('dagResizeHandle');
+
+            // Show metrics panel in both modes
+            prodMetricsPanel.style.display = 'block';
+
+            if (MODE === 'comparison') {
+                // Hide resize handle in comparison mode (DAGs are side-by-side)
+                dagResizeHandle.style.display = 'none';
+            } else {
+                // Show resize handle in single/production mode
+                dagResizeHandle.style.display = 'flex';
+            }
+        }
+
+        function updateProdMetrics(panel) {
+            // Helper to calculate metrics for a single panel
+            function calcPanelMetrics(p) {
+                const stats = p.stats;
+                const total = stats.verified + stats.failed;
+                const elapsed = Math.floor((Date.now() - p.startTime) / 1000);
+
+                // Verification rate
+                const verifyRate = total > 0 ? Math.round((stats.verified / total) * 100) : 0;
+
+                // Failure rate
+                const failRate = total > 0 ? Math.round((stats.failed / total) * 100) : 0;
+
+                // First-pass success
+                const firstPassRate = stats.iterations > 0 ? Math.round(Math.max(0, (1 - (stats.failed / Math.max(1, stats.iterations))) * 100)) : 0;
+
+                // Avg cycle time
+                const avgCycleTime = stats.iterations > 0 ? Math.round(elapsed / stats.iterations) : 0;
+
+                // Retry count (FEEDBACK edges)
+                const retries = p.edges.FEEDBACK || 0;
+
+                // Test coverage
+                const testNodes = p.graphData.nodes.filter(n => n.type === 'TEST' || n.type === 'TEST_SUITE').length;
+                const codeNodes = stats.code;
+                const coverage = codeNodes > 0 ? Math.min(100, Math.round((testNodes / codeNodes) * 100)) : 0;
+
+                // API calls (iterations)
+                const apiCalls = stats.iterations;
+
+                // Code quality
+                const quality = stats.verified > 0 ? 'PASS' : stats.failed > 0 ? 'FAIL' : '—';
+
+                return { verifyRate, failRate, firstPassRate, avgCycleTime, retries, coverage, apiCalls, quality, codeNodes };
+            }
+
+            // Helper to format delta with sign and color class
+            function formatDelta(baseline, treatment, higherIsBetter = true, isPercent = false) {
+                const diff = treatment - baseline;
+                if (diff === 0 || (baseline === 0 && treatment === 0)) {
+                    return { text: '—', className: 'delta-val neutral' };
+                }
+                const sign = diff > 0 ? '+' : '';
+                const suffix = isPercent ? '%' : '';
+                const isPositive = higherIsBetter ? diff > 0 : diff < 0;
+                return {
+                    text: `${sign}${diff}${suffix}`,
+                    className: `delta-val ${isPositive ? 'positive' : 'negative'}`
+                };
+            }
+
+            // Get metrics for both panels (or just single panel)
+            let baselineMetrics, treatmentMetrics;
+
+            if (MODE === 'comparison' && panels.baseline && panels.treatment) {
+                baselineMetrics = calcPanelMetrics(panels.baseline);
+                treatmentMetrics = calcPanelMetrics(panels.treatment);
+            } else {
+                // Single mode: show same values in both columns
+                const metrics = calcPanelMetrics(panel);
+                baselineMetrics = metrics;
+                treatmentMetrics = metrics;
+            }
+
+            // Update Verification Rate
+            document.getElementById('metricVerifyRateBaseline').textContent = `${baselineMetrics.verifyRate}%`;
+            document.getElementById('metricVerifyRateTreatment').textContent = `${treatmentMetrics.verifyRate}%`;
+            const verifyDelta = formatDelta(baselineMetrics.verifyRate, treatmentMetrics.verifyRate, true, true);
+            document.getElementById('metricVerifyRateDelta').textContent = verifyDelta.text;
+            document.getElementById('metricVerifyRateDelta').className = verifyDelta.className;
+
+            // Update Failure Rate (lower is better)
+            document.getElementById('metricFailRateBaseline').textContent = `${baselineMetrics.failRate}%`;
+            document.getElementById('metricFailRateTreatment').textContent = `${treatmentMetrics.failRate}%`;
+            const failDelta = formatDelta(baselineMetrics.failRate, treatmentMetrics.failRate, false, true);
+            document.getElementById('metricFailRateDelta').textContent = failDelta.text;
+            document.getElementById('metricFailRateDelta').className = failDelta.className;
+
+            // Update First-Pass Success
+            document.getElementById('metricFirstPassBaseline').textContent = `${baselineMetrics.firstPassRate}%`;
+            document.getElementById('metricFirstPassTreatment').textContent = `${treatmentMetrics.firstPassRate}%`;
+            const firstPassDelta = formatDelta(baselineMetrics.firstPassRate, treatmentMetrics.firstPassRate, true, true);
+            document.getElementById('metricFirstPassDelta').textContent = firstPassDelta.text;
+            document.getElementById('metricFirstPassDelta').className = firstPassDelta.className;
+
+            // Update Avg Cycle Time (lower is better)
+            document.getElementById('metricCycleTimeBaseline').textContent = baselineMetrics.avgCycleTime > 0 ? `${baselineMetrics.avgCycleTime}s` : '—';
+            document.getElementById('metricCycleTimeTreatment').textContent = treatmentMetrics.avgCycleTime > 0 ? `${treatmentMetrics.avgCycleTime}s` : '—';
+            const cycleDelta = formatDelta(baselineMetrics.avgCycleTime, treatmentMetrics.avgCycleTime, false, false);
+            document.getElementById('metricCycleTimeDelta').textContent = cycleDelta.text !== '—' ? cycleDelta.text + 's' : '—';
+            document.getElementById('metricCycleTimeDelta').className = cycleDelta.className;
+
+            // Update Retry Count (lower is better)
+            document.getElementById('metricRetriesBaseline').textContent = baselineMetrics.retries;
+            document.getElementById('metricRetriesTreatment').textContent = treatmentMetrics.retries;
+            const retriesDelta = formatDelta(baselineMetrics.retries, treatmentMetrics.retries, false, false);
+            document.getElementById('metricRetriesDelta').textContent = retriesDelta.text;
+            document.getElementById('metricRetriesDelta').className = retriesDelta.className;
+
+            // Update Test Coverage
+            document.getElementById('metricCoverageBaseline').textContent = baselineMetrics.codeNodes > 0 ? `${baselineMetrics.coverage}%` : '—';
+            document.getElementById('metricCoverageTreatment').textContent = treatmentMetrics.codeNodes > 0 ? `${treatmentMetrics.coverage}%` : '—';
+            const coverageDelta = formatDelta(baselineMetrics.coverage, treatmentMetrics.coverage, true, true);
+            document.getElementById('metricCoverageDelta').textContent = coverageDelta.text;
+            document.getElementById('metricCoverageDelta').className = coverageDelta.className;
+
+            // Update API Calls (lower is better for efficiency)
+            document.getElementById('metricApiCallsBaseline').textContent = baselineMetrics.apiCalls;
+            document.getElementById('metricApiCallsTreatment').textContent = treatmentMetrics.apiCalls;
+            const apiDelta = formatDelta(baselineMetrics.apiCalls, treatmentMetrics.apiCalls, false, false);
+            document.getElementById('metricApiCallsDelta').textContent = apiDelta.text;
+            document.getElementById('metricApiCallsDelta').className = apiDelta.className;
+
+            // Update Code Quality
+            document.getElementById('metricQualityBaseline').textContent = baselineMetrics.quality;
+            document.getElementById('metricQualityTreatment').textContent = treatmentMetrics.quality;
+            // For quality, show comparison text
+            let qualityDeltaText = '—';
+            let qualityDeltaClass = 'delta-val neutral';
+            if (baselineMetrics.quality === treatmentMetrics.quality) {
+                qualityDeltaText = '=';
+            } else if (treatmentMetrics.quality === 'PASS' && baselineMetrics.quality !== 'PASS') {
+                qualityDeltaText = '▲';
+                qualityDeltaClass = 'delta-val positive';
+            } else if (treatmentMetrics.quality === 'FAIL' && baselineMetrics.quality !== 'FAIL') {
+                qualityDeltaText = '▼';
+                qualityDeltaClass = 'delta-val negative';
+            }
+            document.getElementById('metricQualityDelta').textContent = qualityDeltaText;
+            document.getElementById('metricQualityDelta').className = qualityDeltaClass;
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                document.getElementById('connectionDot').classList.add('connected');
+                document.getElementById('connectionText').textContent = 'Connected';
+                Object.values(panels).forEach(p => p.addEvent('system', 'Connected to server'));
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionDot').classList.remove('connected');
+                document.getElementById('connectionText').textContent = 'Disconnected';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+        }
+
+        function handleMessage(msg) {
+            // Handle full_state
+            if (msg.type === 'full_state') {
+                if (MODE === 'comparison' && msg.dev_mode && msg.data.baseline && msg.data.treatment) {
+                    panels.baseline.loadState(msg.data.baseline);
+                    panels.treatment.loadState(msg.data.treatment);
+                } else {
+                    const panel = MODE === 'comparison' ? panels.baseline : panels.single;
+                    panel.loadState(msg.data);
+                }
+                updateComparison();
+                return;
+            }
+
+            // Get target panel
+            const session = msg.session || (MODE === 'comparison' ? 'baseline' : 'single');
+            const panel = panels[session];
+            if (!panel) return;
+
+            switch (msg.type) {
+                case 'node_created':
+                    panel.addNode(msg.data.node);
+                    panel.addEvent('node_created', `${msg.data.node.type}: ${msg.data.node.id.substring(0, 8)}`);
+                    break;
+                case 'node_status_changed':
+                    panel.updateNodeStatus(msg.data.node_id, msg.data.new_status);
+                    panel.addEvent('status_change', `${msg.data.node_id.substring(0, 8)}: ${msg.data.new_status}`);
+                    break;
+                case 'edge_created':
+                    panel.addEdge(msg.data.edge);
+                    panel.addEvent('edge_created', `${msg.data.edge.type}: ${msg.data.edge.source.substring(0, 8)} → ${msg.data.edge.target.substring(0, 8)}`);
+                    break;
+                case 'agent_started':
+                    panel.setNodeAgent(msg.data.node_id, msg.data.agent_role);
+                    panel.addEvent('agent_started', `${msg.data.agent_role} → ${msg.data.node_id.substring(0, 8)}`);
+                    break;
+                case 'agent_finished':
+                    panel.addCost(msg.data.cost);
+                    panel.addEvent('agent_finished', `${msg.data.agent_role} ($${(msg.data.cost || 0).toFixed(4)})`);
+                    break;
+                case 'iteration':
+                    panel.setIteration(msg.data.iteration);
+                    break;
+                case 'complete':
+                    panel.setComplete();
+                    panel.addEvent('complete', 'Execution complete!');
+                    break;
+                case 'error':
+                    panel.addEvent('error', msg.data.error);
+                    break;
+            }
+
+            // Handle chat-related messages
+            handleChatMessage(msg);
+
+            updateComparison();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // CHAT PANEL - Bidirectional Agent Communication
+        // ═══════════════════════════════════════════════════════════════════
+
+        const chatState = {
+            pendingQuestions: {},  // question_id -> question data
+            minimized: false,
+            unreadCount: 0
+        };
+
+        function initChat() {
+            const chatInput = document.getElementById('chatInput');
+            const chatSend = document.getElementById('chatSend');
+
+            // Auto-resize textarea
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
+            });
+
+            // Send on Enter (Shift+Enter for newline)
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            });
+
+            chatSend.addEventListener('click', sendChatMessage);
+
+            // Clear unread when focused
+            chatInput.addEventListener('focus', () => {
+                chatState.unreadCount = 0;
+                updateChatBadge();
+            });
+        }
+
+        function updateChatBadge() {
+            const badge = document.getElementById('chatBadge');
+            if (chatState.unreadCount > 0) {
+                badge.textContent = chatState.unreadCount;
+                badge.classList.add('visible');
+            } else {
+                badge.classList.remove('visible');
+            }
+        }
+
+        function addChatMessage(type, content, agentRole = null, questionId = null, options = null) {
+            const messagesContainer = document.getElementById('chatMessages');
+
+            const messageEl = document.createElement('div');
+            messageEl.className = `chat-message ${type}`;
+            if (questionId) {
+                messageEl.classList.add('question');
+                messageEl.dataset.questionId = questionId;
+            }
+
+            let html = '';
+
+            if (agentRole && type === 'agent') {
+                const roleLower = agentRole.toLowerCase();
+                html += `<div class="message-agent-label ${roleLower}">${agentRole}</div>`;
+            }
+
+            html += `<div class="message-content">${escapeHtml(content)}</div>`;
+
+            // Add option buttons for questions
+            if (options && options.length > 0) {
+                html += '<div class="question-options">';
+                options.forEach(opt => {
+                    html += `<button class="option-btn" onclick="selectOption('${questionId}', '${escapeHtml(opt)}')">${escapeHtml(opt)}</button>`;
+                });
+                html += '</div>';
+            }
+
+            messageEl.innerHTML = html;
+            messagesContainer.appendChild(messageEl);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Update unread count for incoming messages (agent/system)
+            if (type !== 'user') {
+                chatState.unreadCount++;
+                updateChatBadge();
+            }
+
+            // Update status
+            if (questionId) {
+                document.getElementById('chatStatus').textContent = 'Waiting for response...';
+                document.getElementById('chatStatus').classList.add('waiting');
+            }
+
+            return messageEl;
+        }
+
+        function selectOption(questionId, option) {
+            // Highlight selected option
+            const questionEl = document.querySelector(`[data-question-id="${questionId}"]`);
+            if (questionEl) {
+                questionEl.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                    if (btn.textContent === option) {
+                        btn.classList.add('selected');
+                    }
+                });
+            }
+
+            // Send the response
+            sendQuestionResponse(questionId, option);
+        }
+
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chatInput');
+            const message = chatInput.value.trim();
+
+            if (!message) return;
+
+            const routing = document.getElementById('chatRouting').value;
+
+            // Add user message to chat
+            addChatMessage('user', message);
+
+            // Check if this is a response to a pending question
+            const pendingIds = Object.keys(chatState.pendingQuestions);
+            if (pendingIds.length > 0) {
+                // Respond to the most recent pending question
+                const questionId = pendingIds[pendingIds.length - 1];
+                sendQuestionResponse(questionId, message);
+            } else {
+                // Send as a new user query
+                sendUserQuery(message, routing);
+            }
+
+            // Clear input
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+        }
+
+        function sendQuestionResponse(questionId, response) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addChatMessage('system', 'Not connected to server');
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'user_response',
+                question_id: questionId,
+                response: response
+            }));
+
+            // Remove from pending
+            delete chatState.pendingQuestions[questionId];
+
+            // Update status
+            if (Object.keys(chatState.pendingQuestions).length === 0) {
+                document.getElementById('chatStatus').textContent = 'Ready';
+                document.getElementById('chatStatus').classList.remove('waiting');
+            }
+
+            addChatMessage('system', `Response sent: "${response.substring(0, 50)}${response.length > 50 ? '...' : ''}"`);
+        }
+
+        function sendUserQuery(query, routing) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addChatMessage('system', 'Not connected to server');
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                type: 'user_query',
+                query: query,
+                routing: routing,
+                target_type: null,
+                target_id: null
+            }));
+
+            document.getElementById('chatStatus').textContent = 'Processing...';
+        }
+
+        function handleChatMessage(msg) {
+            switch (msg.type) {
+                case 'question_from_model':
+                    // Agent is asking the user a question
+                    const { question_id, question, context, options } = msg.data;
+                    const agentRole = context?.agent_role || 'SYSTEM';
+
+                    chatState.pendingQuestions[question_id] = msg.data;
+
+                    addChatMessage('agent', question, agentRole, question_id, options);
+                    break;
+
+                case 'query_response':
+                    // Response to a user query
+                    const responseData = msg.data;
+                    let responseText = '';
+
+                    if (responseData.error) {
+                        responseText = `Error: ${responseData.error}`;
+                    } else if (responseData.data) {
+                        if (typeof responseData.data === 'object') {
+                            responseText = formatQueryResponse(responseData.data);
+                        } else {
+                            responseText = String(responseData.data);
+                        }
+                    }
+
+                    addChatMessage('agent', responseText, 'SYSTEM');
+                    document.getElementById('chatStatus').textContent = 'Ready';
+                    break;
+
+                case 'chat_message':
+                    // Direct chat message from an agent
+                    addChatMessage('agent', msg.data.message, msg.data.agent_role || 'SYSTEM');
+                    break;
+            }
+        }
+
+        function formatQueryResponse(data) {
+            if (data.nodes_count !== undefined) {
+                // Summary response
+                return `Graph Status:\n• ${data.nodes_count} nodes\n• ${data.edges_count} edges\n• Cost: $${data.stats?.total_cost?.toFixed(4) || 0}\n• Active agents: ${data.active_agents?.length || 0}`;
+            }
+
+            if (data.id) {
+                // Node response
+                return `Node ${data.id.substring(0, 8)}:\n• Type: ${data.type}\n• Status: ${data.status}\n• Content: ${(data.content || '').substring(0, 100)}...`;
+            }
+
+            return JSON.stringify(data, null, 2);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize chat when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initChat();
+        });
+    </script>
+</body>
+</html>

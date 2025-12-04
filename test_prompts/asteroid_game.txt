@@ -1,0 +1,16 @@
+PROJECT: Asteroid Game (Pygame)
+TARGET DIR: game/
+
+OBJECTIVES:
+1. Create a fully playable Asteroids clone using pygame.
+2. Architecture MUST be decomposed into at least 5 separate files:
+   - main.py: The game loop and initialization.
+   - entities.py: Base classes for GameObject.
+   - player.py: Ship mechanics (thrust, rotation).
+   - asteroid.py: Rock mechanics (splitting, drift).
+   - physics.py: Collision detection and movement vectors.
+3. Constraint: main.py is the ONLY entry point. No circular imports allowed.
+
+GOVERNANCE:
+- The Architect must define the DEPENDS_ON edges explicitly in the PLAN.
+- The Verifier must fail any code that imports a file not defined in the architecture.

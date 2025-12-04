@@ -218,7 +218,8 @@ class LLMGateway:
         role: str,
         system_prompt: str,
         user_context: str,
-        tools: Optional[List[Dict]] = None
+        tools: Optional[List[Dict]] = None,
+        force_tool: Optional[str] = None
     ) -> str:
         """
         Call LLM with optional tool definitions (legacy mode).
@@ -231,6 +232,7 @@ class LLMGateway:
             system_prompt: System message
             user_context: User message
             tools: Optional list of tool definitions for function calling
+            force_tool: Optional tool name to force via tool_choice
 
         Returns:
             Response content as string (or JSON if tool calls present)
@@ -253,6 +255,11 @@ class LLMGateway:
         # STRICT MODEL ROUTER: FORCE OVERRIDE BEFORE CALLING PROVIDER
         # ---------------------------------------------------------
         forced_config = self._force_model_override(role, role_config)
+
+        # Apply force_tool as tool_choice if specified
+        if force_tool and tools:
+            forced_config["tool_choice"] = {"type": "tool", "name": force_tool}
+            logger.debug(f"Forcing tool: {force_tool}")
 
         try:
             return self.provider.call(

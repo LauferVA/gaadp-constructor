@@ -45,7 +45,7 @@ class GraphRuntime:
     - Optionally emits events to visualization server
     """
 
-    def __init__(self, graph_db, llm_gateway=None, viz_server=None):
+    def __init__(self, graph_db, llm_gateway=None, viz_server=None, output_dir=None):
         """
         Initialize the runtime.
 
@@ -53,22 +53,32 @@ class GraphRuntime:
             graph_db: The GraphDB instance
             llm_gateway: Optional LLM gateway for agents
             viz_server: Optional VizServer for real-time visualization
+            output_dir: Directory to write generated code files (default: current directory)
         """
+        from pathlib import Path
         self.graph = graph_db
         self.gateway = llm_gateway
         self._agents: Dict[str, GenericAgent] = {}
         self._viz = viz_server
         self._telemetry = get_recorder()
+        self._output_dir = Path(output_dir) if output_dir else Path(".")
 
-        logger.info("GraphRuntime initialized")
+        logger.info(f"GraphRuntime initialized (output_dir={self._output_dir})")
 
     async def _emit(self, method: str, *args, **kwargs):
         """Emit an event to the visualization server if connected."""
-        if self._viz and hasattr(self._viz, method):
-            try:
-                await getattr(self._viz, method)(*args, **kwargs)
-            except Exception as e:
-                logger.debug(f"Viz emit error: {e}")
+        if self._viz:
+            if hasattr(self._viz, method):
+                try:
+                    logger.info(f"📡 VIZ EMIT: {method}")
+                    await getattr(self._viz, method)(*args, **kwargs)
+                    logger.info(f"✅ VIZ EMIT SUCCESS: {method}")
+                except Exception as e:
+                    logger.error(f"❌ Viz emit error for {method}: {e}")
+            else:
+                logger.warning(f"VizServer missing method: {method}")
+        else:
+            logger.warning(f"⚠️ No viz_server for emit: {method}")
 
     # =========================================================================
     # CONDITION EVALUATION
@@ -107,12 +117,24 @@ class GraphRuntime:
 
         # === Dependency Tracking ===
         if condition == "dependencies_verified":
-            # All DEPENDS_ON targets must be VERIFIED
-            for pred in self.graph.graph.predecessors(node_id):
-                edge_data = self.graph.graph.edges[pred, node_id]
+            # All DEPENDS_ON targets must be VERIFIED (or have VERIFIED CODE)
+            # Edge direction: dependent --DEPENDS_ON--> dependency
+            # So we check SUCCESSORS (outgoing edges) for dependencies
+            for succ in self.graph.graph.successors(node_id):
+                edge_data = self.graph.graph.edges[node_id, succ]
                 if edge_data.get('type') == EdgeType.DEPENDS_ON.value:
-                    pred_status = self.graph.graph.nodes[pred].get('status')
-                    if pred_status != NodeStatus.VERIFIED.value:
+                    succ_status = self.graph.graph.nodes[succ].get('status')
+                    if succ_status == NodeStatus.VERIFIED.value:
+                        continue  # Direct verification - OK
+                    # Check if this SPEC has a VERIFIED CODE child
+                    has_verified_code = False
+                    for pred in self.graph.graph.predecessors(succ):
+                        pred_data = self.graph.graph.nodes[pred]
+                        if (pred_data.get('type') == NodeType.CODE.value and
+                            pred_data.get('status') == NodeStatus.VERIFIED.value):
+                            has_verified_code = True
+                            break
+                    if not has_verified_code:
                         return False
             return True
 
@@ -219,9 +241,28 @@ class GraphRuntime:
 
         # === Dispatch Conditions ===
         if condition == "needs_decomposition":
-            # REQ has no SPEC children
-            for succ in self.graph.graph.successors(node_id):
-                if self.graph.graph.nodes[succ].get('type') == NodeType.SPEC.value:
+            # REQ has no SPEC children AND has VERIFIED RESEARCH (or skip_research=True)
+            # Note: Child nodes trace TO parent via TRACES_TO, so check predecessors
+
+            # Check for skip_research flag - allows bypassing research phase
+            metadata = node_data.get('metadata', {})
+            skip_research = metadata.get('skip_research', False)
+
+            # Check for VERIFIED RESEARCH child (unless skip_research)
+            if not skip_research:
+                has_verified_research = False
+                for pred in self.graph.graph.predecessors(node_id):
+                    pred_data = self.graph.graph.nodes[pred]
+                    if pred_data.get('type') == NodeType.RESEARCH.value:
+                        if pred_data.get('status') == NodeStatus.VERIFIED.value:
+                            has_verified_research = True
+                            break
+                if not has_verified_research:
+                    return False  # Research must be verified before decomposition
+
+            # Check no SPEC children yet
+            for pred in self.graph.graph.predecessors(node_id):
+                if self.graph.graph.nodes[pred].get('type') == NodeType.SPEC.value:
                     return False
             return True
 
@@ -251,6 +292,285 @@ class GraphRuntime:
         if condition == "needs_replan":
             # ESCALATION not yet addressed
             return not self.evaluate_condition(node_id, "replan_produced")
+
+        # === DIALECTIC Pipeline (Pre-Research Ambiguity Detection) ===
+        if condition == "needs_dialectic":
+            # REQ hasn't been analyzed for ambiguity yet
+            # True if: no skip_dialectic flag AND no dialectic_passed flag AND no CLARIFICATION from DIALECTOR
+            metadata = node_data.get('metadata', {})
+
+            # Skip if explicitly bypassing dialectic
+            if metadata.get('skip_dialectic', False):
+                return False
+
+            # Skip if dialectic already passed (no ambiguity found)
+            if metadata.get('dialectic_passed', False):
+                return False
+
+            # Skip if there's already a CLARIFICATION from DIALECTOR (blocking or not)
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.CLARIFICATION.value:
+                    pred_meta = pred_data.get('metadata', {})
+                    if pred_meta.get('source') == 'DIALECTOR':
+                        return False
+
+            return True  # Needs dialectic analysis
+
+        if condition == "dialectic_passed":
+            # REQ has been analyzed and found clear (no blocking ambiguities)
+            metadata = node_data.get('metadata', {})
+            return metadata.get('dialectic_passed', False) or metadata.get('skip_dialectic', False)
+
+        if condition == "dialectic_blocked":
+            # REQ has CLARIFICATION children from DIALECTOR that are still PENDING
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.CLARIFICATION.value:
+                    pred_meta = pred_data.get('metadata', {})
+                    if pred_meta.get('source') == 'DIALECTOR':
+                        if pred_data.get('status') in [NodeStatus.PENDING.value, NodeStatus.PROCESSING.value]:
+                            return True
+            return False
+
+        # === Graph-Native Socratic Q&A Conditions ===
+
+        if condition == "has_blocking_clarifications":
+            # Has CLARIFICATION children with impact_level="blocking" that are PENDING/PROCESSING
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.CLARIFICATION.value:
+                    pred_meta = pred_data.get('metadata', {})
+                    if pred_meta.get('impact_level') == 'blocking':
+                        if pred_data.get('status') in [NodeStatus.PENDING.value, NodeStatus.PROCESSING.value, NodeStatus.BLOCKED.value]:
+                            return True
+            return False
+
+        if condition == "has_clarifying_only":
+            # Has CLARIFICATION children but ALL are non-blocking (impact_level != "blocking")
+            has_any_clarification = False
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.CLARIFICATION.value:
+                    has_any_clarification = True
+                    pred_meta = pred_data.get('metadata', {})
+                    # If any is blocking and not resolved, return False
+                    if pred_meta.get('impact_level') == 'blocking':
+                        if pred_data.get('status') in [NodeStatus.PENDING.value, NodeStatus.PROCESSING.value, NodeStatus.BLOCKED.value]:
+                            return False
+            return has_any_clarification  # True only if has clarifications and none are blocking
+
+        if condition == "all_blocking_resolved":
+            # All CLARIFICATION children with impact_level="blocking" are VERIFIED
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.CLARIFICATION.value:
+                    pred_meta = pred_data.get('metadata', {})
+                    if pred_meta.get('impact_level') == 'blocking':
+                        if pred_data.get('status') != NodeStatus.VERIFIED.value:
+                            return False
+            return True  # All blocking ones are verified (or there are none)
+
+        if condition == "user_provided_answer":
+            # VizServer has received a response for this CLARIFICATION node
+            # Check if there's a pending answer in the VizServer (if connected)
+            if self._viz and hasattr(self._viz, '_question_responses'):
+                # Check if any response is for this node
+                node_meta = node_data.get('metadata', {})
+                question_id = node_meta.get('question_id')
+                if question_id:
+                    return question_id in getattr(self._viz, '_question_responses', {})
+            return False
+
+        if condition == "user_requested_pause":
+            # User signaled they want to defer answering this CLARIFICATION
+            metadata = node_data.get('metadata', {})
+            return metadata.get('user_paused', False)
+
+        if condition == "user_ready_to_answer":
+            # User signaled ready to resume a paused CLARIFICATION
+            metadata = node_data.get('metadata', {})
+            return metadata.get('user_resumed', False)
+
+        if condition == "clarification_timed_out":
+            # Timeout expired waiting for user response
+            from datetime import datetime, timezone
+            metadata = node_data.get('metadata', {})
+            timeout_at = metadata.get('timeout_at')
+            if timeout_at:
+                try:
+                    deadline = datetime.fromisoformat(timeout_at)
+                    return datetime.now(timezone.utc) > deadline
+                except (ValueError, TypeError):
+                    pass
+            return False
+
+        if condition == "can_use_default":
+            # CLARIFICATION is non-blocking, default can be used on timeout
+            metadata = node_data.get('metadata', {})
+            return metadata.get('impact_level') != 'blocking'
+
+        # === Research Standard v1.0 Conditions ===
+        if condition == "needs_research":
+            # REQ has no RESEARCH child node (unless skip_research is set)
+            # Note: Child nodes trace TO parent via TRACES_TO edge, so check predecessors
+
+            # IMPORTANT: Must pass dialectic first (or skip it)
+            metadata = node_data.get('metadata', {})
+            if not metadata.get('skip_dialectic', False) and not metadata.get('dialectic_passed', False):
+                return False  # Can't research until dialectic passes
+
+            # Check for skip_research flag in metadata
+            if metadata.get('skip_research', False):
+                return False  # Don't need research, it's being skipped
+
+            for pred in self.graph.graph.predecessors(node_id):
+                if self.graph.graph.nodes[pred].get('type') == NodeType.RESEARCH.value:
+                    return False
+            return True
+
+        if condition == "needs_research_verification":
+            # RESEARCH node is in PROCESSING state and needs verification
+            # (i.e., has been produced but not yet verified)
+            node_type = node_data.get('type')
+            node_status = node_data.get('status')
+            if node_type != NodeType.RESEARCH.value:
+                return False
+            # Check if already verified
+            if node_status == NodeStatus.VERIFIED.value:
+                return False
+            # Check if there's already a verification result
+            metadata = node_data.get('metadata', {})
+            if metadata.get('verification_verdict'):
+                return False
+            return True
+
+        if condition == "research_verified":
+            # RESEARCH node has passed verification (8/10 criteria)
+            node_type = node_data.get('type')
+            if node_type != NodeType.RESEARCH.value:
+                return False
+            # Check node status (set by RESEARCH_VERIFIER)
+            node_status = node_data.get('status')
+            if node_status == NodeStatus.VERIFIED.value:
+                return True
+            # Also check metadata verdict for backwards compatibility
+            metadata = node_data.get('metadata', {})
+            verdict = metadata.get('verification_verdict')
+            return verdict == "PASS"
+
+        # =================================================================
+        # Gen-2 TDD CONDITIONS
+        # =================================================================
+
+        if condition == "needs_spec_generation":
+            # RESEARCH is VERIFIED but no SPEC created yet for the parent REQ
+            node_type = node_data.get('type')
+            if node_type != NodeType.RESEARCH.value:
+                return False
+            node_status = node_data.get('status')
+            if node_status != NodeStatus.VERIFIED.value:
+                return False
+            # Find the parent REQ via TRACES_TO edge
+            for succ in self.graph.graph.successors(node_id):
+                edge_data = self.graph.graph.edges[node_id, succ]
+                if edge_data.get('type') == EdgeType.TRACES_TO.value:
+                    succ_data = self.graph.graph.nodes[succ]
+                    if succ_data.get('type') == NodeType.REQ.value:
+                        # Check if REQ has any SPEC children
+                        for pred in self.graph.graph.predecessors(succ):
+                            pred_data = self.graph.graph.nodes[pred]
+                            if pred_data.get('type') == NodeType.SPEC.value:
+                                return False  # Already has a SPEC
+                        return True  # VERIFIED RESEARCH, no SPEC yet
+            return False
+
+        if condition == "has_verified_research":
+            # REQ has a VERIFIED RESEARCH child
+            node_type = node_data.get('type')
+            if node_type != NodeType.REQ.value:
+                return False
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.RESEARCH.value:
+                    if pred_data.get('status') == NodeStatus.VERIFIED.value:
+                        return True
+            return False
+
+        if condition == "needs_testing":
+            # CODE created, needs TESTER review (no TEST_SUITE yet)
+            node_type = node_data.get('type')
+            if node_type != NodeType.CODE.value:
+                return False
+            node_status = node_data.get('status')
+            # CODE should be PENDING or just created
+            if node_status not in [NodeStatus.PENDING.value]:
+                return False
+            # Check no TEST_SUITE pointing to this CODE via TESTS edge
+            for pred in self.graph.graph.predecessors(node_id):
+                edge_data = self.graph.graph.edges[pred, node_id]
+                pred_data = self.graph.graph.nodes[pred]
+                if (edge_data.get('type') == EdgeType.TESTS.value or
+                    pred_data.get('type') == NodeType.TEST_SUITE.value):
+                    return False
+            return True
+
+        if condition == "tests_passed":
+            # TESTER verdict is PASS - check TEST_SUITE nodes
+            node_type = node_data.get('type')
+            if node_type != NodeType.CODE.value:
+                return False
+            # Find TEST_SUITE pointing to this CODE
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.TEST_SUITE.value:
+                    metadata = pred_data.get('metadata', {})
+                    if metadata.get('verdict') == 'PASS':
+                        return True
+            return False
+
+        if condition == "tests_need_revision":
+            # TESTER verdict is NEEDS_REVISION
+            node_type = node_data.get('type')
+            if node_type != NodeType.CODE.value:
+                return False
+            # Find TEST_SUITE pointing to this CODE
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.TEST_SUITE.value:
+                    metadata = pred_data.get('metadata', {})
+                    if metadata.get('verdict') == 'NEEDS_REVISION':
+                        return True
+            return False
+
+        if condition == "tests_failed_critical":
+            # TESTER verdict is FAIL (security/critical issues)
+            node_type = node_data.get('type')
+            if node_type != NodeType.CODE.value:
+                return False
+            # Find TEST_SUITE pointing to this CODE
+            for pred in self.graph.graph.predecessors(node_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if pred_data.get('type') == NodeType.TEST_SUITE.value:
+                    metadata = pred_data.get('metadata', {})
+                    if metadata.get('verdict') == 'FAIL':
+                        return True
+            return False
+
+        if condition == "code_tested":
+            # CODE has passed all tests (status=TESTED)
+            node_type = node_data.get('type')
+            if node_type != NodeType.CODE.value:
+                return False
+            node_status = node_data.get('status')
+            return node_status == NodeStatus.TESTED.value
+
+        if condition == "under_max_attempts":
+            # metadata.attempts < metadata.max_attempts (for TDD loop)
+            metadata = node_data.get('metadata', {})
+            attempts = metadata.get('attempts', 0)
+            max_attempts = metadata.get('max_attempts', 3)
+            return attempts < max_attempts
 
         logger.warning(f"Condition not implemented: {condition}")
         return False
@@ -402,13 +722,48 @@ class GraphRuntime:
         node_data = self.graph.graph.nodes.get(node_id, {})
 
         # Find root REQ
+        # Note: Nodes trace TO their parent via TRACES_TO edge, meaning:
+        # - RESEARCH --TRACES_TO--> REQ (REQ is a successor of RESEARCH)
+        # - SPEC --TRACES_TO--> RESEARCH or REQ (parent is successor)
+        # So we need to check both predecessors and successors
         req_content = None
         req_id = None
+
+        # First check predecessors (for nodes that have REQ as ancestor)
         for ancestor in self._find_ancestors(node_id, NodeType.REQ.value):
             ancestor_data = self.graph.graph.nodes[ancestor]
             req_content = ancestor_data.get('content')
             req_id = ancestor
             break
+
+        # If not found, check successors via TRACES_TO (for RESEARCH nodes)
+        if not req_id:
+            for succ in self.graph.graph.successors(node_id):
+                edge_data = self.graph.graph.edges[node_id, succ]
+                if edge_data.get('type') == EdgeType.TRACES_TO.value:
+                    succ_data = self.graph.graph.nodes[succ]
+                    if succ_data.get('type') == NodeType.REQ.value:
+                        req_content = succ_data.get('content')
+                        req_id = succ
+                        break
+
+        # Find VERIFIED RESEARCH artifact for this REQ
+        # RESEARCH nodes trace TO the REQ via TRACES_TO, making them predecessors
+        research_artifact = None
+        if req_id:
+            import json
+            for pred in self.graph.graph.predecessors(req_id):
+                pred_data = self.graph.graph.nodes[pred]
+                if (pred_data.get('type') == NodeType.RESEARCH.value and
+                    pred_data.get('status') == NodeStatus.VERIFIED.value):
+                    # Parse the research artifact from content
+                    content = pred_data.get('content', '{}')
+                    try:
+                        research_artifact = json.loads(content)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse RESEARCH content as JSON")
+                        research_artifact = {"raw_content": content}
+                    break
 
         # Get parent nodes (TRACES_TO)
         parents = []
@@ -425,12 +780,28 @@ class GraphRuntime:
             children[-1]['id'] = succ
 
         # Get dependencies (DEPENDS_ON)
+        # Edge direction: dependent --DEPENDS_ON--> dependency
+        # So we check SUCCESSORS (outgoing edges) for what we depend on
         deps = []
-        for pred in self.graph.graph.predecessors(node_id):
-            edge_data = self.graph.graph.edges[pred, node_id]
+        dep_code = {}  # file_path -> code content
+        for succ in self.graph.graph.successors(node_id):
+            edge_data = self.graph.graph.edges[node_id, succ]
             if edge_data.get('type') == EdgeType.DEPENDS_ON.value:
-                deps.append(dict(self.graph.graph.nodes[pred]))
-                deps[-1]['id'] = pred
+                succ_data = dict(self.graph.graph.nodes[succ])
+                succ_data['id'] = succ
+                deps.append(succ_data)
+
+                # Find VERIFIED CODE child of this dependency SPEC
+                for pred in self.graph.graph.predecessors(succ):
+                    pred_data = self.graph.graph.nodes[pred]
+                    if (pred_data.get('type') == NodeType.CODE.value and
+                        pred_data.get('status') == NodeStatus.VERIFIED.value):
+                        # Extract file_path from metadata and content
+                        code_metadata = pred_data.get('metadata', {})
+                        file_path = code_metadata.get('file_path', succ_data.get('content', 'unknown')[:50])
+                        code_content = pred_data.get('content', '')
+                        dep_code[file_path] = code_content
+                        break
 
         # Get feedback
         feedback = []
@@ -454,8 +825,10 @@ class GraphRuntime:
             parent_nodes=parents,
             child_nodes=children,
             dependency_nodes=deps,
+            dependency_code=dep_code,
             requirement_content=req_content,
             requirement_id=req_id,
+            research_artifact=research_artifact,
             feedback=feedback,
             previous_attempts=metadata.get('attempts', 0)
         )
@@ -532,8 +905,22 @@ class GraphRuntime:
         context = self.build_context(node_id)
         agent = self.get_or_create_agent(agent_role)
 
-        # Emit agent started event
-        await self._emit('on_agent_started', agent_role, node_id)
+        # Extract context node IDs for visualization (agent's "field of view")
+        context_node_ids = [node_id]  # Always includes the target node
+        if context.requirement_id:
+            context_node_ids.append(context.requirement_id)
+        for parent in context.parent_nodes:
+            if parent.get('id'):
+                context_node_ids.append(parent['id'])
+        for child in context.child_nodes:
+            if child.get('id'):
+                context_node_ids.append(child['id'])
+        for dep in context.dependency_nodes:
+            if dep.get('id'):
+                context_node_ids.append(dep['id'])
+
+        # Emit agent started event with context nodes
+        await self._emit('on_agent_started', agent_role, node_id, context_node_ids)
 
         # Telemetry: Log agent start
         self._telemetry.log_agent_start(agent_role, node_id)
@@ -589,7 +976,10 @@ class GraphRuntime:
         node_id_map = {}  # Map placeholder IDs to real IDs
         for node_spec in output.new_nodes:
             new_id = uuid.uuid4().hex
-            node_id_map[node_spec.type] = new_id  # Simple mapping
+            # Use explicit id if provided, otherwise fall back to type
+            # This allows multiple nodes of the same type to be referenced
+            map_key = node_spec.id if node_spec.id else node_spec.type
+            node_id_map[map_key] = new_id
 
             self.graph.add_node(
                 node_id=new_id,
@@ -655,14 +1045,18 @@ class GraphRuntime:
                 except Exception as e:
                     logger.warning(f"Failed to update status for {update_node_id}: {e}")
 
-        # Write artifacts
+        # Write artifacts to output directory
         for file_path, content in output.artifacts.items():
             try:
                 from pathlib import Path
-                path = Path(file_path)
+                # Prepend output directory to relative paths
+                if not Path(file_path).is_absolute():
+                    path = self._output_dir / file_path
+                else:
+                    path = Path(file_path)
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content)
-                logger.info(f"Wrote artifact: {file_path}")
+                logger.info(f"Wrote artifact: {path}")
             except Exception as e:
                 logger.error(f"Failed to write artifact {file_path}: {e}")
 

@@ -1,0 +1,243 @@
+{
+  "task_id": "task_04",
+  "task_name": "Markdown Parser",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.85,
+    "task_category": "algorithmic",
+    "why": "Users need to convert Markdown documents to HTML for web publishing, documentation sites, and content management systems. This enables authors to write in the more readable Markdown format while producing web-compatible HTML output.",
+    "success_criteria": [
+      {
+        "criterion": "Correctly converts headers (# ## ###) to HTML h1, h2, h3 tags",
+        "test_method": "Parse markdown with headers, verify HTML output contains proper h1/h2/h3 tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts bold (**text**) and italic (*text*) formatting",
+        "test_method": "Parse markdown with bold/italic text, verify HTML contains <strong> and <em> tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts links [text](url) to HTML anchor tags",
+        "test_method": "Parse markdown with links, verify HTML contains proper <a href> tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts unordered lists (- item) to HTML ul/li structure",
+        "test_method": "Parse markdown with bullet lists, verify HTML contains <ul><li> structure",
+        "is_automated": true
+      },
+      {
+        "criterion": "Handles plain text paragraphs by wrapping in <p> tags",
+        "test_method": "Parse plain text, verify output is wrapped in paragraph tags",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "markdown_text",
+        "type": "str",
+        "validation": "isinstance(markdown_text, str)",
+        "trust_boundary": "untrusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "html_output",
+        "type": "str",
+        "postcondition": "isinstance(html_output, str) and len(html_output) >= 0"
+      }
+    ],
+    "happy_path_examples": [
+      {
+        "input": {
+          "markdown_text": "# Hello World\n\nThis is a **bold** statement."
+        },
+        "expected_output": "<h1>Hello World</h1>\n<p>This is a <strong>bold</strong> statement.</p>",
+        "explanation": "Basic header and bold text conversion"
+      },
+      {
+        "input": {
+          "markdown_text": "Check out [Google](https://google.com) for search."
+        },
+        "expected_output": "<p>Check out <a href=\"https://google.com\">Google</a> for search.</p>",
+        "explanation": "Link conversion with URL and text"
+      },
+      {
+        "input": {
+          "markdown_text": "- Item 1\n- Item 2\n- Item 3"
+        },
+        "expected_output": "<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n<li>Item 3</li>\n</ul>",
+        "explanation": "Unordered list conversion"
+      }
+    ],
+    "edge_case_examples": [
+      {
+        "input": {
+          "markdown_text": ""
+        },
+        "expected_output": "",
+        "why_edge": "Empty input should produce empty output without errors"
+      },
+      {
+        "input": {
+          "markdown_text": "**bold *nested italic* text**"
+        },
+        "expected_output": "<p><strong>bold <em>nested italic</em> text</strong></p>",
+        "why_edge": "Nested formatting requires proper parsing precedence"
+      },
+      {
+        "input": {
+          "markdown_text": "# Header with **bold** text"
+        },
+        "expected_output": "<h1>Header with <strong>bold</strong> text</h1>",
+        "why_edge": "Inline formatting within headers"
+      },
+      {
+        "input": {
+          "markdown_text": "Line 1\n\nLine 3"
+        },
+        "expected_output": "<p>Line 1</p>\n<p>Line 3</p>",
+        "why_edge": "Double newlines should create separate paragraphs"
+      }
+    ],
+    "error_case_examples": [
+      {
+        "input": {
+          "markdown_text": "[broken link]("
+        },
+        "expected_exception": "ValueError: Malformed link syntax",
+        "explanation": "Incomplete link syntax should raise clear error"
+      },
+      {
+        "input": {
+          "markdown_text": "**unclosed bold"
+        },
+        "expected_exception": "ValueError: Unclosed bold formatting",
+        "explanation": "Unclosed formatting tags should be detected and reported"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "Should we support full CommonMark specification or a subset?",
+        "options": [
+          "Full CommonMark spec",
+          "Basic subset (headers, bold, italic, links, lists)",
+          "Extended subset with code blocks"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Basic subset (headers, bold, italic, links, lists)",
+        "rationale": "Basic subset covers most common use cases while keeping implementation manageable"
+      },
+      {
+        "description": "How should we handle malformed markdown syntax?",
+        "options": [
+          "Raise exceptions",
+          "Ignore and treat as plain text",
+          "Best-effort parsing with warnings"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Raise exceptions",
+        "rationale": "Clear error reporting helps users fix their markdown rather than silently producing incorrect output"
+      },
+      {
+        "description": "Should output HTML be formatted/indented or minified?",
+        "options": [
+          "Pretty-printed with indentation",
+          "Minified single line",
+          "Configurable option"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Pretty-printed with indentation",
+        "rationale": "Readable output is more useful for debugging and human inspection"
+      }
+    ],
+    "complexity_time": "O(n)",
+    "complexity_space": "O(n)",
+    "complexity_justification": "n = length of input text. Must scan entire input once, and output HTML is proportional to input size.",
+    "unit_tests": [
+      {
+        "name": "test_header_conversion",
+        "assertion": "parse_markdown('# Test') == '<h1>Test</h1>'",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_bold_conversion",
+        "assertion": "parse_markdown('**bold**') == '<p><strong>bold</strong></p>'",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_italic_conversion",
+        "assertion": "parse_markdown('*italic*') == '<p><em>italic</em></p>'",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_link_conversion",
+        "assertion": "parse_markdown('[text](url)') == '<p><a href=\"url\">text</a></p>'",
+        "traces_to_criterion": 2,
+        "priority": "critical"
+      },
+      {
+        "name": "test_list_conversion",
+        "assertion": "'<ul>' in parse_markdown('- item') and '<li>item</li>' in parse_markdown('- item')",
+        "traces_to_criterion": 3,
+        "priority": "critical"
+      },
+      {
+        "name": "test_paragraph_wrapping",
+        "assertion": "parse_markdown('plain text') == '<p>plain text</p>'",
+        "traces_to_criterion": 4,
+        "priority": "high"
+      }
+    ],
+    "forbidden_patterns": [
+      "eval(",
+      "exec(",
+      "compile(",
+      "__import__"
+    ],
+    "trust_boundary": "untrusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "markdown_parser.py",
+        "purpose": "Main markdown parsing logic with regex-based pattern matching"
+      }
+    ],
+    "entry_point": "markdown_parser.py",
+    "dependencies": [],
+    "reasoning": "Analyzed this as an algorithmic text processing task. Key decisions: (1) Limited scope to basic markdown features to keep implementation focused, (2) Chose to raise exceptions for malformed syntax rather than silent failures for better user experience, (3) Pretty-printed HTML output for readability. The parser will use regex patterns to identify markdown syntax and convert to corresponding HTML tags."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": true,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": true,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": true,
+    "reasoning": "This Research Artifact fully meets all 10 verification criteria:\n\n1. Input types: markdown_text has type annotation \"str\" and executable validation \"isinstance(markdown_text, str)\"\n2. Output types: html_output has type annotation \"str\" with proper postcondition\n3. Examples: Contains 3 happy path examples, 4 edge case examples, and 2 error case examples - all with concrete values\n4. Complexity: States O(n) time/space with clear justification referencing input length\n5. Dependencies: Empty array present (no external dependencies needed)\n6. Security: Defines forbidden_patterns (eval, exec, etc.) and trust_boundary classification as \"untrusted\"\n7. File structure: Single file \"markdown_parser.py\" with clear purpose - appropriate for algorithmic task\n8. Tests: 6 unit tests each with traces_to_criterion linking back to success criteria (0-4)\n9. Rationale: Comprehensive reasoning explaining design decisions for scope, error handling, and output formatting\n10. No ambiguity: All pronouns have clear referents; no dangling \"it\", \"this\", or \"that\"\n\nThe artifact demonstrates excellent completeness with concrete examples, proper type specifications, comprehensive test coverage, and clear documentation of design decisions.",
+    "verification_method": "llm",
+    "deterministic_score": 10,
+    "llm_score": 10
+  },
+  "attempts": 1,
+  "total_cost": 0.12832500000000002,
+  "total_tokens": {
+    "input": 57668,
+    "output": 20575
+  },
+  "duration_seconds": 43.070529,
+  "error": null
+}

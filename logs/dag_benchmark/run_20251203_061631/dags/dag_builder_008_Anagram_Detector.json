@@ -1,0 +1,236 @@
+{
+  "metadata": {
+    "task_id": "builder_008",
+    "task_name": "Anagram Detector",
+    "task_type": "builder",
+    "requirement": "Create a Python file `anagram.py` with a function `are_anagrams(s1, s2)` that:\n1. Returns True if s1 and s2 are anagrams of each other\n2. Ignores case and whitespace\n3. Returns False if either string is empty\n",
+    "exported_at": "2025-12-03T06:20:01.919095",
+    "duration_seconds": 20.964583,
+    "stats": {
+      "total_nodes": 16,
+      "total_edges": 5,
+      "total_cost": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "id": "be89dcbd8d0e4f96bbe614aea136e4b9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a function to calculate factorial",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3
+      }
+    },
+    {
+      "id": "69a33c94934545a3850c63765f3c8b96",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036524999999999995
+      }
+    },
+    {
+      "id": "ce547a4946f04bfca5028171b91807b1",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative integers\",\n      \"test_method\": \"Verify fibonacci(n) returns correct sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"c",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036573
+      }
+    },
+    {
+      "id": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution for mathematical computations.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify fibonacci(n) returns correct Fibonacci sequence values\",\n      \"is_",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "a9f0bd202ae94cd483427cf9581bff6e",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036069000000000004
+      }
+    },
+    {
+      "id": "5e9520c68a054dc2a66050ba2dc346eb",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of Fibonacci sequence generation that handles edge cases and provides clear error handling.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "941ba81cc207437aa8a79b5765e29e6c",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `calc.py` with a function `safe_divide(a, b)` that:\n1. Returns the result of a divided by b\n2. Raises `ZeroDivisionError` with message \"Cannot divide by zero\" when b is 0\n3. DO NOT return infinity or NaN - always raise for division by zero\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_002"
+      }
+    },
+    {
+      "id": "8e4250ece8354ffdb2ad44ff1849a333",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `palindrome.py` with a function `is_palindrome(s)` that:\n1. Returns True if the string s is a palindrome (reads same forwards and backwards)\n2. Ignores case and non-alphanumeric characters\n3. Returns False for empty strings\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_003"
+      }
+    },
+    {
+      "id": "ceb9f4d2bcac43dc93bdb40fe13629d5",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `primes.py` with a function `is_prime(n)` that:\n1. Returns True if n is a prime number, False otherwise\n2. Returns False for numbers less than 2\n3. Uses efficient algorithm (check divisibility up to sqrt(n))\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_004",
+        "attempts": 1,
+        "cost_actual": 0.035883
+      }
+    },
+    {
+      "id": "b83f54f26f294cfc978039b67fd20e5d",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a reliable and efficient method to determine whether a given number is prime, which is crucial for various mathematical and cryptographic applications.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly identify prime numbers\",\n      \"test_method\": \"Verify is_prime() returns True for known prime numbers\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\"",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "cd14960dfbce4b399ba4123deee5bc72",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `search.py` with a function `binary_search(arr, target)` that:\n1. Returns the index of target in sorted array arr\n2. Returns -1 if target is not found\n3. Assumes arr is already sorted in ascending order\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_005"
+      }
+    },
+    {
+      "id": "0f797a93b85647a0beb349fb06215a2f",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `strings.py` with a function `reverse_words(sentence)` that:\n1. Reverses the order of words in a sentence\n2. Preserves whitespace between words (single space)\n3. Returns empty string for empty input\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_006"
+      }
+    },
+    {
+      "id": "de46984914064ee386b6c1c54809a024",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `math_funcs.py` with a function `factorial(n)` that:\n1. Returns the factorial of n (n!)\n2. Raises ValueError for negative numbers\n3. Returns 1 for n=0\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_007",
+        "attempts": 1,
+        "cost_actual": 0.034011
+      }
+    },
+    {
+      "id": "ad5095f7fee045bf9bc38dbcfc901056",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a reliable, safe implementation of factorial calculation that handles edge cases and prevents invalid inputs.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates factorial for non-negative integers\",\n      \"test_method\": \"Verify factorial calculations for multiple input values\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"Raises ValueEr",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "857951e476ce4da4bcb0cd70554b0dad",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `anagram.py` with a function `are_anagrams(s1, s2)` that:\n1. Returns True if s1 and s2 are anagrams of each other\n2. Ignores case and whitespace\n3. Returns False if either string is empty\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_008",
+        "attempts": 1,
+        "last_error": "2 validation errors for ResearcherOutput\nerror_case_examples\n  Input should be a valid list [type=list_type, input_value='[\\n    {\\n        \"input...se TypeError\"\\n    }\\n]', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/list_type\ndependencies\n  Input should be a valid list [type=list_type, input_value='[],', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/list_type"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "ce547a4946f04bfca5028171b91807b1",
+      "target": "69a33c94934545a3850c63765f3c8b96",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "target": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "5e9520c68a054dc2a66050ba2dc346eb",
+      "target": "a9f0bd202ae94cd483427cf9581bff6e",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "b83f54f26f294cfc978039b67fd20e5d",
+      "target": "ceb9f4d2bcac43dc93bdb40fe13629d5",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ad5095f7fee045bf9bc38dbcfc901056",
+      "target": "de46984914064ee386b6c1c54809a024",
+      "type": "TRACES_TO"
+    }
+  ]
+}

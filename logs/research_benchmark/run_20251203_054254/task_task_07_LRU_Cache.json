@@ -1,0 +1,188 @@
+{
+  "task_id": "task_07",
+  "task_name": "LRU Cache",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.95,
+    "task_category": "algorithmic",
+    "why": "LRU (Least Recently Used) caches are fundamental data structures used in operating systems, databases, web servers, and applications to optimize memory usage by evicting the least recently accessed items when capacity is reached. This enables efficient caching with predictable memory bounds and fast access patterns.",
+    "success_criteria": [
+      {
+        "criterion": "Get operation completes in O(1) time complexity",
+        "test_method": "Measure time complexity with large cache sizes and verify constant time",
+        "is_automated": true
+      },
+      {
+        "criterion": "Put operation completes in O(1) time complexity",
+        "test_method": "Measure time complexity with large cache sizes and verify constant time",
+        "is_automated": true
+      },
+      {
+        "criterion": "Cache correctly evicts least recently used item when capacity exceeded",
+        "test_method": "Fill cache to capacity, add new item, verify oldest item was removed",
+        "is_automated": true
+      },
+      {
+        "criterion": "Get operation updates item to most recently used",
+        "test_method": "Access item, fill cache, verify accessed item not evicted",
+        "is_automated": true
+      },
+      {
+        "criterion": "Cache maintains correct size limits",
+        "test_method": "Verify cache never exceeds specified capacity",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "capacity",
+        "type": "int",
+        "validation": "isinstance(capacity, int) and capacity > 0",
+        "trust_boundary": "trusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "cache_instance",
+        "type": "LRUCache",
+        "postcondition": "hasattr(cache_instance, 'get') and hasattr(cache_instance, 'put') and hasattr(cache_instance, 'capacity')"
+      }
+    ],
+    "happy_path_examples": "[\n  {\n    \"input\": {\"capacity\": 3},\n    \"expected_output\": \"LRUCache instance with capacity=3, supporting get(key) and put(key, value) operations\",\n    \"explanation\": \"Standard cache creation with reasonable capacity\"\n  },\n  {\n    \"input\": {\"operations\": [(\"put\", 1, \"a\"), (\"put\", 2, \"b\"), (\"get\", 1), (\"put\", 3, \"c\"), (\"get\", 2)]},\n    \"expected_output\": {\"get_1\": \"a\", \"get_2\": \"b\", \"final_keys\": [1, 3, 2]},\n    \"explanation\": \"Sequence showing LRU ordering is maintained\"\n  }\n]",
+    "edge_case_examples": "[\n  {\n    \"input\": {\"capacity\": 1},\n    \"expected_output\": \"LRUCache with capacity=1, each put operation evicts previous item\",\n    \"why_edge\": \"Minimal capacity tests immediate eviction behavior\"\n  },\n  {\n    \"input\": {\"operations\": [(\"put\", 1, \"a\"), (\"put\", 1, \"b\")]},\n    \"expected_output\": {\"get_1\": \"b\"},\n    \"why_edge\": \"Updating existing key should not change cache size but update value\"\n  },\n  {\n    \"input\": {\"operations\": [(\"get\", 999)]},\n    \"expected_output\": null,\n    \"why_edge\": \"Getting non-existent key should return None or raise KeyError\"\n  }\n]",
+    "error_case_examples": [
+      {
+        "input": {
+          "capacity": 0
+        },
+        "expected_exception": "ValueError: Capacity must be positive",
+        "explanation": "Zero capacity is invalid"
+      },
+      {
+        "input": {
+          "capacity": -5
+        },
+        "expected_exception": "ValueError: Capacity must be positive",
+        "explanation": "Negative capacity is invalid"
+      },
+      {
+        "input": {
+          "capacity": "invalid"
+        },
+        "expected_exception": "TypeError: Capacity must be an integer",
+        "explanation": "Non-integer capacity should raise type error"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "What should get() return when key doesn't exist?",
+        "options": [
+          "Return None",
+          "Raise KeyError",
+          "Return default value parameter"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Return None",
+        "rationale": "None is more user-friendly than exceptions for cache misses, following dict.get() pattern"
+      },
+      {
+        "description": "Should put() with existing key update LRU order?",
+        "options": [
+          "Yes, move to most recent",
+          "No, keep current position"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Yes, move to most recent",
+        "rationale": "Standard LRU behavior - any access (read or write) updates recency"
+      }
+    ],
+    "complexity_time": "O(1)",
+    "complexity_space": "O(capacity)",
+    "complexity_justification": "O(1) time achieved using hash table + doubly linked list. Hash table provides O(1) key lookup, doubly linked list provides O(1) insertion/deletion at any position. Space is O(capacity) as we store at most 'capacity' items.",
+    "unit_tests": [
+      {
+        "name": "test_get_time_complexity",
+        "assertion": "time_get_operation(large_cache) < CONSTANT_TIME_THRESHOLD",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_put_time_complexity",
+        "assertion": "time_put_operation(large_cache) < CONSTANT_TIME_THRESHOLD",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_lru_eviction",
+        "assertion": "cache.get(oldest_key) is None after filling cache beyond capacity",
+        "traces_to_criterion": 2,
+        "priority": "critical"
+      },
+      {
+        "name": "test_get_updates_recency",
+        "assertion": "recently_accessed_item not evicted when cache fills",
+        "traces_to_criterion": 3,
+        "priority": "high"
+      },
+      {
+        "name": "test_capacity_limit",
+        "assertion": "len(cache) <= cache.capacity at all times",
+        "traces_to_criterion": 4,
+        "priority": "critical"
+      }
+    ],
+    "forbidden_patterns": [
+      "time.sleep(",
+      "threading.Lock()",
+      "multiprocessing"
+    ],
+    "trust_boundary": "trusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "lru_cache.py",
+        "purpose": "Main LRU cache implementation with doubly linked list and hash table"
+      }
+    ],
+    "entry_point": "lru_cache.py",
+    "dependencies": [],
+    "reasoning": "Analyzed this as an algorithmic task requiring implementation of a classic data structure. The key insight is that O(1) operations require combining a hash table (for O(1) key lookup) with a doubly linked list (for O(1) insertion/deletion at arbitrary positions). Resolved ambiguities around missing key behavior and update semantics based on standard LRU cache conventions. No external dependencies needed as this is a fundamental data structure implementable with built-in Python features."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": true,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": false,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": false,
+    "issues": [
+      "Criterion 3: happy_path_examples and edge_case_examples are stored as JSON strings instead of proper arrays",
+      "Criterion 10: Found ambiguous pronoun 'it' in edge_case_examples without clear referent: 'Updating existing key should not change cache size but update value' - what does 'it' refer to?"
+    ],
+    "suggestions": [
+      "Convert happy_path_examples and edge_case_examples from JSON strings to proper array structures",
+      "Replace ambiguous pronoun usage with explicit subjects (e.g., 'the update operation' instead of 'it')"
+    ],
+    "reasoning": "Artifact is well-structured with comprehensive specifications, but fails on two critical criteria. The examples are improperly formatted as JSON strings rather than arrays, making them unusable for code generation. Additionally, there's pronoun ambiguity in the edge case explanations. With 7/10 criteria passed, this falls short of the required 8/10 threshold.",
+    "verification_method": "tiebreaker_median",
+    "deterministic_score": 10,
+    "llm_score": 8
+  },
+  "attempts": 1,
+  "total_cost": 0.18124499999999993,
+  "total_tokens": {
+    "input": 213764,
+    "output": 69619
+  },
+  "duration_seconds": 50.023981,
+  "error": null
+}

@@ -1,0 +1,27 @@
+{
+  "run_id": "20251203_194045",
+  "timestamp": "2025-12-03T19:41:28.599656",
+  "total_tasks": 1,
+  "tasks_completed": 1,
+  "tasks_failed": 0,
+  "total_cost_usd": 0.081396,
+  "total_duration_seconds": 42.620019,
+  "dag_dir": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_194045/dags",
+  "results": [
+    {
+      "task_id": "builder_001",
+      "task_name": "Fibonacci with Error Handling",
+      "task_type": "builder",
+      "success": true,
+      "nodes_created": 9,
+      "nodes_verified": 2,
+      "nodes_failed": 0,
+      "edges_created": 7,
+      "cycles": 5,
+      "cost_usd": 0.081396,
+      "duration_seconds": 41.618025,
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_194045/dags/dag_builder_001_Fibonacci_with_Error_Handling.json",
+      "error": null
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "metadata": {
+    "task_id": "builder_001",
+    "task_name": "Fibonacci with Error Handling",
+    "task_type": "builder",
+    "requirement": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+    "exported_at": "2025-12-03T19:41:27.597746",
+    "duration_seconds": 41.618025,
+    "stats": {
+      "total_nodes": 9,
+      "total_edges": 7,
+      "total_cost": 0.081396
+    }
+  },
+  "nodes": [
+    {
+      "id": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a fibonacci function",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "attempts": 2,
+        "cost_actual": 0.048366
+      }
+    },
+    {
+      "id": "8490510c8cad41daa184cdb51180a795",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Fibonacci sequence is a fundamental mathematical function used in algorithm design, mathematical modeling, and as a classic programming exercise to demonstrate recursive and iterative problem-solving techniques.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generate Fibonacci number for given index\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence ",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.023778
+      }
+    },
+    {
+      "id": "aee56178c0ba4127b485674e237419e5",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Implement a fibonacci function that generates the nth Fibonacci number recursively\n\nFunction Signature:\n- Input: int n (the position in the Fibonacci sequence, 0-indexed)\n- Output: int (the Fibonacci number at position n)\n- Constraints:\n  * Handle n >= 0\n  * Use recursive implementation\n  * Raise ValueError for negative inputs\n\nExample:\nfibonacci(0) -> 0\nfibonacci(1) -> 1\nfibonacci(5) -> 5",
+      "metadata": {
+        "file_path": "fibonacci.py",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "ccf60032c9d14a81b4a44db174d7b2a4",
+      "type": "TEST",
+      "status": "PENDING",
+      "content": "Test cases for fibonacci function:\n1. Test fibonacci(0) returns 0\n2. Test fibonacci(1) returns 1\n3. Test fibonacci(5) returns 5\n4. Test fibonacci(10) returns a correct large Fibonacci number\n5. Verify function raises ValueError for negative inputs",
+      "metadata": {
+        "file_path": "test_fibonacci.py"
+      }
+    },
+    {
+      "id": "106f9ea299074600b8e7386d8e10383a",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "def fibonacci(n: int) -> int:\n    \"\"\"\n    Generate the nth Fibonacci number using a recursive approach.\n\n    Args:\n        n (int): The position in the Fibonacci sequence (0-indexed).\n\n    Returns:\n        int: The Fibonacci number at the given position.\n\n    Raises:\n        ValueError: If the input is a negative number.\n\n    Examples:\n        >>> fibonacci(0)\n        0\n        >>> fibonacci(1)\n        1\n        >>> fibonacci(5)\n        5\n    \"\"\"\n    # Validate input\n    if n < 0:\n        raise ",
+      "metadata": {
+        "file_path": "fibonacci.py",
+        "language": "python",
+        "dependencies": null
+      }
+    },
+    {
+      "id": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 2,
+        "cost_actual": 0.048624
+      }
+    },
+    {
+      "id": "ab2decef3e8049108a1e7de907e1061f",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of Fibonacci sequence generation that handles edge cases and provides clear error handling.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence\",\n      \"is_automated\": true\n    },\n    {\n      \"criteri",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.017100000000000004
+      }
+    },
+    {
+      "id": "ce8beea9d63a4d7588c52490b3a16a94",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Create fib.py with fibonacci(n) function that:\n- Returns 0-indexed Fibonacci number\n- Uses iterative implementation\n- Input validation for non-negative numbers\n\nFunction signature: def fibonacci(n: int) -> int\n\nSpecific requirements:\n1. If n < 0, raise ValueError with message 'n must be non-negative'\n2. Handle base cases: fibonacci(0) = 0, fibonacci(1) = 1\n3. Use iterative approach with O(n) time complexity\n4. Avoid recursive implementation",
+      "metadata": {
+        "file_path": "fib.py",
+        "function_name": "fibonacci",
+        "attempts": 1,
+        "cost_actual": 0.01567199999999999
+      }
+    },
+    {
+      "id": "4b120049ddf740869a207341111eeb7e",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "def fibonacci(n: int) -> int:\n    \"\"\"\n    Calculate the n-th Fibonacci number using an iterative approach.\n\n    Args:\n        n (int): The index of the Fibonacci number to calculate (0-indexed).\n\n    Returns:\n        int: The n-th Fibonacci number.\n\n    Raises:\n        ValueError: If the input is a negative number.\n\n    Time Complexity: O(n)\n    Space Complexity: O(1)\n    \"\"\"\n    # Input validation for non-negative numbers\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    \n   ",
+      "metadata": {
+        "file_path": "fib.py",
+        "language": "python",
+        "dependencies": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "8490510c8cad41daa184cdb51180a795",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "aee56178c0ba4127b485674e237419e5",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ccf60032c9d14a81b4a44db174d7b2a4",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "106f9ea299074600b8e7386d8e10383a",
+      "target": "aee56178c0ba4127b485674e237419e5",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ab2decef3e8049108a1e7de907e1061f",
+      "target": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ce8beea9d63a4d7588c52490b3a16a94",
+      "target": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "4b120049ddf740869a207341111eeb7e",
+      "target": "ce8beea9d63a4d7588c52490b3a16a94",
+      "type": "TRACES_TO"
+    }
+  ]
+}

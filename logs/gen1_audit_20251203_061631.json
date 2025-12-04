@@ -1,0 +1,983 @@
+{
+  "run_id": "20251203_061631",
+  "audit_timestamp": "2025-12-03T11:26:29.523436",
+  "total_dags": 30,
+  "avg_crash_rate": 0.0,
+  "avg_static_pass_rate": 0.0,
+  "total_code_nodes": 0,
+  "total_research_nodes": 228,
+  "total_verified_nodes": 143,
+  "total_failed_nodes": 85,
+  "total_crashes": 21,
+  "total_forbidden_imports": 0,
+  "total_dangerous_patterns": 0,
+  "node_type_distribution": {
+    "REQ": 555,
+    "RESEARCH": 228
+  },
+  "dag_results": [
+    {
+      "dag_id": "architect_001",
+      "task_name": "BankAccount Class Design",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_001_BankAccount_Class_Design.json",
+      "total_nodes": 20,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_002",
+      "task_name": "Stack Data Structure",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_002_Stack_Data_Structure.json",
+      "total_nodes": 21,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_003",
+      "task_name": "Queue Data Structure",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_003_Queue_Data_Structure.json",
+      "total_nodes": 22,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_004",
+      "task_name": "LinkedList Node",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_004_LinkedList_Node.json",
+      "total_nodes": 23,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_005",
+      "task_name": "HashTable Implementation",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_005_HashTable_Implementation.json",
+      "total_nodes": 24,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_006",
+      "task_name": "Binary Tree Node",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_006_Binary_Tree_Node.json",
+      "total_nodes": 25,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_007",
+      "task_name": "PriorityQueue",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_007_PriorityQueue.json",
+      "total_nodes": 26,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_008",
+      "task_name": "Graph Adjacency List",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_008_Graph_Adjacency_List.json",
+      "total_nodes": 27,
+      "code_nodes": 0,
+      "verified_nodes": 4,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_009",
+      "task_name": "LRU Cache",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_009_LRU_Cache.json",
+      "total_nodes": 29,
+      "code_nodes": 0,
+      "verified_nodes": 5,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "architect_010",
+      "task_name": "Event Emitter",
+      "task_type": "architect",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_architect_010_Event_Emitter.json",
+      "total_nodes": 31,
+      "code_nodes": 0,
+      "verified_nodes": 6,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "builder_001",
+      "task_name": "Fibonacci with Error Handling",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_001_Fibonacci_with_Error_Handling.json",
+      "total_nodes": 7,
+      "code_nodes": 0,
+      "verified_nodes": 1,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_002",
+      "task_name": "Division with Zero Handling",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_002_Division_with_Zero_Handling.json",
+      "total_nodes": 8,
+      "code_nodes": 0,
+      "verified_nodes": 1,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_003",
+      "task_name": "Palindrome Checker",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_003_Palindrome_Checker.json",
+      "total_nodes": 9,
+      "code_nodes": 0,
+      "verified_nodes": 1,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_004",
+      "task_name": "Prime Number Checker",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_004_Prime_Number_Checker.json",
+      "total_nodes": 11,
+      "code_nodes": 0,
+      "verified_nodes": 2,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_005",
+      "task_name": "Binary Search Implementation",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_005_Binary_Search_Implementation.json",
+      "total_nodes": 12,
+      "code_nodes": 0,
+      "verified_nodes": 2,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_006",
+      "task_name": "String Reversal",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_006_String_Reversal.json",
+      "total_nodes": 13,
+      "code_nodes": 0,
+      "verified_nodes": 2,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_007",
+      "task_name": "Factorial Calculator",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_007_Factorial_Calculator.json",
+      "total_nodes": 15,
+      "code_nodes": 0,
+      "verified_nodes": 3,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_008",
+      "task_name": "Anagram Detector",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_008_Anagram_Detector.json",
+      "total_nodes": 16,
+      "code_nodes": 0,
+      "verified_nodes": 3,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_009",
+      "task_name": "List Flattener",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_009_List_Flattener.json",
+      "total_nodes": 17,
+      "code_nodes": 0,
+      "verified_nodes": 3,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "builder_010",
+      "task_name": "GCD Calculator",
+      "task_type": "builder",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_builder_010_GCD_Calculator.json",
+      "total_nodes": 18,
+      "code_nodes": 0,
+      "verified_nodes": 3,
+      "failed_nodes": 2,
+      "node_results": []
+    },
+    {
+      "dag_id": "graph_001",
+      "task_name": "Utils Module with Importer",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_001_Utils_Module_with_Importer.json",
+      "total_nodes": 33,
+      "code_nodes": 0,
+      "verified_nodes": 7,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_002",
+      "task_name": "Config and Logger",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_002_Config_and_Logger.json",
+      "total_nodes": 34,
+      "code_nodes": 0,
+      "verified_nodes": 7,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_003",
+      "task_name": "Model and Repository",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_003_Model_and_Repository.json",
+      "total_nodes": 36,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 2,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_004",
+      "task_name": "Validator and Form",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_004_Validator_and_Form.json",
+      "total_nodes": 38,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 3,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_005",
+      "task_name": "Database and Service",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_005_Database_and_Service.json",
+      "total_nodes": 40,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 4,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_006",
+      "task_name": "Auth and Middleware",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_006_Auth_and_Middleware.json",
+      "total_nodes": 42,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 5,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_007",
+      "task_name": "Parser and Transformer",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_007_Parser_and_Transformer.json",
+      "total_nodes": 44,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 6,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_008",
+      "task_name": "Cache and Store",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_008_Cache_and_Store.json",
+      "total_nodes": 46,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 7,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_009",
+      "task_name": "Events and Handlers",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_009_Events_and_Handlers.json",
+      "total_nodes": 47,
+      "code_nodes": 0,
+      "verified_nodes": 8,
+      "failed_nodes": 7,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    },
+    {
+      "dag_id": "graph_010",
+      "task_name": "CLI and Commands",
+      "task_type": "graph",
+      "dag_path": "/Users/lauferva/gaadp-constructor/logs/dag_benchmark/run_20251203_061631/dags/dag_graph_010_CLI_and_Commands.json",
+      "total_nodes": 49,
+      "code_nodes": 0,
+      "verified_nodes": 9,
+      "failed_nodes": 7,
+      "node_results": [
+        {
+          "node_id": "3208695fee3c4a1fb476037c87b113b5",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and ",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        },
+        {
+          "node_id": "381d3f4de7114ccf9ca027ab9013e872",
+          "node_type": "CODE",
+          "file_path": null,
+          "content_preview": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"greenfield\",\n  \"why\": \"Developers need a flexible, extensible command-line interface framework that separates comm",
+          "static_analysis": {
+            "passed": false,
+            "forbidden_imports": [],
+            "dangerous_patterns": [],
+            "cyclomatic_complexity": {},
+            "security_warnings": [
+              "Syntax error: '{' was never closed (<unknown>, line 12)"
+            ],
+            "lines_of_code": 0,
+            "num_functions": 0,
+            "num_classes": 0
+          },
+          "execution": {
+            "attempted": true,
+            "success": false,
+            "crashed": true,
+            "crash_type": "SyntaxError",
+            "crash_message": "'{' was never closed (<string>, line 12)",
+            "wrong_output": false,
+            "stdout": null,
+            "stderr": null,
+            "execution_time_ms": 0
+          }
+        }
+      ]
+    }
+  ],
+  "most_common_crash_types": {
+    "SyntaxError": 21
+  },
+  "most_common_forbidden_imports": {}
+}

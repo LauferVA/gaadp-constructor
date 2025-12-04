@@ -5,7 +5,8 @@ GAADP REGRESSION ENGINE - The Scientist
 Runs A/B tests against Golden Sets and automatically detects regression.
 
 Usage:
-    python scripts/benchmark.py                    # Run benchmark
+    python scripts/benchmark.py                    # Run benchmark (with viz)
+    python scripts/benchmark.py --no-viz           # Run without visualization
     python scripts/benchmark.py --baseline         # Save as new baseline
     python scripts/benchmark.py --compare-only     # Compare without running
     python scripts/benchmark.py --task "Build X"   # Run single task
@@ -14,6 +15,7 @@ Output:
     - Results saved to .gaadp/benchmarks/latest.json
     - Compared against .gaadp/benchmarks/baseline.json
     - Red warnings if regression detected
+    - Visualization at http://localhost:8765 (default)
 """
 import os
 import sys
@@ -175,7 +177,7 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> List[GoldenTask]:
 # TASK RUNNER
 # =============================================================================
 
-async def run_task(task: GoldenTask, dry_run: bool = False) -> TaskResult:
+async def run_task(task: GoldenTask, dry_run: bool = False, viz_server=None) -> TaskResult:
     """
     Execute a single golden set task.
 
@@ -222,7 +224,7 @@ async def run_task(task: GoldenTask, dry_run: bool = False) -> TaskResult:
             logger.warning(f"LLM Gateway not available: {e}")
             gateway = None
 
-        runtime = GraphRuntime(db, llm_gateway=gateway)
+        runtime = GraphRuntime(db, llm_gateway=gateway, viz_server=viz_server)
 
         # Inject requirement
         db.add_node(
@@ -352,7 +354,8 @@ def evaluate_criteria(db, criteria: List[str]) -> Dict[str, bool]:
 
 async def run_benchmark(
     tasks: Optional[List[GoldenTask]] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    viz_server=None
 ) -> BenchmarkReport:
     """
     Run the complete benchmark suite.
@@ -388,7 +391,7 @@ async def run_benchmark(
     total_duration = 0.0
 
     for task in tasks:
-        result = await run_task(task, dry_run=dry_run)
+        result = await run_task(task, dry_run=dry_run, viz_server=viz_server)
         results.append(result)
         total_cycles += result.cycles
         total_cost += result.cost_usd
@@ -581,6 +584,8 @@ def main():
                        help="Simulate without API calls")
     parser.add_argument("--task", type=str,
                        help="Run single task by name")
+    parser.add_argument("--no-viz", action="store_true",
+                       help="Disable visualization server (enabled by default)")
     parser.add_argument("--verbose", "-v", action="store_true",
                        help="Verbose output")
     args = parser.parse_args()
@@ -622,7 +627,29 @@ def main():
     if args.dry_run:
         print("(DRY RUN - no API calls)")
 
-    report = asyncio.run(run_benchmark(tasks, dry_run=args.dry_run))
+    # Run with or without viz server
+    async def run_with_viz():
+        viz_server = None
+        if not args.no_viz:
+            try:
+                from infrastructure.viz_server import VizServer
+                viz_server = VizServer(port=8765)
+                await viz_server.start()
+                print("🔮 Visualization: http://localhost:8765")
+            except Exception as e:
+                logger.warning(f"Could not start viz server: {e}")
+                viz_server = None
+
+        try:
+            return await run_benchmark(tasks, dry_run=args.dry_run, viz_server=viz_server)
+        finally:
+            if viz_server:
+                try:
+                    await viz_server.stop()
+                except:
+                    pass
+
+    report = asyncio.run(run_with_viz())
 
     # Print summary
     print("\n--- RESULTS ---")

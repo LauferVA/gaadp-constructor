@@ -21,11 +21,22 @@
 
         .container {
             display: grid;
-            grid-template-columns: 1fr 320px;
-            grid-template-rows: 60px 1fr 200px;
+            grid-template-columns: 1fr 280px;
+            grid-template-rows: 60px 1fr;
             height: 100vh;
             gap: 1px;
             background: #30363d;
+        }
+
+        /* Explicit grid placement */
+        .graph-container {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .sidebar {
+            grid-column: 2;
+            grid-row: 2;
         }
 
         /* Header */
@@ -69,11 +80,43 @@
             box-shadow: 0 0 8px #3fb950;
         }
 
-        /* Main graph area */
+        /* Main graph area - now contains both graph and event log */
         .graph-container {
             background: #0d1117;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .graph-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        .resize-handle {
+            height: 6px;
+            background: #30363d;
+            cursor: ns-resize;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+
+        .resize-handle:hover {
+            background: #58a6ff;
+        }
+
+        .resize-handle::after {
+            content: '⋯';
+            color: #6e7681;
+            font-size: 14px;
+            letter-spacing: 2px;
         }
 
         #graph {
@@ -81,12 +124,13 @@
             height: 100%;
         }
 
-        /* Sidebar */
+        /* Sidebar - full height on right (explicit placement above) */
         .sidebar {
             background: #161b22;
             display: flex;
             flex-direction: column;
             border-left: 1px solid #30363d;
+            overflow-y: auto;
         }
 
         .sidebar-section {
@@ -215,13 +259,14 @@
             border-radius: 3px;
         }
 
-        /* Event log */
+        /* Event log - now inside graph-container */
         .event-log {
-            grid-column: 1 / -1;
             background: #161b22;
             border-top: 1px solid #30363d;
             display: flex;
             flex-direction: column;
+            height: 250px;
+            min-height: 100px;
         }
 
         .event-log-header {
@@ -336,6 +381,38 @@
             font-size: 10px;
         }
 
+        .tooltip-agent {
+            color: #a371f7;
+            margin-top: 6px;
+            font-size: 11px;
+            border-top: 1px solid #30363d;
+            padding-top: 6px;
+        }
+
+        .tooltip-meta {
+            color: #8b949e;
+            font-size: 10px;
+            margin-top: 4px;
+            font-family: 'SF Mono', monospace;
+        }
+
+        /* Context highlighting - nodes in agent's field of view */
+        .node.in-context circle {
+            stroke: #a371f7 !important;
+            stroke-width: 3px !important;
+            filter: drop-shadow(0 0 6px rgba(163, 113, 247, 0.6));
+        }
+
+        .node.out-of-context {
+            opacity: 0.3;
+        }
+
+        .node.focus-node circle {
+            stroke: #f0883e !important;
+            stroke-width: 4px !important;
+            filter: drop-shadow(0 0 10px rgba(240, 136, 62, 0.8));
+        }
+
         /* Graph nodes */
         .node {
             cursor: pointer;
@@ -370,15 +447,20 @@
         .link {
             stroke-opacity: 0.6;
             fill: none;
+            stroke-width: 1.5px;
         }
 
-        .link.TRACES_TO { stroke: #6e7681; stroke-dasharray: 4; }
-        .link.DEPENDS_ON { stroke: #f85149; }
-        .link.IMPLEMENTS { stroke: #3fb950; }
-        .link.VERIFIES { stroke: #58a6ff; }
-        .link.DEFINES { stroke: #a371f7; stroke-dasharray: 2; }
-        .link.BLOCKS { stroke: #f85149; stroke-width: 3; }
-        .link.FEEDBACK { stroke: #f0883e; stroke-dasharray: 4; }
+        .link-label {
+            font-size: 9px;
+            fill: #8b949e;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        .link-label-bg {
+            fill: #0d1117;
+            opacity: 0.8;
+        }
 
         /* Zoom controls */
         .zoom-controls {
@@ -420,17 +502,30 @@
             </div>
         </div>
 
-        <!-- Main graph -->
+        <!-- Main graph and event log -->
         <div class="graph-container">
-            <svg id="graph"></svg>
-            <div class="zoom-controls">
-                <button class="zoom-btn" onclick="zoomIn()">+</button>
-                <button class="zoom-btn" onclick="zoomOut()">-</button>
-                <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+            <div class="graph-wrapper">
+                <svg id="graph"></svg>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="zoomOut()">-</button>
+                    <button class="zoom-btn" onclick="resetZoom()">⟲</button>
+                </div>
+            </div>
+
+            <div class="resize-handle" id="resizeHandle"></div>
+
+            <!-- Event log -->
+            <div class="event-log">
+                <div class="event-log-header">
+                    <h3>Event Log</h3>
+                    <span id="eventCount">0 events</span>
+                </div>
+                <div class="event-list" id="eventList"></div>
             </div>
         </div>
 
-        <!-- Sidebar -->
+        <!-- Sidebar - full height on right -->
         <div class="sidebar">
             <div class="sidebar-section">
                 <h3>Statistics</h3>
@@ -492,8 +587,8 @@
                 </div>
             </div>
 
-            <div class="sidebar-section" style="flex: 1; overflow: hidden;">
-                <h3>Legend</h3>
+            <div class="sidebar-section">
+                <h3>Node Types</h3>
                 <div class="legend">
                     <div class="legend-item">
                         <div class="legend-color" style="background: #f85149;"></div>
@@ -519,17 +614,70 @@
                         <div class="legend-color" style="background: #ff7b72;"></div>
                         <span>ESCALATION</span>
                     </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #79c0ff;"></div>
+                        <span>RESEARCH</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #bc8cff;"></div>
+                        <span>WEB_SEARCH</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Event log -->
-        <div class="event-log">
-            <div class="event-log-header">
-                <h3>Event Log</h3>
-                <span id="eventCount">0 events</span>
+            <div class="sidebar-section" style="flex: 1; overflow-y: auto;">
+                <h3>Edge Types</h3>
+                <div class="legend" style="margin-top: 8px; gap: 8px;">
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#6e7681" stroke-width="2" stroke-dasharray="4"/></svg>
+                        <span style="font-size: 10px;">TRACES_TO</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#f85149" stroke-width="2"/></svg>
+                        <span style="font-size: 10px;">DEPENDS_ON</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#3fb950" stroke-width="2"/></svg>
+                        <span style="font-size: 10px;">IMPLEMENTS</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#58a6ff" stroke-width="2"/></svg>
+                        <span style="font-size: 10px;">VERIFIES</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#a371f7" stroke-width="2" stroke-dasharray="2"/></svg>
+                        <span style="font-size: 10px;">DEFINES</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#f85149" stroke-width="2"/></svg>
+                        <span style="font-size: 10px;">BLOCKS</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#f0883e" stroke-width="2" stroke-dasharray="4"/></svg>
+                        <span style="font-size: 10px;">FEEDBACK</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#79c0ff" stroke-width="2" stroke-dasharray="6,3"/></svg>
+                        <span style="font-size: 10px;">REFERENCES</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#8b949e" stroke-width="2" stroke-dasharray="2"/></svg>
+                        <span style="font-size: 10px;">CONTAINS</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#a371f7" stroke-width="2"/></svg>
+                        <span style="font-size: 10px;">INHERITS</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#bc8cff" stroke-width="2" stroke-dasharray="4,4"/></svg>
+                        <span style="font-size: 10px;">RESEARCHES</span>
+                    </div>
+                    <div class="legend-item">
+                        <svg width="24" height="12"><line x1="0" y1="6" x2="24" y2="6" stroke="#d2a8ff" stroke-width="2" stroke-dasharray="4,4"/></svg>
+                        <span style="font-size: 10px;">INFORMS</span>
+                    </div>
+                </div>
             </div>
-            <div class="event-list" id="eventList"></div>
         </div>
     </div>
 
@@ -549,7 +697,27 @@
             CODE: '#3fb950',
             TEST: '#f0883e',
             DOC: '#8b949e',
-            ESCALATION: '#ff7b72'
+            ESCALATION: '#ff7b72',
+            RESEARCH: '#79c0ff',
+            WEB_SEARCH: '#bc8cff',
+            QUERY: '#d2a8ff'
+        };
+
+        // Edge styling for different types
+        const EDGE_STYLES = {
+            TRACES_TO: { stroke: '#6e7681', dasharray: '4', label: 'traces' },
+            DEPENDS_ON: { stroke: '#f85149', dasharray: null, label: 'depends' },
+            IMPLEMENTS: { stroke: '#3fb950', dasharray: null, label: 'impl' },
+            VERIFIES: { stroke: '#58a6ff', dasharray: null, label: 'verify' },
+            DEFINES: { stroke: '#a371f7', dasharray: '2', label: 'def' },
+            BLOCKS: { stroke: '#f85149', dasharray: null, label: 'blocks' },
+            FEEDBACK: { stroke: '#f0883e', dasharray: '4', label: 'fb' },
+            REFERENCES: { stroke: '#79c0ff', dasharray: '6,3', label: 'ref' },
+            CONTAINS: { stroke: '#8b949e', dasharray: '2', label: 'contains' },
+            INHERITS: { stroke: '#a371f7', dasharray: null, label: 'inherits' },
+            // Research phase edges - dotted
+            RESEARCHES: { stroke: '#bc8cff', dasharray: '4,4', label: 'research' },
+            INFORMS: { stroke: '#d2a8ff', dasharray: '4,4', label: 'informs' }
         };
 
         const STATUS_STROKE = {
@@ -566,15 +734,68 @@
         let simulation = null;
         let svg, g, linkGroup, nodeGroup;
         let zoom;
+        let totalCost = 0;
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initGraph();
+            initResizeHandle();
             connectWebSocket();
         });
 
+        function initResizeHandle() {
+            const resizeHandle = document.getElementById('resizeHandle');
+            const graphWrapper = document.querySelector('.graph-wrapper');
+            const eventLog = document.querySelector('.event-log');
+            let isResizing = false;
+            let startY = 0;
+            let startGraphHeight = 0;
+            let startLogHeight = 0;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startY = e.clientY;
+                startGraphHeight = graphWrapper.offsetHeight;
+                startLogHeight = eventLog.offsetHeight;
+                document.body.style.cursor = 'ns-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                const deltaY = e.clientY - startY;
+                const newGraphHeight = startGraphHeight + deltaY;
+                const newLogHeight = startLogHeight - deltaY;
+
+                // Enforce minimum heights
+                if (newGraphHeight >= 200 && newLogHeight >= 100) {
+                    graphWrapper.style.flex = 'none';
+                    graphWrapper.style.height = newGraphHeight + 'px';
+                    eventLog.style.height = newLogHeight + 'px';
+
+                    // Trigger graph resize
+                    const container = document.querySelector('.graph-wrapper');
+                    const width = container.clientWidth;
+                    const height = container.clientHeight;
+                    svg.attr('width', width).attr('height', height);
+                    simulation.force('center', d3.forceCenter(width / 2, height / 2));
+                    simulation.alpha(0.3).restart();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        }
+
         function initGraph() {
-            const container = document.querySelector('.graph-container');
+            const container = document.querySelector('.graph-wrapper');
             const width = container.clientWidth;
             const height = container.clientHeight;
 
@@ -672,9 +893,19 @@
                     break;
                 case 'agent_started':
                     updateAgent(msg.data.agent_role, 'working', msg.data.node_id);
+                    // Highlight context nodes (agent's field of view)
+                    highlightContextNodes(msg.data.node_id, msg.data.context_nodes || [msg.data.node_id]);
                     break;
                 case 'agent_finished':
                     updateAgent(msg.data.agent_role, 'idle', null);
+                    // Remove context highlighting
+                    clearContextHighlight();
+                    // Update node with processed_by info
+                    updateNodeProcessedBy(msg.data.node_id, msg.data.agent_role, msg.data.cost);
+                    if (msg.data.cost !== undefined && msg.data.cost !== null) {
+                        totalCost += msg.data.cost;
+                        document.getElementById('statCost').textContent = totalCost.toFixed(4);
+                    }
                     break;
                 case 'iteration':
                     document.getElementById('statIterations').textContent = msg.data.iteration;
@@ -723,7 +954,8 @@
             document.getElementById('statIterations').textContent = stats.iterations;
             document.getElementById('statVerified').textContent = stats.nodes_verified;
             document.getElementById('statFailed').textContent = stats.nodes_failed;
-            document.getElementById('statCost').textContent = stats.total_cost.toFixed(4);
+            totalCost = stats.total_cost || 0;
+            document.getElementById('statCost').textContent = totalCost.toFixed(4);
 
             // Load events
             state.events.forEach(event => {
@@ -796,6 +1028,42 @@
             }
         }
 
+        // Track current context for highlighting
+        let currentContextNodes = [];
+        let currentFocusNode = null;
+
+        function highlightContextNodes(focusNodeId, contextNodeIds) {
+            // Store for later cleanup
+            currentContextNodes = contextNodeIds;
+            currentFocusNode = focusNodeId;
+
+            // Apply CSS classes to nodes
+            nodeGroup.selectAll('.node')
+                .classed('in-context', d => contextNodeIds.includes(d.id))
+                .classed('out-of-context', d => !contextNodeIds.includes(d.id) && graphData.nodes.length > 1)
+                .classed('focus-node', d => d.id === focusNodeId);
+        }
+
+        function clearContextHighlight() {
+            currentContextNodes = [];
+            currentFocusNode = null;
+
+            // Remove all context CSS classes
+            nodeGroup.selectAll('.node')
+                .classed('in-context', false)
+                .classed('out-of-context', false)
+                .classed('focus-node', false);
+        }
+
+        function updateNodeProcessedBy(nodeId, agentRole, cost) {
+            // Update the node data in graphData
+            const node = graphData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                node.processed_by = agentRole;
+                node.process_cost = cost;
+            }
+        }
+
         function addEvent(type, message, timestamp = new Date()) {
             const eventList = document.getElementById('eventList');
             const eventEl = document.createElement('div');
@@ -827,15 +1095,42 @@
         }
 
         function updateGraph() {
-            // Update links
-            const link = linkGroup.selectAll('.link')
-                .data(graphData.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`);
+            // Update links - use groups to hold line + label
+            const linkData = graphData.links;
 
-            link.exit().remove();
+            // Remove old link groups
+            linkGroup.selectAll('.link-group').remove();
 
-            const linkEnter = link.enter().append('line')
-                .attr('class', d => `link ${d.type}`)
-                .attr('marker-end', 'url(#arrow)');
+            // Create link groups
+            const linkGroups = linkGroup.selectAll('.link-group')
+                .data(linkData, d => `${d.source.id || d.source}-${d.target.id || d.target}`)
+                .enter().append('g')
+                .attr('class', 'link-group');
+
+            // Add line
+            linkGroups.append('line')
+                .attr('class', 'link')
+                .attr('marker-end', 'url(#arrow)')
+                .each(function(d) {
+                    const style = EDGE_STYLES[d.type] || { stroke: '#6e7681', dasharray: null };
+                    d3.select(this)
+                        .attr('stroke', style.stroke)
+                        .attr('stroke-dasharray', style.dasharray);
+                });
+
+            // Add edge label background
+            linkGroups.append('rect')
+                .attr('class', 'link-label-bg')
+                .attr('rx', 2)
+                .attr('ry', 2);
+
+            // Add edge label
+            linkGroups.append('text')
+                .attr('class', 'link-label')
+                .text(d => {
+                    const style = EDGE_STYLES[d.type];
+                    return style ? style.label : d.type.toLowerCase();
+                });
 
             // Update nodes
             const node = nodeGroup.selectAll('.node')
@@ -874,25 +1169,89 @@
             simulation.alpha(0.3).restart();
 
             simulation.on('tick', () => {
+                // Update link lines
                 linkGroup.selectAll('.link')
                     .attr('x1', d => d.source.x)
                     .attr('y1', d => d.source.y)
                     .attr('x2', d => d.target.x)
                     .attr('y2', d => d.target.y);
 
+                // Update link labels - position at midpoint
+                linkGroup.selectAll('.link-label')
+                    .attr('x', d => (d.source.x + d.target.x) / 2)
+                    .attr('y', d => (d.source.y + d.target.y) / 2);
+
+                // Update label backgrounds
+                linkGroup.selectAll('.link-label-bg')
+                    .each(function(d) {
+                        const textEl = this.nextSibling;
+                        if (textEl && textEl.getBBox) {
+                            const bbox = textEl.getBBox();
+                            d3.select(this)
+                                .attr('x', bbox.x - 2)
+                                .attr('y', bbox.y - 1)
+                                .attr('width', bbox.width + 4)
+                                .attr('height', bbox.height + 2);
+                        }
+                    });
+
                 nodeGroup.selectAll('.node')
                     .attr('transform', d => `translate(${d.x}, ${d.y})`);
             });
         }
 
+        // Agent symbols for tooltip display
+        const AGENT_SYMBOLS = {
+            ARCHITECT: '🏛️',
+            BUILDER: '🔨',
+            VERIFIER: '✓',
+            SOCRATES: '🤔',
+            RESEARCHER: '🔍'
+        };
+
         function showTooltip(event, d) {
             const tooltip = document.getElementById('tooltip');
+
+            // Build processed_by info if available
+            let processedByHtml = '';
+            if (d.processed_by) {
+                const symbol = AGENT_SYMBOLS[d.processed_by] || '⚙️';
+                const cost = d.process_cost ? ` ($${d.process_cost.toFixed(4)})` : '';
+                processedByHtml = `<div class="tooltip-agent">${symbol} ${d.processed_by}${cost}</div>`;
+            }
+
+            // Build metadata section
+            let metadataHtml = '';
+            const meta = d.metadata || {};
+
+            // File path (for CODE nodes)
+            if (meta.file_path) {
+                metadataHtml += `<div class="tooltip-meta">📄 ${meta.file_path}</div>`;
+            }
+
+            // Session/Log reference
+            if (meta.session_id) {
+                metadataHtml += `<div class="tooltip-meta">📋 Session: ${meta.session_id}</div>`;
+            }
+
+            // Git commit (if verified and committed)
+            if (meta.git_commit) {
+                metadataHtml += `<div class="tooltip-meta">🔗 Commit: ${meta.git_commit.slice(0, 7)}</div>`;
+            }
+
+            // Attempts
+            if (meta.attempts && meta.attempts > 1) {
+                metadataHtml += `<div class="tooltip-meta">🔄 Attempt: ${meta.attempts}</div>`;
+            }
+
             tooltip.innerHTML = `
                 <div class="tooltip-header">
                     <span class="tooltip-type">${d.type}</span>
                     <span class="tooltip-status ${d.status}">${d.status}</span>
                 </div>
                 <div class="tooltip-content">${d.content || 'No content'}</div>
+                ${processedByHtml}
+                ${metadataHtml}
                 <div class="tooltip-id">ID: ${d.id}</div>
             `;
 

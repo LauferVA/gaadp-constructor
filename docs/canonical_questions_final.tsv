@@ -1,0 +1,21 @@
+Level	ID	Ask_When	Category	Question (Plain Language)	Technical Name	Notes
+L1	L1.01	Always	Problem	What is the single most important problem this software solves for you?	(Problem Statement)	The prompt itself - establishes North Star
+L1	L1.02	Always	Users	Who exactly will use this? Describe the person at the keyboard.	(User Persona)	Critical for UX decisions
+L1	L1.03	Always	Integration	Does this need to connect to any existing systems you already use?	(System Integration)	Zero inference - only user knows their stack
+L1	L1.04	Always	Compliance	Are there legal or industry rules we must follow? (e.g., health privacy, European data laws, credit card handling)	(Regulatory Compliance)	HIPAA, GDPR, PCI-DSS - must be explicit
+L1	L1.05	Always	Timeline	Is there a hard deadline we need to hit?	(Timeline Constraint)	Zero inference - external reality
+L1	L1.06	Always	Budget	Is there a budget limit for building or running this?	(Budget Constraint)	Zero inference - external reality
+L1	L1.07	Always	Scale	How many people will use this at once? Now and in a year?	(Concurrency Scale)	Drives architecture decisions
+L1	L1.08	Always	Platform	Where will people use this? (Web browser, phone app, desktop software, or multiple?)	(Platform Target)	Drives technology stack
+L1	L1.09	Always	Trade-off	If you had to choose: get something working fast, or build it to last?	(Speed vs Robustness)	MVP vs production-grade - user must decide
+L2	L2.01	Always	Boundary	What kicks off this feature, and what means it's finished?	(Trigger and Exit Condition)	Defines module boundaries - consolidated from L2.02 + L2.03
+L2	L2.02	Always	Data Flow	Does this handle one thing at a time, batches, or a continuous stream? Does the user wait for results or can it run in background?	(Cardinality and Latency)	Consolidated from L2.07 + L2.08 + L2.09
+L2	L2.03	Always	Topology	What does this feature need from other parts, and what does it provide to them?	(Dependencies and Dependents)	Consolidated from L2.04 + L2.05 - critical for graph structure
+L2	L2.04	Always	Data Ownership	Does this feature own its data, or borrow it from somewhere else?	(Data Sovereignty)	Critical topological question - determines source of truth
+L2	L2.05	If_Ambiguous	Fault Handling	If this feature breaks, should the whole app stop, or just this part?	(Fault Isolation)	Usually inferable from module criticality
+L3	L3.01	If_No_Graph_Structure	Interface	What data goes in and what comes out? What format and rules?	(I/O Schema)	Only ask if not derivable from function signature or parent SPEC
+L3	L3.02	If_Ambiguous	Side Effects	Does this change anything permanent or external? (Database, email, payment, file)	(Side Effects and Idempotency)	Consolidated from L3.10 + L3.11 - usually obvious from function name
+L3	L3.03	Structural_Validator	Data Source	Where exactly does each input come from?	(Input Provenance)	NEVER guess - graph must have explicit edge or ask user
+L3	L3.04	Structural_Validator	Hidden State	Does this need any information not passed in directly?	(Implicit Dependencies)	NEVER guess - catches "magic variables"
+TERMINAL	T1	Always	Assumptions	Here's what I'm assuming: [LIST]. Correct? Anything else?	(Assumptions Review)	Surfaces inferences for correction before proceeding
+TERMINAL	T2	Always	Delegation	Want to skip any of these questions? I'll use my best judgment for skipped items.	(Delegation License)	User can say "skip" to delegate decision to agent

@@ -1,0 +1,8 @@
+PROJECT: Hello World
+TARGET DIR: hello/
+
+OBJECTIVES:
+Create a simple hello world function that prints "Hello, World!" to stdout.
+
+EXPECTED OUTPUT:
+- hello.py: Single file with greet() function

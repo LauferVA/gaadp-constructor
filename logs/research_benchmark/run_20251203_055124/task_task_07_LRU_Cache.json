@@ -1,0 +1,230 @@
+{
+  "task_id": "task_07",
+  "task_name": "LRU Cache",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.95,
+    "task_category": "algorithmic",
+    "why": "LRU (Least Recently Used) cache is a fundamental data structure used in operating systems, databases, and web applications to manage memory efficiently by evicting the least recently accessed items when capacity is reached. This enables fast data access while maintaining bounded memory usage.",
+    "success_criteria": [
+      {
+        "criterion": "Get operation completes in O(1) time complexity",
+        "test_method": "Time multiple get operations and verify constant time behavior",
+        "is_automated": true
+      },
+      {
+        "criterion": "Put operation completes in O(1) time complexity",
+        "test_method": "Time multiple put operations and verify constant time behavior",
+        "is_automated": true
+      },
+      {
+        "criterion": "Cache evicts least recently used item when capacity exceeded",
+        "test_method": "Fill cache to capacity, add one more item, verify oldest item was evicted",
+        "is_automated": true
+      },
+      {
+        "criterion": "Get operation updates item to most recently used",
+        "test_method": "Access item, fill cache, verify accessed item wasn't evicted",
+        "is_automated": true
+      },
+      {
+        "criterion": "Cache respects specified capacity limit",
+        "test_method": "Add more items than capacity, verify cache size never exceeds limit",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "capacity",
+        "type": "int",
+        "validation": "isinstance(capacity, int) and capacity > 0",
+        "trust_boundary": "trusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "lru_cache",
+        "type": "LRUCache",
+        "postcondition": "hasattr(lru_cache, 'get') and hasattr(lru_cache, 'put') and hasattr(lru_cache, 'capacity')"
+      }
+    ],
+    "happy_path_examples": [
+      {
+        "input": {
+          "capacity": 2
+        },
+        "expected_output": "LRUCache instance with capacity=2, supports get(key) and put(key, value) operations",
+        "explanation": "Basic cache creation and usage with small capacity for easy testing"
+      },
+      {
+        "input": {
+          "capacity": 100
+        },
+        "expected_output": "LRUCache instance with capacity=100",
+        "explanation": "Larger capacity cache for realistic usage scenarios"
+      }
+    ],
+    "edge_case_examples": [
+      {
+        "input": {
+          "capacity": 1
+        },
+        "expected_output": "LRUCache with capacity=1 that evicts on every put after first",
+        "why_edge": "Minimum possible capacity - every new item evicts the previous one"
+      },
+      {
+        "input": {
+          "capacity": 1000000
+        },
+        "expected_output": "LRUCache with very large capacity",
+        "why_edge": "Large capacity tests memory efficiency and performance at scale"
+      }
+    ],
+    "error_case_examples": [
+      {
+        "input": {
+          "capacity": 0
+        },
+        "expected_exception": "ValueError: Capacity must be positive",
+        "explanation": "Zero capacity is invalid for a cache"
+      },
+      {
+        "input": {
+          "capacity": -5
+        },
+        "expected_exception": "ValueError: Capacity must be positive",
+        "explanation": "Negative capacity is invalid"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "What should get() return when key is not found?",
+        "options": [
+          "Return None",
+          "Raise KeyError",
+          "Return -1 (LeetCode style)"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Return None",
+        "rationale": "None is Pythonic and clearly indicates absence without exceptions in normal flow"
+      },
+      {
+        "description": "Should put() with existing key update position in LRU order?",
+        "options": [
+          "Yes, move to most recent",
+          "No, keep current position"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Yes, move to most recent",
+        "rationale": "Standard LRU behavior - any access (get or put) should update recency"
+      },
+      {
+        "description": "What types should keys and values support?",
+        "options": [
+          "Any hashable keys, any values",
+          "Only strings",
+          "Only immutable types"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Any hashable keys, any values",
+        "rationale": "Maximum flexibility like Python's built-in dict"
+      }
+    ],
+    "complexity_time": "O(1)",
+    "complexity_space": "O(capacity)",
+    "complexity_justification": "Time: O(1) for both get and put achieved using hash map + doubly linked list. Space: O(capacity) as we store at most 'capacity' items plus constant overhead for data structures.",
+    "unit_tests": [
+      {
+        "name": "test_get_time_complexity",
+        "assertion": "time_operation(lambda: cache.get('key')) < 0.001",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_put_time_complexity",
+        "assertion": "time_operation(lambda: cache.put('key', 'value')) < 0.001",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_lru_eviction",
+        "assertion": "cache = LRUCache(2); cache.put(1, 1); cache.put(2, 2); cache.put(3, 3); cache.get(1) is None",
+        "traces_to_criterion": 2,
+        "priority": "critical"
+      },
+      {
+        "name": "test_get_updates_recency",
+        "assertion": "cache = LRUCache(2); cache.put(1, 1); cache.put(2, 2); cache.get(1); cache.put(3, 3); cache.get(2) is None and cache.get(1) == 1",
+        "traces_to_criterion": 3,
+        "priority": "critical"
+      },
+      {
+        "name": "test_capacity_limit",
+        "assertion": "cache = LRUCache(3); [cache.put(i, i) for i in range(10)]; len(cache._data) <= 3",
+        "traces_to_criterion": 4,
+        "priority": "critical"
+      },
+      {
+        "name": "test_nonexistent_key_returns_none",
+        "assertion": "LRUCache(5).get('nonexistent') is None",
+        "traces_to_criterion": 0,
+        "priority": "high"
+      },
+      {
+        "name": "test_put_updates_existing_key",
+        "assertion": "cache = LRUCache(2); cache.put('a', 1); cache.put('a', 2); cache.get('a') == 2",
+        "traces_to_criterion": 3,
+        "priority": "high"
+      }
+    ],
+    "forbidden_patterns": [
+      "time.sleep(",
+      "threading.",
+      "multiprocessing.",
+      "eval(",
+      "exec("
+    ],
+    "trust_boundary": "trusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "lru_cache.py",
+        "purpose": "Main LRU cache implementation with hash map and doubly linked list"
+      }
+    ],
+    "entry_point": "lru_cache.py",
+    "dependencies": [],
+    "reasoning": "Analyzed this as an algorithmic task requiring classic LRU cache implementation. The O(1) requirement necessitates hash map + doubly linked list approach. Key ambiguities resolved: return None for missing keys (Pythonic), update recency on put to existing keys (standard LRU), support any hashable keys (maximum flexibility). The implementation must balance performance requirements with clean API design."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": true,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": true,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": true,
+    "issues": null,
+    "suggestions": null,
+    "reasoning": "This Research Artifact is exceptionally well-formed and meets all 10 verification criteria:\n\n1. Input types: The 'capacity' input has both type annotation (int) and executable validation (isinstance(capacity, int) and capacity > 0)\n2. Output types: The 'lru_cache' output has type annotation (LRUCache) and a postcondition\n3. Examples: Contains happy_path_examples (2), edge_case_examples (2), and error_case_examples (2) - all non-empty\n4. Complexity: Has complexity_time (O(1)), complexity_space (O(capacity)), and detailed complexity_justification\n5. Dependencies: Dependencies field is present (empty array, which is valid)\n6. Security: Has forbidden_patterns array and trust_boundary classification (\"trusted\")\n7. Files: Has files array with clear structure for single-file implementation\n8. Tests: Unit tests array with 7 tests, each having traces_to_criterion linking to success_criteria\n9. Rationale: Comprehensive reasoning field explaining design decisions and approach\n10. No ambiguity: All pronouns have clear referents; no dangling \"it\", \"this\", or \"that\" found\n\nThe artifact demonstrates high quality with concrete examples, executable validations, comprehensive test coverage, and clear documentation of all design decisions.",
+    "verification_method": "llm",
+    "deterministic_score": 10,
+    "llm_score": 10
+  },
+  "attempts": 1,
+  "total_cost": 0.14137799999999984,
+  "total_tokens": {
+    "input": 142110,
+    "output": 46297
+  },
+  "duration_seconds": 42.073171,
+  "error": null
+}

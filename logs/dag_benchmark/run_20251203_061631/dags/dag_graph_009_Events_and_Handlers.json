@@ -1,0 +1,657 @@
+{
+  "metadata": {
+    "task_id": "graph_009",
+    "task_name": "Events and Handlers",
+    "task_type": "graph",
+    "requirement": "Create two Python files:\n\n1. `events.py` - Event definitions:\n   - `Event` base class with `name`, `data` attributes\n   - `UserCreatedEvent`, `UserDeletedEvent` subclasses\n\n2. `handlers.py` - Event handlers:\n   - Imports event classes\n   - `EventHandler` base class\n   - `UserEventHandler` with `handle(event)` method\n",
+    "exported_at": "2025-12-03T06:30:51.294160",
+    "duration_seconds": 19.786988,
+    "stats": {
+      "total_nodes": 47,
+      "total_edges": 15,
+      "total_cost": 0.0
+    }
+  },
+  "nodes": [
+    {
+      "id": "be89dcbd8d0e4f96bbe614aea136e4b9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a function to calculate factorial",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3
+      }
+    },
+    {
+      "id": "69a33c94934545a3850c63765f3c8b96",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036524999999999995
+      }
+    },
+    {
+      "id": "ce547a4946f04bfca5028171b91807b1",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative integers\",\n      \"test_method\": \"Verify fibonacci(n) returns correct sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"c",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036573
+      }
+    },
+    {
+      "id": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides a clear, performant solution for mathematical computations.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify fibonacci(n) returns correct Fibonacci sequence values\",\n      \"is_",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "a9f0bd202ae94cd483427cf9581bff6e",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.036069000000000004
+      }
+    },
+    {
+      "id": "5e9520c68a054dc2a66050ba2dc346eb",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of Fibonacci sequence generation that handles edge cases and provides clear error handling.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "941ba81cc207437aa8a79b5765e29e6c",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `calc.py` with a function `safe_divide(a, b)` that:\n1. Returns the result of a divided by b\n2. Raises `ZeroDivisionError` with message \"Cannot divide by zero\" when b is 0\n3. DO NOT return infinity or NaN - always raise for division by zero\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_002"
+      }
+    },
+    {
+      "id": "8e4250ece8354ffdb2ad44ff1849a333",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `palindrome.py` with a function `is_palindrome(s)` that:\n1. Returns True if the string s is a palindrome (reads same forwards and backwards)\n2. Ignores case and non-alphanumeric characters\n3. Returns False for empty strings\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_003"
+      }
+    },
+    {
+      "id": "ceb9f4d2bcac43dc93bdb40fe13629d5",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `primes.py` with a function `is_prime(n)` that:\n1. Returns True if n is a prime number, False otherwise\n2. Returns False for numbers less than 2\n3. Uses efficient algorithm (check divisibility up to sqrt(n))\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_004",
+        "attempts": 1,
+        "cost_actual": 0.035883
+      }
+    },
+    {
+      "id": "b83f54f26f294cfc978039b67fd20e5d",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a reliable and efficient method to determine whether a given number is prime, which is crucial for various mathematical and cryptographic applications.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly identify prime numbers\",\n      \"test_method\": \"Verify is_prime() returns True for known prime numbers\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\"",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "cd14960dfbce4b399ba4123deee5bc72",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `search.py` with a function `binary_search(arr, target)` that:\n1. Returns the index of target in sorted array arr\n2. Returns -1 if target is not found\n3. Assumes arr is already sorted in ascending order\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_005"
+      }
+    },
+    {
+      "id": "0f797a93b85647a0beb349fb06215a2f",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `strings.py` with a function `reverse_words(sentence)` that:\n1. Reverses the order of words in a sentence\n2. Preserves whitespace between words (single space)\n3. Returns empty string for empty input\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_006"
+      }
+    },
+    {
+      "id": "de46984914064ee386b6c1c54809a024",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `math_funcs.py` with a function `factorial(n)` that:\n1. Returns the factorial of n (n!)\n2. Raises ValueError for negative numbers\n3. Returns 1 for n=0\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_007",
+        "attempts": 1,
+        "cost_actual": 0.034011
+      }
+    },
+    {
+      "id": "ad5095f7fee045bf9bc38dbcfc901056",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a reliable, safe implementation of factorial calculation that handles edge cases and prevents invalid inputs.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates factorial for non-negative integers\",\n      \"test_method\": \"Verify factorial calculations for multiple input values\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"Raises ValueEr",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "857951e476ce4da4bcb0cd70554b0dad",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `anagram.py` with a function `are_anagrams(s1, s2)` that:\n1. Returns True if s1 and s2 are anagrams of each other\n2. Ignores case and whitespace\n3. Returns False if either string is empty\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_008"
+      }
+    },
+    {
+      "id": "6c197954904e46eb9ceacac4f826e1fe",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `flatten.py` with a function `flatten_list(nested)` that:\n1. Flattens a nested list to a single-level list\n2. Works with any depth of nesting\n3. Preserves order of elements\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_009"
+      }
+    },
+    {
+      "id": "a44bdd06caee4c69a8fbaac20e5dfd91",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `gcd.py` with a function `gcd(a, b)` that:\n1. Returns the greatest common divisor of a and b\n2. Uses Euclidean algorithm\n3. Handles zero inputs correctly (gcd(0, n) = n)\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_010"
+      }
+    },
+    {
+      "id": "0979701173594f5783b43b8b38603914",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `BankAccount` with the following methods:\n- `__init__(self, owner: str, initial_balance: float = 0)`\n- `deposit(self, amount: float) -> float` - adds amount, returns new balance\n- `withdraw(self, amount: float) -> float` - subtracts amount, returns new balance\n- `audit(self) -> dict` - returns {\"owner\": str, \"balance\": float, \"transactions\": int}\n\nThe class should track the number of transactions (deposits + withdrawals).\nWithdrawals should raise ValueError if amount exceed",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_001",
+        "attempts": 1,
+        "cost_actual": 0.044274
+      }
+    },
+    {
+      "id": "3208695fee3c4a1fb476037c87b113b5",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Create a simple bank account class to demonstrate basic financial transaction tracking and validation in Python\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Can create account with initial balance\",\n      \"test_method\": \"Verify initial balance matches constructor input\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"Deposits increase balance and track transactions\",\n ",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "5ac9c9a2a0d545f78d9bc3364a276b62",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `Stack` implementing a LIFO data structure with:\n- `push(item)` - adds item to top\n- `pop()` - removes and returns top item, raises IndexError if empty\n- `peek()` - returns top item without removing, raises IndexError if empty\n- `is_empty()` - returns True if stack is empty\n- `size()` - returns number of items\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_002"
+      }
+    },
+    {
+      "id": "e923b3316caf49ffac9b213c8a51c303",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `Queue` implementing a FIFO data structure with:\n- `enqueue(item)` - adds item to back\n- `dequeue()` - removes and returns front item, raises IndexError if empty\n- `front()` - returns front item without removing\n- `is_empty()` - returns True if queue is empty\n- `size()` - returns number of items\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_003"
+      }
+    },
+    {
+      "id": "6bf4c983cb044440abd1baa259b7788d",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `LinkedList` with:\n- `append(value)` - adds node to end\n- `prepend(value)` - adds node to beginning\n- `find(value)` - returns node with value or None\n- `delete(value)` - removes first node with value\n- `to_list()` - returns Python list of all values\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_004"
+      }
+    },
+    {
+      "id": "2988de79ba5040c998dde575318cae17",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `HashTable` with:\n- `put(key, value)` - stores key-value pair\n- `get(key)` - returns value for key, raises KeyError if not found\n- `remove(key)` - removes key-value pair\n- `contains(key)` - returns True if key exists\n- `keys()` - returns list of all keys\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_005"
+      }
+    },
+    {
+      "id": "188ace593ebf4d18a395591d0f7a4164",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `BinaryTree` with:\n- `insert(value)` - inserts value maintaining BST property\n- `search(value)` - returns True if value exists\n- `inorder()` - returns list of values in-order\n- `preorder()` - returns list of values pre-order\n- `height()` - returns height of tree\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_006"
+      }
+    },
+    {
+      "id": "decd764adcaa45a6bd5dd7932256e47a",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `PriorityQueue` with:\n- `push(item, priority)` - adds item with priority (lower = higher priority)\n- `pop()` - removes and returns highest priority item\n- `peek()` - returns highest priority item without removing\n- `is_empty()` - returns True if empty\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_007"
+      }
+    },
+    {
+      "id": "5a3e8951a38d4f67b4a522f17cd720e6",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `Graph` with:\n- `add_vertex(v)` - adds a vertex\n- `add_edge(v1, v2, weight=1)` - adds edge between vertices\n- `get_neighbors(v)` - returns list of neighbors\n- `has_path(start, end)` - returns True if path exists (BFS)\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_008"
+      }
+    },
+    {
+      "id": "3693bc82d9784b66b47b1300cb065896",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `LRUCache` with:\n- `__init__(capacity)` - creates cache with max capacity\n- `get(key)` - returns value, moves to most recent\n- `put(key, value)` - adds/updates, evicts least recent if full\n- `size()` - returns current number of items\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_009",
+        "attempts": 1,
+        "cost_actual": 0.041448
+      }
+    },
+    {
+      "id": "f841e8e54f554b0d97cd88ef1255dc8e",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Implement an efficient Least Recently Used (LRU) Cache data structure that provides O(1) get and put operations while maintaining a fixed maximum capacity.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Cache maintains maximum capacity\",\n      \"test_method\": \"Create cache, add more than capacity items, verify oldest items are evicted\",\n      \"is_automated\": true\n    },\n    {\n      \"",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "bc737a078b2d4efeab5c0da2a99d771a",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Design a Python class `EventEmitter` with:\n- `on(event_name, callback)` - registers callback for event\n- `off(event_name, callback)` - removes callback\n- `emit(event_name, *args)` - triggers all callbacks for event\n- `once(event_name, callback)` - registers one-time callback\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "architect_010",
+        "attempts": 1,
+        "cost_actual": 0.037479
+      }
+    },
+    {
+      "id": "4fa8cebf8ee44ccda5279492f0845f0d",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a flexible event management system to implement publish-subscribe (pub/sub) pattern in Python, enabling decoupled communication between components.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Can register multiple callbacks for same event\",\n      \"test_method\": \"Register multiple callbacks, verify all are called when event emitted\",\n      \"is_automated\": true\n    ",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "652c643b0e21424a977e7d82a825988a",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `utils.py` - A utility module containing:\n   - `format_name(first: str, last: str) -> str` that returns \"Last, First\"\n   - `calculate_age(birth_year: int) -> int` that returns current year minus birth year\n\n2. `main.py` - A main module that:\n   - Imports from utils.py\n   - Has a function `greet_user(first: str, last: str, birth_year: int) -> str`\n     that uses both utility functions to return a greeting\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_001",
+        "attempts": 1,
+        "cost_actual": 0.039099
+      }
+    },
+    {
+      "id": "385993d491cf4dbeafbd11640d4a29cd",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"greenfield\",\n  \"why\": \"Create a simple name and age utility module with greeting functionality to demonstrate modular Python programming and function composition\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly format name as 'Last, First'\",\n      \"test_method\": \"Verify format_name() returns expected string format\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"Accurately calculate cur",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "greenfield",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "9211c49e69b04df9bed5553a91ef1d60",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `config.py` - Configuration module with:\n   - `LOG_LEVEL = \"INFO\"`\n   - `APP_NAME = \"MyApp\"`\n   - `get_config() -> dict` returning all config as dict\n\n2. `logger.py` - Logger module that:\n   - Imports config.py\n   - `setup_logger()` - configures logging using config values\n   - `log(message)` - logs message with APP_NAME prefix\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_002"
+      }
+    },
+    {
+      "id": "c1620160b7834c2fbdabb4a11ef3eb2d",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `models.py` - Data models:\n   - `User` class with `id`, `name`, `email` attributes\n   - `to_dict()` method\n\n2. `repository.py` - Data access:\n   - Imports User from models.py\n   - `UserRepository` class with `add(user)`, `find(id)`, `all()` methods\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_003",
+        "attempts": 1,
+        "cost_actual": 0.04071
+      }
+    },
+    {
+      "id": "08ca5cf42d8f41c3a80b4fc2b68bb8f5",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"greenfield\",\n  \"why\": \"Create a basic user management system with data models and repository pattern for storing and retrieving user information\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"User model can be instantiated with id, name, and email\",\n      \"test_method\": \"Create a User instance and verify attributes\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"User model can convert to dicti",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "greenfield",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "d1bf784f31974d95ac2124e50a6babb4",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `validators.py` - Validation functions:\n   - `validate_email(email)` - returns True if valid email format\n   - `validate_phone(phone)` - returns True if valid phone format\n\n2. `forms.py` - Form handling:\n   - Imports validators\n   - `ContactForm` class that uses validators to validate input\n   - `is_valid()` method that checks all fields\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_004",
+        "attempts": 1,
+        "cost_actual": 0.036828
+      }
+    },
+    {
+      "id": "7fa239b0f2a449ddafb373ff321ba3cb",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"greenfield\",\n  \"why\": \"Developers need robust input validation for contact forms to ensure data integrity and prevent malformed user inputs from entering the system.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Email validation correctly identifies valid email formats\",\n      \"test_method\": \"Test validate_email() with various email formats\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"Pho",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "greenfield",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "de80c90fbcd243e7bca0a037d54d439c",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `database.py` - Database abstraction:\n   - `Database` class with `connect()`, `execute(query)`, `close()`\n   - Simulates a database connection (can use dict storage)\n\n2. `service.py` - Business logic:\n   - Imports Database\n   - `ProductService` class using database for CRUD operations\n   - Methods: `create(product)`, `get(id)`, `update(id, data)`, `delete(id)`\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_005",
+        "attempts": 1,
+        "cost_actual": 0.037433999999999995
+      }
+    },
+    {
+      "id": "0ae767eacbda45c6952fb3e81955ba06",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"brownfield\",\n  \"why\": \"Create a lightweight database abstraction and product service to enable basic CRUD operations with a simulated database backend for application development and testing\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Database can connect and simulate storage\",\n      \"test_method\": \"Verify database can store and retrieve data using in-memory dictionary\",\n      \"is_automated\": true\n    }",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "brownfield",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "6ee04aa9e187479299ab467079e4ea8e",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `auth.py` - Authentication:\n   - `generate_token(user_id)` - creates simple token\n   - `verify_token(token)` - verifies and returns user_id or None\n\n2. `middleware.py` - Request middleware:\n   - Imports auth functions\n   - `AuthMiddleware` class with `process(request)` method\n   - Extracts and verifies token from request headers\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_006",
+        "attempts": 1,
+        "cost_actual": 0.041229
+      }
+    },
+    {
+      "id": "2014fb64ee3245119822d19795295b69",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"systems\",\n  \"why\": \"Create a lightweight authentication middleware system for verifying user tokens in web applications, enabling secure request processing\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Token generation creates valid, unique tokens\",\n      \"test_method\": \"Generate multiple tokens and verify they are unique and contain user ID\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"To",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "systems",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "30b4e3f86d584311b174bea5fecc8d17",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `parser.py` - Data parser:\n   - `parse_csv(text)` - parses CSV text into list of dicts\n   - `parse_json(text)` - parses JSON text into Python object\n\n2. `transformer.py` - Data transformation:\n   - Imports parser functions\n   - `DataTransformer` class with methods to convert between formats\n   - `csv_to_json(csv_text)`, `json_to_csv(json_text)`\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_007",
+        "attempts": 1,
+        "cost_actual": 0.042423
+      }
+    },
+    {
+      "id": "cd48d5073f464e4eb0ab91704a6749ec",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a flexible data parsing and transformation utility to convert between CSV and JSON formats, enabling interoperability between different data representations.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"CSV parsing correctly converts text to list of dictionaries\",\n      \"test_method\": \"Verify parse_csv handles standard CSV input\",\n      \"is_automated\": true\n    },\n",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "3c081a4447964024835dbe7e539c62c5",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `cache.py` - Caching layer:\n   - `Cache` class with `get(key)`, `set(key, value, ttl)`, `delete(key)`\n   - Simple in-memory implementation with TTL support\n\n2. `store.py` - Data store with caching:\n   - Imports Cache\n   - `CachedStore` class that wraps storage with caching\n   - `read(key)` checks cache first, `write(key, value)` updates both\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_008",
+        "attempts": 1,
+        "cost_actual": 0.036864
+      }
+    },
+    {
+      "id": "0949cc819ab14122b32ba6592eca989c",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a flexible in-memory caching mechanism with time-to-live (TTL) support to improve read performance and reduce redundant data retrieval operations.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Cache supports set with TTL\",\n      \"test_method\": \"Verify items expire after specified time\",\n      \"is_automated\": true\n    },\n    {\n      \"criterion\": \"CachedStore correctl",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "50bc17a7c9734075b710d36342e47568",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create two Python files:\n\n1. `events.py` - Event definitions:\n   - `Event` base class with `name`, `data` attributes\n   - `UserCreatedEvent`, `UserDeletedEvent` subclasses\n\n2. `handlers.py` - Event handlers:\n   - Imports event classes\n   - `EventHandler` base class\n   - `UserEventHandler` with `handle(event)` method\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "graph_009",
+        "attempts": 1,
+        "last_error": "2 validation errors for ResearcherOutput\nerror_case_examples\n  Input should be a valid list [type=list_type, input_value='[\\n    {\\n        \"input...a type error\"\\n    }\\n]', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/list_type\ndependencies\n  Input should be a valid list [type=list_type, input_value='[],', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/list_type"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "ce547a4946f04bfca5028171b91807b1",
+      "target": "69a33c94934545a3850c63765f3c8b96",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "c3b2b9df164c4fde9b37abedc9d49eb5",
+      "target": "f5bd42c6e9904b07af985d215a3bc8c9",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "5e9520c68a054dc2a66050ba2dc346eb",
+      "target": "a9f0bd202ae94cd483427cf9581bff6e",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "b83f54f26f294cfc978039b67fd20e5d",
+      "target": "ceb9f4d2bcac43dc93bdb40fe13629d5",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ad5095f7fee045bf9bc38dbcfc901056",
+      "target": "de46984914064ee386b6c1c54809a024",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "3208695fee3c4a1fb476037c87b113b5",
+      "target": "0979701173594f5783b43b8b38603914",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "f841e8e54f554b0d97cd88ef1255dc8e",
+      "target": "3693bc82d9784b66b47b1300cb065896",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "4fa8cebf8ee44ccda5279492f0845f0d",
+      "target": "bc737a078b2d4efeab5c0da2a99d771a",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "385993d491cf4dbeafbd11640d4a29cd",
+      "target": "652c643b0e21424a977e7d82a825988a",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "08ca5cf42d8f41c3a80b4fc2b68bb8f5",
+      "target": "c1620160b7834c2fbdabb4a11ef3eb2d",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "7fa239b0f2a449ddafb373ff321ba3cb",
+      "target": "d1bf784f31974d95ac2124e50a6babb4",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "0ae767eacbda45c6952fb3e81955ba06",
+      "target": "de80c90fbcd243e7bca0a037d54d439c",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "2014fb64ee3245119822d19795295b69",
+      "target": "6ee04aa9e187479299ab467079e4ea8e",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "cd48d5073f464e4eb0ab91704a6749ec",
+      "target": "30b4e3f86d584311b174bea5fecc8d17",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "0949cc819ab14122b32ba6592eca989c",
+      "target": "3c081a4447964024835dbe7e539c62c5",
+      "type": "TRACES_TO"
+    }
+  ]
+}

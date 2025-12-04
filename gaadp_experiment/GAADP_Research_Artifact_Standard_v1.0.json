@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gaadp.io/research-artifact/v1.0",
+  "title": "GAADP Research Artifact Standard v1.0",
+  "description": "Unified specification standard synthesizing THEORIST, PRAGMATIST, SECURITY, PRODUCT, and QA perspectives with mandatory enforcement",
+
+  "type": "object",
+  "required": ["metadata", "spec", "enforcement", "maturity"],
+
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["artifact_id", "version", "timestamp"],
+      "properties": {
+        "artifact_id": {"type": "string", "format": "uuid"},
+        "version": {"type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "parent_artifact": {"type": "string", "description": "PRAGMATIST: Versionable dependency chain"}
+      }
+    },
+
+    "maturity": {
+      "description": "PRODUCT: Spec maturity levels with cost-of-clarity tradeoffs",
+      "type": "object",
+      "required": ["level", "completeness_score"],
+      "properties": {
+        "level": {
+          "enum": ["DRAFT", "REVIEWABLE", "EXECUTABLE", "PRODUCTION"],
+          "description": "DRAFT: Human clarification expected | REVIEWABLE: Ambiguities captured | EXECUTABLE: Machine-verifiable | PRODUCTION: Attestation-complete"
+        },
+        "completeness_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "THEORIST: Quantified specification completeness (1.0 = polynomial-time decidable)"
+        },
+        "escalation_triggers": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "PRODUCT: Conditions requiring human intervention (feature not failure)"
+        }
+      }
+    },
+
+    "spec": {
+      "description": "THEORIST: Tuple (D,C,V) - Domain, Contracts, Verification",
+      "type": "object",
+      "required": ["domain", "contracts", "verification"],
+      "properties": {
+        "domain": {
+          "type": "object",
+          "required": ["why", "inputs", "outputs"],
+          "properties": {
+            "why": {"type": "string", "description": "PRODUCT: Business context - WHY this exists"},
+            "inputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "type", "hoare_precondition"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "type": {"type": "string", "description": "THEORIST: Closed type system annotation"},
+                  "hoare_precondition": {"type": "string", "description": "THEORIST: Executable invariant (e.g., 'len(arr) > 0 AND all(isinstance(x, int) for x in arr)')"},
+                  "trust_boundary": {"enum": ["TRUSTED", "UNTRUSTED"], "description": "SECURITY: Input trust classification"}
+                }
+              }
+            },
+            "outputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "type", "hoare_postcondition"],
+                "properties": {
+                  "name": {"type": "string"},
+                  "type": {"type": "string"},
+                  "hoare_postcondition": {"type": "string", "description": "THEORIST: Executable postcondition"},
+                  "sensitivity": {"enum": ["PUBLIC", "INTERNAL", "PII", "SECRET"], "description": "SECURITY: Data classification"}
+                }
+              }
+            }
+          }
+        },
+
+        "contracts": {
+          "type": "object",
+          "required": ["complexity", "examples"],
+          "properties": {
+            "complexity": {
+              "type": "object",
+              "required": ["time", "space"],
+              "properties": {
+                "time": {"type": "string", "description": "THEORIST: Algorithmic time bound (e.g., 'O(n log n)')"},
+                "space": {"type": "string", "description": "THEORIST: Space bound"}
+              }
+            },
+            "examples": {
+              "type": "array",
+              "minItems": 3,
+              "description": "PRAGMATIST: Typed examples over prose - minimum 3 (happy/edge/error)",
+              "items": {
+                "type": "object",
+                "required": ["input", "output", "category"],
+                "properties": {
+                  "input": {"type": "object"},
+                  "output": {"type": "object"},
+                  "category": {"enum": ["HAPPY", "EDGE", "ERROR"]},
+                  "explanation": {"type": "string"}
+                }
+              }
+            },
+            "ambiguities": {
+              "type": "array",
+              "description": "PRAGMATIST: Explicit ambiguity capture (eliminates choices via documentation)",
+              "items": {
+                "type": "object",
+                "required": ["aspect", "options", "resolution"],
+                "properties": {
+                  "aspect": {"type": "string"},
+                  "options": {"type": "array", "items": {"type": "string"}},
+                  "resolution": {"type": "string", "description": "Chosen option or escalation_required"},
+                  "rationale": {"type": "string"}
+                }
+              }
+            }
+          }
+        },
+
+        "verification": {
+          "description": "QA: Specification-to-test mapping with deterministic state machines",
+          "type": "object",
+          "required": ["test_mapping", "state_machine"],
+          "properties": {
+            "test_mapping": {
+              "type": "array",
+              "minItems": 1,
+              "description": "QA Gap 1: Every requirement maps to executable test",
+              "items": {
+                "type": "object",
+                "required": ["requirement_id", "test_condition", "assertion"],
+                "properties": {
+                  "requirement_id": {"type": "string"},
+                  "test_condition": {"type": "string", "description": "QA: Executable condition (Python expression)"},
+                  "assertion": {"type": "string", "description": "QA: Deterministic assertion"},
+                  "priority": {"enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]}
+                }
+              }
+            },
+            "state_machine": {
+              "type": "object",
+              "required": ["states", "transitions"],
+              "description": "QA Gap 2: Deterministic state transitions for verification flow",
+              "properties": {
+                "states": {"type": "array", "items": {"type": "string"}},
+                "transitions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["from", "to", "condition", "action"],
+                    "properties": {
+                      "from": {"type": "string"},
+                      "to": {"type": "string"},
+                      "condition": {"type": "string", "description": "QA Gap 1: Executable boolean expression"},
+                      "action": {"type": "string"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "enforcement": {
+      "description": "SECURITY: Mandatory enforcement requirements with hard boundaries",
+      "type": "object",
+      "required": ["security", "governance", "integrity"],
+      "properties": {
+        "security": {
+          "type": "object",
+          "required": ["forbidden_patterns", "approval_gates"],
+          "properties": {
+            "threat_model": {"type": "string", "description": "SECURITY: Threat scenario this spec defends against"},
+            "forbidden_patterns": {
+              "type": "array",
+              "description": "SECURITY: Blocklist enforced at verification",
+              "items": {"type": "string"}
+            },
+            "approval_gates": {
+              "type": "array",
+              "description": "SECURITY: Permission isolation per node (QA Gap 6)",
+              "items": {
+                "type": "object",
+                "required": ["gate_id", "required_clearance", "condition"],
+                "properties": {
+                  "gate_id": {"type": "string"},
+                  "required_clearance": {"enum": ["L0_PUBLIC", "L1_INTERNAL", "L2_PRIVILEGED", "L3_ADMIN"]},
+                  "condition": {"type": "string", "description": "When this gate activates"}
+                }
+              }
+            }
+          }
+        },
+
+        "governance": {
+          "type": "object",
+          "required": ["cost_limit", "deadline"],
+          "properties": {
+            "cost_limit": {
+              "type": "number",
+              "description": "SECURITY: Cost limit as hard boundary (QA Gap 5)",
+              "minimum": 0
+            },
+            "cost_unit": {"type": "string", "default": "USD"},
+            "deadline": {
+              "type": "string",
+              "format": "date-time",
+              "description": "QA Gap 5: Deadline enforcement (triggers escalation at T-0)"
+            },
+            "max_clarification_rounds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "QA Gap 4: Clarification loop termination bound"
+            }
+          }
+        },
+
+        "integrity": {
+          "type": "object",
+          "required": ["merkle_chain", "attestation"],
+          "description": "SECURITY & QA: Cryptographic integrity and transitive attestation",
+          "properties": {
+            "merkle_chain": {
+              "type": "array",
+              "description": "QA Gap 3: Merkle chain from REQ->SPEC->PLAN->CODE->TEST",
+              "items": {
+                "type": "object",
+                "required": ["node_id", "node_type", "content_hash", "parent_hash"],
+                "properties": {
+                  "node_id": {"type": "string"},
+                  "node_type": {"enum": ["REQ", "SPEC", "PLAN", "CODE", "TEST"]},
+                  "content_hash": {"type": "string", "description": "SHA-256 of node content"},
+                  "parent_hash": {"type": "string", "description": "Hash of parent node (null for root)"}
+                }
+              }
+            },
+            "attestation": {
+              "type": "object",
+              "required": ["signature", "signatory", "timestamp"],
+              "description": "SECURITY: HMAC attestation for transitive trust",
+              "properties": {
+                "signature": {"type": "string", "description": "HMAC-SHA256 signature"},
+                "signatory": {"type": "string", "description": "Agent/human role that signed"},
+                "timestamp": {"type": "string", "format": "date-time"},
+                "parent_attestations": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "description": "SECURITY: Transitive attestation chain"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "environment": {
+      "description": "PRAGMATIST: Environmental physics - versions, deps, failure modes",
+      "type": "object",
+      "required": ["runtime", "dependencies"],
+      "properties": {
+        "runtime": {
+          "type": "object",
+          "required": ["language", "version"],
+          "properties": {
+            "language": {"type": "string"},
+            "version": {"type": "string"},
+            "platform": {"type": "string"}
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "version", "required"],
+            "properties": {
+              "name": {"type": "string"},
+              "version": {"type": "string"},
+              "required": {"type": "boolean"},
+              "security_hash": {"type": "string", "description": "SECURITY: Dependency integrity check"}
+            }
+          }
+        },
+        "failure_hierarchy": {
+          "type": "array",
+          "description": "PRAGMATIST: Failure mode hierarchy with recovery strategies",
+          "items": {
+            "type": "object",
+            "required": ["failure_mode", "severity", "recovery"],
+            "properties": {
+              "failure_mode": {"type": "string"},
+              "severity": {"enum": ["FATAL", "ERROR", "WARNING", "INFO"]},
+              "recovery": {"type": "string"},
+              "escalation_required": {"type": "boolean"}
+            }
+          }
+        }
+      }
+    },
+
+    "success_criteria": {
+      "description": "PRODUCT: Executable success criteria as physics (NFRs are constraints)",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["criterion", "measurement", "threshold"],
+        "properties": {
+          "criterion": {"type": "string"},
+          "measurement": {"type": "string", "description": "How to measure (executable)"},
+          "threshold": {"type": "string", "description": "Pass condition"},
+          "nfr_category": {"enum": ["PERFORMANCE", "SECURITY", "RELIABILITY", "USABILITY", "MAINTAINABILITY"]}
+        }
+      }
+    }
+  }
+}

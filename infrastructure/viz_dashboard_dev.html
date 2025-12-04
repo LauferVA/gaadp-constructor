@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAADP Dev Cockpit - Comparison Mode</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 60px auto 180px auto;
+            height: 100vh;
+            gap: 1px;
+            background: #30363d;
+        }
+
+        /* Header - spans full width */
+        .header {
+            grid-column: 1 / -1;
+            background: #161b22;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .header h1 span {
+            color: #8b949e;
+            font-weight: 400;
+        }
+
+        .header h1 .dev-badge {
+            background: #f0883e;
+            color: #0d1117;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f85149;
+        }
+
+        .status-dot.connected {
+            background: #3fb950;
+            box-shadow: 0 0 8px #3fb950;
+        }
+
+        /* Panel headers */
+        .panel-header {
+            background: #21262d;
+            padding: 10px 16px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-header .label {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .panel-header .label.baseline {
+            background: #6e7681;
+            color: #f0f6fc;
+        }
+
+        .panel-header .label.treatment {
+            background: #3fb950;
+            color: #0d1117;
+        }
+
+        /* Graph panels */
+        .graph-panel {
+            background: #0d1117;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .graph-panel.baseline {
+            border-right: 1px solid #30363d;
+        }
+
+        .graph-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            min-height: 200px;
+        }
+
+        .graph-wrapper svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Stats panel below each graph */
+        .stats-panel {
+            background: #161b22;
+            padding: 12px 16px;
+            border-top: 1px solid #30363d;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+
+        .stat-item {
+            background: #21262d;
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: #8b949e;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+
+        .stat-item.cost .stat-value { color: #f0883e; }
+        .stat-item.verified .stat-value { color: #3fb950; }
+        .stat-item.failed .stat-value { color: #f85149; }
+        .stat-item.code .stat-value { color: #3fb950; }
+
+        /* Metrics comparison panel - spans full width */
+        .metrics-comparison {
+            grid-column: 1 / -1;
+            background: #161b22;
+            border-top: 2px solid #58a6ff;
+            border-bottom: 2px solid #58a6ff;
+            padding: 16px;
+        }
+
+        .metrics-comparison h3 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #58a6ff;
+            margin-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 8px 12px;
+            background: #21262d;
+            color: #8b949e;
+            font-weight: 500;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .comparison-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .comparison-table tr:hover {
+            background: #21262d;
+        }
+
+        .comparison-table .metric-name {
+            font-weight: 500;
+        }
+
+        .comparison-table .baseline-val {
+            color: #8b949e;
+        }
+
+        .comparison-table .treatment-val {
+            color: #c9d1d9;
+        }
+
+        .comparison-table .delta {
+            font-weight: 600;
+        }
+
+        .comparison-table .delta.positive {
+            color: #3fb950;
+        }
+
+        .comparison-table .delta.negative {
+            color: #f85149;
+        }
+
+        .comparison-table .delta.neutral {
+            color: #8b949e;
+        }
+
+        /* Event logs - side by side at bottom */
+        .event-log {
+            background: #161b22;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .event-log.baseline {
+            border-right: 1px solid #30363d;
+        }
+
+        .event-log-header {
+            padding: 10px 16px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .event-log-header h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #8b949e;
+            letter-spacing: 0.5px;
+        }
+
+        .event-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+            font-family: 'SF Mono', 'Consolas', monospace;
+            font-size: 11px;
+        }
+
+        .event-item {
+            padding: 3px 0;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .event-time {
+            color: #6e7681;
+            white-space: nowrap;
+            font-size: 10px;
+        }
+
+        .event-type {
+            color: #8b949e;
+            min-width: 80px;
+            font-size: 10px;
+        }
+
+        .event-type.node_created { color: #3fb950; }
+        .event-type.status_change { color: #58a6ff; }
+        .event-type.edge_created { color: #6e7681; }
+        .event-type.agent_started { color: #f0883e; }
+        .event-type.agent_finished { color: #a371f7; }
+        .event-type.iteration { color: #79c0ff; }
+        .event-type.error { color: #f85149; }
+        .event-type.complete { color: #3fb950; }
+
+        .event-message {
+            color: #c9d1d9;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            max-width: 280px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 1000;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .tooltip-type {
+            font-weight: 600;
+            color: #58a6ff;
+        }
+
+        .tooltip-status {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .tooltip-status.PENDING { background: #6e7681; }
+        .tooltip-status.PROCESSING { background: #58a6ff; }
+        .tooltip-status.TESTING { background: #f0883e; }
+        .tooltip-status.TESTED { background: #79c0ff; }
+        .tooltip-status.VERIFIED { background: #3fb950; }
+        .tooltip-status.FAILED { background: #f85149; }
+
+        .tooltip-content {
+            color: #8b949e;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .tooltip-id {
+            font-family: 'SF Mono', monospace;
+            color: #6e7681;
+            margin-top: 8px;
+            font-size: 10px;
+        }
+
+        /* Graph nodes */
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke-width: 2px;
+            transition: all 0.2s;
+        }
+
+        .node:hover circle {
+            stroke-width: 4px;
+            filter: brightness(1.2);
+        }
+
+        .node.processing circle {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { stroke-opacity: 1; }
+            50% { stroke-opacity: 0.4; }
+        }
+
+        .node text {
+            font-size: 10px;
+            font-weight: 600;
+            fill: #ffffff;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        .link {
+            stroke-opacity: 0.6;
+            fill: none;
+            stroke-width: 1.5px;
+            cursor: pointer;
+            transition: stroke-opacity 0.2s, stroke-width 0.2s;
+        }
+
+        .link:hover {
+            stroke-opacity: 1;
+            stroke-width: 3px;
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            display: flex;
+            gap: 4px;
+        }
+
+        .zoom-btn {
+            width: 24px;
+            height: 24px;
+            background: #21262d;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            color: #c9d1d9;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .zoom-btn:hover {
+            background: #30363d;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           NEW LEGEND DESIGN: Shape = Type, Color = Status, Line = Edge
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Legend section container */
+        .legend-row {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-section {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: #21262d;
+            border-radius: 4px;
+        }
+
+        .legend-title {
+            font-size: 9px;
+            color: #6e7681;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 4px;
+        }
+
+        .legend-items {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+            color: #8b949e;
+        }
+
+        /* Shape legend - inline SVG shapes */
+        .legend-shape {
+            width: 14px;
+            height: 14px;
+        }
+
+        .legend-shape svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Status color legend - colored squares */
+        .legend-status {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-status.PENDING { background: #6e7681; }
+        .legend-status.PROCESSING { background: #58a6ff; }
+        .legend-status.TESTING { background: #f0883e; }
+        .legend-status.VERIFIED { background: #3fb950; }
+        .legend-status.FAILED { background: #f85149; }
+
+        /* Agent stroke legend - colored outlines */
+        .legend-agent {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #21262d;
+            border: 3px solid;
+        }
+
+        /* Edge style legend - SVG line samples */
+        .legend-edge-line {
+            width: 24px;
+            height: 12px;
+        }
+
+        .legend-edge-line svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Edge count badge (used in legend) */
+        .edge-count {
+            font-weight: 600;
+            color: #58a6ff;
+            margin-left: 4px;
+            font-size: 9px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>GAADP <span>Dev Cockpit</span><span class="dev-badge">Comparison Mode</span></h1>
+            <div class="connection-status">
+                <div class="status-dot" id="connectionDot"></div>
+                <span id="connectionText">Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Baseline Panel -->
+        <div class="graph-panel baseline">
+            <div class="panel-header">
+                <h2><span class="label baseline">BASELINE</span> Gen-1 Pipeline</h2>
+                <span id="baselineStatus" style="color: #8b949e; font-size: 11px;">Waiting...</span>
+            </div>
+            <div class="graph-wrapper" id="graphWrapperBaseline">
+                <svg id="graphBaseline"></svg>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn('baseline')">+</button>
+                    <button class="zoom-btn" onclick="zoomOut('baseline')">-</button>
+                    <button class="zoom-btn" onclick="resetZoom('baseline')">R</button>
+                </div>
+            </div>
+            <div class="stats-panel">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="baselineNodes">0</div>
+                        <div class="stat-label">Nodes</div>
+                    </div>
+                    <div class="stat-item code">
+                        <div class="stat-value" id="baselineCode">0</div>
+                        <div class="stat-label">CODE</div>
+                    </div>
+                    <div class="stat-item verified">
+                        <div class="stat-value" id="baselineVerified">0</div>
+                        <div class="stat-label">Verified</div>
+                    </div>
+                    <div class="stat-item failed">
+                        <div class="stat-value" id="baselineFailed">0</div>
+                        <div class="stat-label">Failed</div>
+                    </div>
+                    <div class="stat-item cost">
+                        <div class="stat-value">$<span id="baselineCost">0.00</span></div>
+                        <div class="stat-label">Cost</div>
+                    </div>
+                </div>
+                <!-- NEW LEGEND: Shape=Type, Color=Status, Line=Edge -->
+                <div class="legend-row">
+                    <!-- Node Types (by Shape) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Type</span>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-6L1.7,-2L6.5,-2L2.4,1L4,6L0,3L-4,6L-2.4,1L-6.5,-2L-1.7,-2Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                REQ
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><circle r="5" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                RESEARCH
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><rect x="-5" y="-5" width="10" height="10" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                SPEC
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-6L6,0L0,6L-6,0Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                CODE
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-5L5.8,5L-5.8,5Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                TEST
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Node Status (by Color) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Status</span>
+                        <div class="legend-items">
+                            <div class="legend-item"><span class="legend-status PENDING"></span>Pending</div>
+                            <div class="legend-item"><span class="legend-status PROCESSING"></span>Active</div>
+                            <div class="legend-item"><span class="legend-status VERIFIED"></span>Verified</div>
+                            <div class="legend-item"><span class="legend-status FAILED"></span>Failed</div>
+                        </div>
+                    </div>
+                    <!-- Agent (by Stroke Color) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Agent</span>
+                        <div class="legend-items">
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #a371f7;"></span>Researcher</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #f778ba;"></span>Architect</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #79c0ff;"></span>Builder</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #f0883e;"></span>Tester</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #3fb950;"></span>Verifier</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edge Types (by Line Style) -->
+                <div class="legend-row">
+                    <div class="legend-section" style="flex: 1;">
+                        <span class="legend-title">Edges</span>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="18" y2="6" stroke="#8b949e" stroke-width="1.5"/>
+                                    <path d="M16,3L22,6L16,9" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+                                </svg></span>
+                                Traces<span class="edge-count" id="baselineTracesTo">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="18" y2="6" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4,2"/>
+                                    <path d="M16,3L22,6L16,9" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+                                </svg></span>
+                                Depends<span class="edge-count" id="baselineDependsOn">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="16" y2="6" stroke="#8b949e" stroke-width="2"/>
+                                    <path d="M14,2L22,6L14,10Z" fill="#8b949e"/>
+                                </svg></span>
+                                Implements<span class="edge-count" id="baselineImplements">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Treatment Panel -->
+        <div class="graph-panel treatment">
+            <div class="panel-header">
+                <h2><span class="label treatment">TREATMENT</span> Gen-2 TDD Pipeline</h2>
+                <span id="treatmentStatus" style="color: #8b949e; font-size: 11px;">Waiting...</span>
+            </div>
+            <div class="graph-wrapper" id="graphWrapperTreatment">
+                <svg id="graphTreatment"></svg>
+                <div class="zoom-controls">
+                    <button class="zoom-btn" onclick="zoomIn('treatment')">+</button>
+                    <button class="zoom-btn" onclick="zoomOut('treatment')">-</button>
+                    <button class="zoom-btn" onclick="resetZoom('treatment')">R</button>
+                </div>
+            </div>
+            <div class="stats-panel">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="treatmentNodes">0</div>
+                        <div class="stat-label">Nodes</div>
+                    </div>
+                    <div class="stat-item code">
+                        <div class="stat-value" id="treatmentCode">0</div>
+                        <div class="stat-label">CODE</div>
+                    </div>
+                    <div class="stat-item verified">
+                        <div class="stat-value" id="treatmentVerified">0</div>
+                        <div class="stat-label">Verified</div>
+                    </div>
+                    <div class="stat-item failed">
+                        <div class="stat-value" id="treatmentFailed">0</div>
+                        <div class="stat-label">Failed</div>
+                    </div>
+                    <div class="stat-item cost">
+                        <div class="stat-value">$<span id="treatmentCost">0.00</span></div>
+                        <div class="stat-label">Cost</div>
+                    </div>
+                </div>
+                <!-- NEW LEGEND: Shape=Type, Color=Status, Line=Edge -->
+                <div class="legend-row">
+                    <!-- Node Types (by Shape) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Type</span>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-6L1.7,-2L6.5,-2L2.4,1L4,6L0,3L-4,6L-2.4,1L-6.5,-2L-1.7,-2Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                REQ
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><circle r="5" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                RESEARCH
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><rect x="-5" y="-5" width="10" height="10" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                SPEC
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-6L6,0L0,6L-6,0Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                CODE
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-shape"><svg viewBox="-7 -7 14 14"><path d="M0,-5L5.8,5L-5.8,5Z" fill="#8b949e" stroke="#fff" stroke-width="1"/></svg></span>
+                                TEST
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Node Status (by Color) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Status</span>
+                        <div class="legend-items">
+                            <div class="legend-item"><span class="legend-status PENDING"></span>Pending</div>
+                            <div class="legend-item"><span class="legend-status PROCESSING"></span>Active</div>
+                            <div class="legend-item"><span class="legend-status TESTING"></span>Testing</div>
+                            <div class="legend-item"><span class="legend-status VERIFIED"></span>Verified</div>
+                            <div class="legend-item"><span class="legend-status FAILED"></span>Failed</div>
+                        </div>
+                    </div>
+                    <!-- Agent (by Stroke Color) -->
+                    <div class="legend-section">
+                        <span class="legend-title">Agent</span>
+                        <div class="legend-items">
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #a371f7;"></span>Researcher</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #f778ba;"></span>Architect</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #79c0ff;"></span>Builder</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #f0883e;"></span>Tester</div>
+                            <div class="legend-item"><span class="legend-agent" style="border-color: #3fb950;"></span>Verifier</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Edge Types (by Line Style) - Gen-2 has more edge types -->
+                <div class="legend-row">
+                    <div class="legend-section" style="flex: 1;">
+                        <span class="legend-title">Edges</span>
+                        <div class="legend-items">
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="18" y2="6" stroke="#8b949e" stroke-width="1.5"/>
+                                    <path d="M16,3L22,6L16,9" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+                                </svg></span>
+                                Traces<span class="edge-count" id="treatmentTracesTo">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="18" y2="6" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4,2"/>
+                                    <path d="M16,3L22,6L16,9" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+                                </svg></span>
+                                Depends<span class="edge-count" id="treatmentDependsOn">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="16" y2="6" stroke="#8b949e" stroke-width="2"/>
+                                    <path d="M14,2L22,6L14,10Z" fill="#8b949e"/>
+                                </svg></span>
+                                Implements<span class="edge-count" id="treatmentImplements">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="16" y2="6" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="2,2"/>
+                                    <path d="M14,3L18,6L14,9 M18,3L22,6L18,9" fill="none" stroke="#8b949e" stroke-width="1"/>
+                                </svg></span>
+                                Tests<span class="edge-count" id="treatmentTests">0</span>
+                            </div>
+                            <div class="legend-item">
+                                <span class="legend-edge-line"><svg viewBox="0 0 24 12">
+                                    <line x1="0" y1="6" x2="16" y2="6" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="6,2,2,2"/>
+                                    <path d="M16,3L22,6L16,9" fill="none" stroke="#f0883e" stroke-width="1.5"/>
+                                </svg></span>
+                                Feedback<span class="edge-count" id="treatmentFeedback">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Comparison -->
+        <div class="metrics-comparison">
+            <h3>Metrics Comparison</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Metric</th>
+                        <th style="width: 20%;">Baseline (Gen-1)</th>
+                        <th style="width: 20%;">Treatment (Gen-2)</th>
+                        <th style="width: 20%;">Delta</th>
+                        <th style="width: 15%;">Assessment</th>
+                    </tr>
+                </thead>
+                <tbody id="metricsBody">
+                    <tr>
+                        <td class="metric-name">CODE Nodes Generated</td>
+                        <td class="baseline-val" id="cmpCodeBaseline">0</td>
+                        <td class="treatment-val" id="cmpCodeTreatment">0</td>
+                        <td class="delta neutral" id="cmpCodeDelta">-</td>
+                        <td id="cmpCodeAssess">-</td>
+                    </tr>
+                    <tr>
+                        <td class="metric-name">Verification Rate</td>
+                        <td class="baseline-val" id="cmpVerifyBaseline">0%</td>
+                        <td class="treatment-val" id="cmpVerifyTreatment">0%</td>
+                        <td class="delta neutral" id="cmpVerifyDelta">-</td>
+                        <td id="cmpVerifyAssess">-</td>
+                    </tr>
+                    <tr>
+                        <td class="metric-name">Failure Rate</td>
+                        <td class="baseline-val" id="cmpFailBaseline">0%</td>
+                        <td class="treatment-val" id="cmpFailTreatment">0%</td>
+                        <td class="delta neutral" id="cmpFailDelta">-</td>
+                        <td id="cmpFailAssess">-</td>
+                    </tr>
+                    <tr>
+                        <td class="metric-name">Total Cost</td>
+                        <td class="baseline-val" id="cmpCostBaseline">$0.00</td>
+                        <td class="treatment-val" id="cmpCostTreatment">$0.00</td>
+                        <td class="delta neutral" id="cmpCostDelta">-</td>
+                        <td id="cmpCostAssess">-</td>
+                    </tr>
+                    <tr>
+                        <td class="metric-name">Pipeline Depth</td>
+                        <td class="baseline-val" id="cmpDepthBaseline">0</td>
+                        <td class="treatment-val" id="cmpDepthTreatment">0</td>
+                        <td class="delta neutral" id="cmpDepthDelta">-</td>
+                        <td id="cmpDepthAssess">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Event Logs -->
+        <div class="event-log baseline">
+            <div class="event-log-header">
+                <h3>Baseline Events</h3>
+                <span id="baselineEventCount">0 events</span>
+            </div>
+            <div class="event-list" id="eventListBaseline"></div>
+        </div>
+
+        <div class="event-log treatment">
+            <div class="event-log-header">
+                <h3>Treatment Events</h3>
+                <span id="treatmentEventCount">0 events</span>
+            </div>
+            <div class="event-list" id="eventListTreatment"></div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Configuration - connects to same port, sessions distinguished by message prefix
+        const WS_URL = `ws://${window.location.hostname}:8765`;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // NEW DESIGN: Shape = Type, Color = Status, Line Style = Edge Type
+        // ═══════════════════════════════════════════════════════════════════
+
+        // NODE SHAPES - what kind of artifact (d3 symbol types)
+        const NODE_SHAPES = {
+            REQ: d3.symbolStar,          // Entry point - star
+            RESEARCH: d3.symbolCircle,    // Knowledge - circle
+            SPEC: d3.symbolSquare,        // Structured spec - square
+            PLAN: d3.symbolSquare,        // Plan - square (like spec)
+            CODE: d3.symbolDiamond,       // Implementation - diamond
+            TEST_SUITE: d3.symbolTriangle,// Testing - triangle
+            TEST: d3.symbolTriangle,      // Testing - triangle
+            DOC: d3.symbolCircle,         // Documentation - circle
+            CLARIFICATION: d3.symbolCross,// Clarification - cross
+            ESCALATION: d3.symbolWye      // Escalation - wye
+        };
+
+        // STATUS COLORS - what state the node is in (fill color)
+        const STATUS_COLORS = {
+            PENDING: '#6e7681',     // Gray - waiting
+            PROCESSING: '#58a6ff', // Blue - active
+            TESTING: '#f0883e',    // Orange - being tested
+            TESTED: '#79c0ff',     // Light blue - tests passed
+            VERIFIED: '#3fb950',   // Green - approved
+            FAILED: '#f85149'      // Red - failed
+        };
+
+        // EDGE STYLES - relationship type (line style + arrow)
+        const EDGE_STYLES = {
+            TRACES_TO: {
+                dasharray: 'none',           // Solid line
+                marker: 'arrow',             // Simple arrow →
+                color: '#8b949e',            // Gray
+                description: 'Provenance - traces origin back to source'
+            },
+            DEPENDS_ON: {
+                dasharray: '8,4',            // Dashed line
+                marker: 'arrow',             // Arrow →
+                color: '#8b949e',            // Gray
+                description: 'Dependency - requires target to function'
+            },
+            IMPLEMENTS: {
+                dasharray: 'none',           // Solid line
+                marker: 'arrow-filled',      // Filled arrow ▶
+                color: '#8b949e',            // Gray
+                width: 2.5,                  // Thicker
+                description: 'Implementation - code realizes the spec'
+            },
+            TESTS: {
+                dasharray: '3,3',            // Dotted line
+                marker: 'diamond',           // Diamond head ◇
+                color: '#8b949e',            // Gray
+                description: 'Testing - test suite validates code'
+            },
+            FEEDBACK: {
+                dasharray: '12,4,4,4',       // Dash-dot line
+                marker: 'arrow-loop',        // Loop arrow ↺
+                color: '#f0883e',            // Orange (feedback is special)
+                description: 'Feedback - triggers rework or refinement'
+            }
+        };
+
+        // AGENT STROKES - which agent last processed the node (stroke color)
+        const AGENT_STROKES = {
+            RESEARCHER: { color: '#a371f7', width: 3, description: 'Researcher - gathers knowledge' },
+            ARCHITECT:  { color: '#f778ba', width: 3, description: 'Architect - designs structure' },
+            BUILDER:    { color: '#79c0ff', width: 3, description: 'Builder - writes code' },
+            TESTER:     { color: '#f0883e', width: 3, description: 'Tester - validates code' },
+            VERIFIER:   { color: '#3fb950', width: 3, description: 'Verifier - approves output' },
+            NONE:       { color: '#ffffff', width: 2, description: 'Not yet processed' }
+        };
+
+        // Legacy compatibility for any remaining references
+        const NODE_COLORS = STATUS_COLORS;
+
+        // State for both sessions
+        const sessions = {
+            baseline: {
+                graphData: { nodes: [], links: [] },
+                simulation: null,
+                svg: null,
+                g: null,
+                linkGroup: null,
+                nodeGroup: null,
+                zoom: null,
+                stats: { nodes: 0, code: 0, verified: 0, failed: 0, cost: 0 },
+                edges: { TRACES_TO: 0, DEPENDS_ON: 0, IMPLEMENTS: 0, TESTS: 0, FEEDBACK: 0 }
+            },
+            treatment: {
+                graphData: { nodes: [], links: [] },
+                simulation: null,
+                svg: null,
+                g: null,
+                linkGroup: null,
+                nodeGroup: null,
+                zoom: null,
+                stats: { nodes: 0, code: 0, verified: 0, failed: 0, cost: 0 },
+                edges: { TRACES_TO: 0, DEPENDS_ON: 0, IMPLEMENTS: 0, TESTS: 0, FEEDBACK: 0 }
+            }
+        };
+
+        let ws = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initGraph('baseline');
+            initGraph('treatment');
+            connectWebSocket();
+        });
+
+        // Get edge color from EDGE_STYLES (single source of truth)
+        function getEdgeColor(edgeType) {
+            return (EDGE_STYLES[edgeType] || EDGE_STYLES.TRACES_TO).color;
+        }
+
+        function initGraph(session) {
+            const containerId = session === 'baseline' ? 'graphWrapperBaseline' : 'graphWrapperTreatment';
+            const svgId = session === 'baseline' ? 'graphBaseline' : 'graphTreatment';
+
+            const container = document.getElementById(containerId);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            const s = sessions[session];
+
+            s.svg = d3.select(`#${svgId}`)
+                .attr('width', width)
+                .attr('height', height);
+
+            s.zoom = d3.zoom()
+                .scaleExtent([0.1, 4])
+                .on('zoom', (event) => {
+                    s.g.attr('transform', event.transform);
+                });
+
+            s.svg.call(s.zoom);
+            s.g = s.svg.append('g');
+
+            // Create defs for multiple marker types
+            const defs = s.svg.append('defs');
+
+            // 1. Simple arrow → (TRACES_TO, DEPENDS_ON)
+            defs.append('marker')
+                .attr('id', `arrow-${session}`)
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 22)
+                .attr('refY', 0)
+                .attr('markerWidth', 6)
+                .attr('markerHeight', 6)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('fill', '#8b949e')
+                .attr('d', 'M0,-4L10,0L0,4');
+
+            // 2. Filled arrow ▶ (IMPLEMENTS) - solid triangle
+            defs.append('marker')
+                .attr('id', `arrow-filled-${session}`)
+                .attr('viewBox', '0 -5 10 10')
+                .attr('refX', 22)
+                .attr('refY', 0)
+                .attr('markerWidth', 8)
+                .attr('markerHeight', 8)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('fill', '#8b949e')
+                .attr('d', 'M0,-5L10,0L0,5Z');
+
+            // 3. Diamond ◇ (TESTS)
+            defs.append('marker')
+                .attr('id', `diamond-${session}`)
+                .attr('viewBox', '-5 -5 10 10')
+                .attr('refX', 22)
+                .attr('refY', 0)
+                .attr('markerWidth', 8)
+                .attr('markerHeight', 8)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('fill', '#8b949e')
+                .attr('d', 'M-5,0L0,-4L5,0L0,4Z');
+
+            // 4. Loop arrow ↺ (FEEDBACK) - curved arrow
+            defs.append('marker')
+                .attr('id', `arrow-loop-${session}`)
+                .attr('viewBox', '0 -6 12 12')
+                .attr('refX', 24)
+                .attr('refY', 0)
+                .attr('markerWidth', 10)
+                .attr('markerHeight', 10)
+                .attr('orient', 'auto')
+                .append('path')
+                .attr('fill', '#f0883e')
+                .attr('d', 'M0,-4L8,0L0,4 M4,-2 A4,4 0 1,1 4,2');
+
+            s.linkGroup = s.g.append('g').attr('class', 'links');
+            s.nodeGroup = s.g.append('g').attr('class', 'nodes');
+
+            s.simulation = d3.forceSimulation()
+                .force('link', d3.forceLink().id(d => d.id).distance(80))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(30));
+
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                const newWidth = container.clientWidth;
+                const newHeight = container.clientHeight;
+                s.svg.attr('width', newWidth).attr('height', newHeight);
+                s.simulation.force('center', d3.forceCenter(newWidth / 2, newHeight / 2));
+                s.simulation.alpha(0.3).restart();
+            });
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                document.getElementById('connectionDot').classList.add('connected');
+                document.getElementById('connectionText').textContent = 'Connected';
+                addEvent('baseline', 'system', 'Connected to GAADP server');
+                addEvent('treatment', 'system', 'Connected to GAADP server');
+            };
+
+            ws.onclose = () => {
+                document.getElementById('connectionDot').classList.remove('connected');
+                document.getElementById('connectionText').textContent = 'Disconnected';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+        }
+
+        function handleMessage(msg) {
+            // Handle full_state specially for dev_mode
+            if (msg.type === 'full_state') {
+                if (msg.dev_mode && msg.data.baseline && msg.data.treatment) {
+                    // Dev mode: data contains both baseline and treatment
+                    loadFullState('baseline', msg.data.baseline);
+                    loadFullState('treatment', msg.data.treatment);
+                } else {
+                    // Single state mode
+                    loadFullState('baseline', msg.data);
+                }
+                // Update comparison metrics after loading full state
+                updateComparison();
+                return;
+            }
+
+            // Session is determined by msg.session field (default to 'baseline')
+            const session = msg.session || 'baseline';
+            const s = sessions[session];
+
+            if (!s) {
+                console.warn('Unknown session:', session);
+                return;
+            }
+
+            switch (msg.type) {
+                case 'node_created':
+                    addNode(session, msg.data.node);
+                    addEvent(session, 'node_created', `${msg.data.node.type} node created: ${msg.data.node.id.substring(0, 8)}`);
+                    break;
+                case 'node_status_changed':
+                    updateNodeStatus(session, msg.data.node_id, msg.data.new_status);
+                    addEvent(session, 'status_change', `${msg.data.node_id.substring(0, 8)}: ${msg.data.old_status || '?'} → ${msg.data.new_status}`);
+                    break;
+                case 'edge_created':
+                    addEdge(session, msg.data.edge);
+                    addEvent(session, 'edge_created', `${msg.data.edge.type}: ${msg.data.edge.source.substring(0, 8)} → ${msg.data.edge.target.substring(0, 8)}`);
+                    break;
+                case 'agent_started':
+                    updateAgent(session, msg.data.agent_role, 'working', msg.data.node_id);
+                    // Track which agent is processing this node
+                    setNodeAgent(session, msg.data.node_id, msg.data.agent_role);
+                    addEvent(session, 'agent_started', `${msg.data.agent_role} started on ${msg.data.node_id.substring(0, 8)}`);
+                    break;
+                case 'agent_finished':
+                    updateAgent(session, msg.data.agent_role, 'idle', null);
+                    if (msg.data.cost) {
+                        s.stats.cost += msg.data.cost;
+                        updateStatsDisplay(session);
+                    }
+                    addEvent(session, 'agent_finished', `${msg.data.agent_role} finished ($${(msg.data.cost || 0).toFixed(4)})`);
+                    break;
+                case 'iteration':
+                    document.getElementById(`${session}Status`).textContent = `Iteration ${msg.data.iteration}`;
+                    addEvent(session, 'iteration', `Iteration ${msg.data.iteration}`);
+                    break;
+                case 'complete':
+                    document.getElementById(`${session}Status`).textContent = 'Complete';
+                    addEvent(session, 'complete', 'Execution complete!');
+                    updateComparison();
+                    break;
+                case 'error':
+                    addEvent(session, 'error', `Error: ${msg.data.error}`);
+                    break;
+            }
+
+            updateComparison();
+        }
+
+        function loadFullState(session, state) {
+            const s = sessions[session];
+            s.graphData = { nodes: [], links: [] };
+
+            Object.values(state.nodes).forEach(node => {
+                s.graphData.nodes.push({
+                    id: node.id,
+                    type: node.type,
+                    status: node.status,
+                    content: node.content,
+                    metadata: node.metadata
+                });
+            });
+
+            state.edges.forEach(edge => {
+                s.graphData.links.push({
+                    source: edge.source,
+                    target: edge.target,
+                    type: edge.type
+                });
+            });
+
+            // Reset and count edges by type
+            s.edges = { TRACES_TO: 0, DEPENDS_ON: 0, IMPLEMENTS: 0, TESTS: 0, FEEDBACK: 0 };
+            state.edges.forEach(edge => {
+                if (s.edges.hasOwnProperty(edge.type)) {
+                    s.edges[edge.type]++;
+                }
+            });
+            updateEdgesDisplay(session);
+
+            // Update stats
+            s.stats.nodes = Object.keys(state.nodes).length;
+            s.stats.code = Object.values(state.nodes).filter(n => n.type === 'CODE').length;
+            s.stats.verified = state.stats.nodes_verified || 0;
+            s.stats.failed = state.stats.nodes_failed || 0;
+            s.stats.cost = state.stats.total_cost || 0;
+
+            updateStatsDisplay(session);
+            updateGraph(session);
+
+            // Load events
+            if (state.events) {
+                state.events.forEach(event => {
+                    addEvent(session, event.type, event.message, new Date(event.timestamp));
+                });
+            }
+        }
+
+        function addNode(session, node) {
+            const s = sessions[session];
+            const existing = s.graphData.nodes.find(n => n.id === node.id);
+            if (existing) {
+                Object.assign(existing, node);
+            } else {
+                s.graphData.nodes.push({
+                    id: node.id,
+                    type: node.type,
+                    status: node.status,
+                    content: node.content,
+                    metadata: node.metadata
+                });
+            }
+
+            s.stats.nodes = s.graphData.nodes.length;
+            s.stats.code = s.graphData.nodes.filter(n => n.type === 'CODE').length;
+            updateStatsDisplay(session);
+            updateGraph(session);
+        }
+
+        function updateNodeStatus(session, nodeId, newStatus) {
+            const s = sessions[session];
+            const node = s.graphData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                node.status = newStatus;
+                if (newStatus === 'VERIFIED') s.stats.verified++;
+                else if (newStatus === 'FAILED') s.stats.failed++;
+                updateStatsDisplay(session);
+                updateGraph(session);
+            }
+        }
+
+        function addEdge(session, edge) {
+            const s = sessions[session];
+            s.graphData.links.push({
+                source: edge.source,
+                target: edge.target,
+                type: edge.type
+            });
+            // Count edge type
+            if (s.edges.hasOwnProperty(edge.type)) {
+                s.edges[edge.type]++;
+            }
+            updateEdgesDisplay(session);
+            updateGraph(session);
+        }
+
+        function updateEdgesDisplay(session) {
+            const s = sessions[session];
+            const prefix = session === 'baseline' ? 'baseline' : 'treatment';
+            const containerId = `${prefix}Edges`;
+
+            // Update counts and active states
+            const edgeTypes = ['TRACES_TO', 'DEPENDS_ON', 'IMPLEMENTS', 'TESTS', 'FEEDBACK'];
+            const idMap = {
+                'TRACES_TO': 'TracesTo',
+                'DEPENDS_ON': 'DependsOn',
+                'IMPLEMENTS': 'Implements',
+                'TESTS': 'Tests',
+                'FEEDBACK': 'Feedback'
+            };
+
+            edgeTypes.forEach(edgeType => {
+                const count = s.edges[edgeType] || 0;
+                const countEl = document.getElementById(`${prefix}${idMap[edgeType]}`);
+                if (countEl) {
+                    countEl.textContent = count;
+                }
+                // Set active class if count > 0
+                const edgeMini = document.querySelector(`#${containerId} [data-edge="${edgeType}"]`);
+                if (edgeMini) {
+                    edgeMini.classList.toggle('active', count > 0);
+                }
+            });
+        }
+
+        function updateAgent(session, role, status, nodeId) {
+            const containerId = session === 'baseline' ? 'baselineAgents' : 'treatmentAgents';
+            const agentEl = document.querySelector(`#${containerId} [data-agent="${role}"]`);
+            if (agentEl) {
+                agentEl.classList.toggle('working', status === 'working');
+            }
+        }
+
+        // Set which agent last processed a node (for stroke color)
+        function setNodeAgent(session, nodeId, agentRole) {
+            const s = sessions[session];
+            const node = s.graphData.nodes.find(n => n.id === nodeId);
+            if (node) {
+                node.agent = agentRole;
+                updateGraph(session);
+            }
+        }
+
+        // Get agent stroke style for a node
+        function getAgentStroke(agentRole) {
+            return AGENT_STROKES[agentRole] || AGENT_STROKES.NONE;
+        }
+
+        function updateStatsDisplay(session) {
+            const s = sessions[session];
+            const prefix = session === 'baseline' ? 'baseline' : 'treatment';
+
+            document.getElementById(`${prefix}Nodes`).textContent = s.stats.nodes;
+            document.getElementById(`${prefix}Code`).textContent = s.stats.code;
+            document.getElementById(`${prefix}Verified`).textContent = s.stats.verified;
+            document.getElementById(`${prefix}Failed`).textContent = s.stats.failed;
+            document.getElementById(`${prefix}Cost`).textContent = s.stats.cost.toFixed(2);
+        }
+
+        function updateComparison() {
+            const b = sessions.baseline.stats;
+            const t = sessions.treatment.stats;
+
+            // CODE nodes
+            document.getElementById('cmpCodeBaseline').textContent = b.code;
+            document.getElementById('cmpCodeTreatment').textContent = t.code;
+            const codeDelta = t.code - b.code;
+            const codeDeltaEl = document.getElementById('cmpCodeDelta');
+            codeDeltaEl.textContent = codeDelta > 0 ? `+${codeDelta}` : codeDelta;
+            codeDeltaEl.className = `delta ${codeDelta > 0 ? 'positive' : codeDelta < 0 ? 'negative' : 'neutral'}`;
+            document.getElementById('cmpCodeAssess').textContent = codeDelta > 0 ? 'Improvement' : codeDelta < 0 ? 'Regression' : '-';
+
+            // Verification rate
+            const bVerifyRate = b.nodes > 0 ? (b.verified / b.nodes * 100) : 0;
+            const tVerifyRate = t.nodes > 0 ? (t.verified / t.nodes * 100) : 0;
+            document.getElementById('cmpVerifyBaseline').textContent = `${bVerifyRate.toFixed(0)}%`;
+            document.getElementById('cmpVerifyTreatment').textContent = `${tVerifyRate.toFixed(0)}%`;
+            const verifyDelta = tVerifyRate - bVerifyRate;
+            const verifyDeltaEl = document.getElementById('cmpVerifyDelta');
+            verifyDeltaEl.textContent = verifyDelta !== 0 ? `${verifyDelta > 0 ? '+' : ''}${verifyDelta.toFixed(0)}%` : '-';
+            verifyDeltaEl.className = `delta ${verifyDelta > 0 ? 'positive' : verifyDelta < 0 ? 'negative' : 'neutral'}`;
+            document.getElementById('cmpVerifyAssess').textContent = verifyDelta > 5 ? 'Improvement' : verifyDelta < -5 ? 'Regression' : '-';
+
+            // Failure rate
+            const bFailRate = b.nodes > 0 ? (b.failed / b.nodes * 100) : 0;
+            const tFailRate = t.nodes > 0 ? (t.failed / t.nodes * 100) : 0;
+            document.getElementById('cmpFailBaseline').textContent = `${bFailRate.toFixed(0)}%`;
+            document.getElementById('cmpFailTreatment').textContent = `${tFailRate.toFixed(0)}%`;
+            const failDelta = tFailRate - bFailRate;
+            const failDeltaEl = document.getElementById('cmpFailDelta');
+            failDeltaEl.textContent = failDelta !== 0 ? `${failDelta > 0 ? '+' : ''}${failDelta.toFixed(0)}%` : '-';
+            failDeltaEl.className = `delta ${failDelta < 0 ? 'positive' : failDelta > 0 ? 'negative' : 'neutral'}`; // Lower failure is better
+            document.getElementById('cmpFailAssess').textContent = failDelta < -5 ? 'Improvement' : failDelta > 5 ? 'Regression' : '-';
+
+            // Cost
+            document.getElementById('cmpCostBaseline').textContent = `$${b.cost.toFixed(2)}`;
+            document.getElementById('cmpCostTreatment').textContent = `$${t.cost.toFixed(2)}`;
+            const costRatio = b.cost > 0 ? (t.cost / b.cost) : 1;
+            const costDeltaEl = document.getElementById('cmpCostDelta');
+            costDeltaEl.textContent = b.cost > 0 ? `${costRatio.toFixed(1)}x` : '-';
+            costDeltaEl.className = `delta ${costRatio > 2 ? 'negative' : costRatio < 1.5 ? 'positive' : 'neutral'}`;
+            document.getElementById('cmpCostAssess').textContent = costRatio > 2 ? 'Higher cost' : costRatio < 1.5 ? 'Acceptable' : 'Moderate';
+
+            // Pipeline depth (max node count)
+            document.getElementById('cmpDepthBaseline').textContent = b.nodes;
+            document.getElementById('cmpDepthTreatment').textContent = t.nodes;
+            const depthDelta = t.nodes - b.nodes;
+            const depthDeltaEl = document.getElementById('cmpDepthDelta');
+            depthDeltaEl.textContent = depthDelta !== 0 ? `${depthDelta > 0 ? '+' : ''}${depthDelta}` : '-';
+            depthDeltaEl.className = 'delta neutral';
+            document.getElementById('cmpDepthAssess').textContent = '-';
+        }
+
+        function addEvent(session, type, message, timestamp = new Date()) {
+            const listId = session === 'baseline' ? 'eventListBaseline' : 'eventListTreatment';
+            const countId = session === 'baseline' ? 'baselineEventCount' : 'treatmentEventCount';
+
+            const eventList = document.getElementById(listId);
+            const eventEl = document.createElement('div');
+            eventEl.className = 'event-item';
+
+            const timeStr = timestamp.toLocaleTimeString('en-US', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+
+            eventEl.innerHTML = `
+                <span class="event-time">${timeStr}</span>
+                <span class="event-type ${type}">${type}</span>
+                <span class="event-message">${message}</span>
+            `;
+
+            eventList.insertBefore(eventEl, eventList.firstChild);
+
+            const count = eventList.children.length;
+            document.getElementById(countId).textContent = `${count} events`;
+
+            while (eventList.children.length > 50) {
+                eventList.removeChild(eventList.lastChild);
+            }
+        }
+
+        function updateGraph(session) {
+            const s = sessions[session];
+
+            // Update links
+            s.linkGroup.selectAll('.link').remove();
+
+            // Helper to get edge style
+            const getEdgeStyle = (type) => EDGE_STYLES[type] || EDGE_STYLES.TRACES_TO;
+
+            const links = s.linkGroup.selectAll('.link')
+                .data(s.graphData.links, d => `${d.source.id || d.source}-${d.target.id || d.target}`)
+                .enter().append('line')
+                .attr('class', d => `link link-${d.type}`)
+                .attr('stroke', d => getEdgeStyle(d.type).color)
+                .attr('stroke-width', d => getEdgeStyle(d.type).width || 1.5)
+                .attr('stroke-dasharray', d => getEdgeStyle(d.type).dasharray)
+                .attr('marker-end', d => `url(#${getEdgeStyle(d.type).marker}-${session})`)
+                .on('mouseover', showEdgeTooltip)
+                .on('mouseout', hideTooltip);
+
+            // Update nodes
+            const node = s.nodeGroup.selectAll('.node')
+                .data(s.graphData.nodes, d => d.id);
+
+            node.exit().remove();
+
+            const nodeEnter = node.enter().append('g')
+                .attr('class', d => `node ${d.status === 'PROCESSING' ? 'processing' : ''}`)
+                .call(d3.drag()
+                    .on('start', (e, d) => dragstarted(e, d, session))
+                    .on('drag', (e, d) => dragged(e, d, session))
+                    .on('end', (e, d) => dragended(e, d, session)))
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip);
+
+            // Helper to get node shape
+            const getNodeShape = (type) => NODE_SHAPES[type] || d3.symbolCircle;
+
+            // Create shape path - COLOR = STATUS, SHAPE = TYPE, STROKE = AGENT
+            nodeEnter.append('path')
+                .attr('d', d => d3.symbol().type(getNodeShape(d.type)).size(600)())
+                .attr('fill', d => STATUS_COLORS[d.status] || '#6e7681')
+                .attr('stroke', d => getAgentStroke(d.agent).color)
+                .attr('stroke-width', d => getAgentStroke(d.agent).width);
+
+            nodeEnter.append('text')
+                .attr('dy', 4)
+                .text(d => d.type.charAt(0));
+
+            // Update existing nodes - update fill based on status, stroke based on agent
+            s.nodeGroup.selectAll('.node')
+                .attr('class', d => `node ${d.status === 'PROCESSING' ? 'processing' : ''}`)
+                .select('path')
+                .attr('fill', d => STATUS_COLORS[d.status] || '#6e7681')
+                .attr('stroke', d => getAgentStroke(d.agent).color)
+                .attr('stroke-width', d => getAgentStroke(d.agent).width);
+
+            // Update simulation
+            s.simulation.nodes(s.graphData.nodes);
+            s.simulation.force('link').links(s.graphData.links);
+            s.simulation.alpha(0.3).restart();
+
+            s.simulation.on('tick', () => {
+                s.linkGroup.selectAll('.link')
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                s.nodeGroup.selectAll('.node')
+                    .attr('transform', d => `translate(${d.x}, ${d.y})`);
+            });
+        }
+
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            const agentStyle = getAgentStroke(d.agent);
+            const agentLabel = d.agent ? `<span style="color: ${agentStyle.color}; font-weight: 600;">${d.agent}</span>` : '<span style="color: #6e7681;">Not processed</span>';
+            tooltip.innerHTML = `
+                <div class="tooltip-header">
+                    <span class="tooltip-type">${d.type}</span>
+                    <span class="tooltip-status ${d.status}">${d.status}</span>
+                </div>
+                <div class="tooltip-content">${d.content ? d.content.substring(0, 150) + '...' : 'No content'}</div>
+                <div class="tooltip-id">ID: ${d.id}</div>
+                <div class="tooltip-agent" style="margin-top: 6px; font-size: 11px;">Agent: ${agentLabel}</div>
+            `;
+            tooltip.style.left = (event.pageX + 15) + 'px';
+            tooltip.style.top = (event.pageY + 15) + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function showEdgeTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            const sourceId = d.source.id || d.source;
+            const targetId = d.target.id || d.target;
+            const edgeStyle = EDGE_STYLES[d.type] || EDGE_STYLES.TRACES_TO;
+            const description = edgeStyle.description || 'Unknown edge type';
+
+            tooltip.innerHTML = `
+                <div class="tooltip-header">
+                    <span class="tooltip-type" style="color: ${getEdgeColor(d.type)}">${d.type.replace('_', ' ')}</span>
+                </div>
+                <div class="tooltip-content" style="margin-bottom: 8px;">${description}</div>
+                <div class="tooltip-id" style="display: flex; flex-direction: column; gap: 4px;">
+                    <span>From: ${sourceId.substring(0, 8)}</span>
+                    <span>To: ${targetId.substring(0, 8)}</span>
+                </div>
+            `;
+            tooltip.style.left = (event.pageX + 15) + 'px';
+            tooltip.style.top = (event.pageY + 15) + 'px';
+            tooltip.classList.add('visible');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        function dragstarted(event, d, session) {
+            if (!event.active) sessions[session].simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d, session) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d, session) {
+            if (!event.active) sessions[session].simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        function zoomIn(session) {
+            sessions[session].svg.transition().duration(300).call(sessions[session].zoom.scaleBy, 1.3);
+        }
+
+        function zoomOut(session) {
+            sessions[session].svg.transition().duration(300).call(sessions[session].zoom.scaleBy, 0.7);
+        }
+
+        function resetZoom(session) {
+            sessions[session].svg.transition().duration(300).call(sessions[session].zoom.transform, d3.zoomIdentity);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "run_id": "20251203_054756",
+  "timestamp": "2025-12-03T05:47:56.597252",
+  "tasks": {
+    "total": 10,
+    "completed": 0,
+    "failed": 10,
+    "success_rate": 0.0
+  },
+  "cost": {
+    "total_usd": 0.0
+  },
+  "duration_seconds": 0.002939
+}

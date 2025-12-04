@@ -1,0 +1,20 @@
+{
+  "run_id": "20251203_042152",
+  "timestamp": "2025-12-03T04:23:02.627331",
+  "tasks": {
+    "total": 2,
+    "completed": 2,
+    "failed": 0,
+    "success_rate": 1.0
+  },
+  "cost": {
+    "total_usd": 0.081237,
+    "per_task_avg": 0.0406185
+  },
+  "tokens": {
+    "input": 7804,
+    "output": 3855
+  },
+  "duration_seconds": 70.529567,
+  "concurrency": 2
+}

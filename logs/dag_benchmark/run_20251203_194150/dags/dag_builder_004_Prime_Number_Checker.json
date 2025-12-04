@@ -1,0 +1,341 @@
+{
+  "metadata": {
+    "task_id": "builder_004",
+    "task_name": "Prime Number Checker",
+    "task_type": "builder",
+    "requirement": "Create a Python file `primes.py` with a function `is_prime(n)` that:\n1. Returns True if n is a prime number, False otherwise\n2. Returns False for numbers less than 2\n3. Uses efficient algorithm (check divisibility up to sqrt(n))\n",
+    "exported_at": "2025-12-03T19:44:21.056676",
+    "duration_seconds": 48.626443,
+    "stats": {
+      "total_nodes": 21,
+      "total_edges": 15,
+      "total_cost": 0.08802299999999999
+    }
+  },
+  "nodes": [
+    {
+      "id": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a fibonacci function",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "attempts": 2,
+        "cost_actual": 0.048366
+      }
+    },
+    {
+      "id": "8490510c8cad41daa184cdb51180a795",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 0.95,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Fibonacci sequence is a fundamental mathematical function used in algorithm design, mathematical modeling, and as a classic programming exercise to demonstrate recursive and iterative problem-solving techniques.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generate Fibonacci number for given index\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence ",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 0.95,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.023778
+      }
+    },
+    {
+      "id": "aee56178c0ba4127b485674e237419e5",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Implement a fibonacci function that generates the nth Fibonacci number recursively\n\nFunction Signature:\n- Input: int n (the position in the Fibonacci sequence, 0-indexed)\n- Output: int (the Fibonacci number at position n)\n- Constraints:\n  * Handle n >= 0\n  * Use recursive implementation\n  * Raise ValueError for negative inputs\n\nExample:\nfibonacci(0) -> 0\nfibonacci(1) -> 1\nfibonacci(5) -> 5",
+      "metadata": {
+        "file_path": "fibonacci.py",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "ccf60032c9d14a81b4a44db174d7b2a4",
+      "type": "TEST",
+      "status": "PENDING",
+      "content": "Test cases for fibonacci function:\n1. Test fibonacci(0) returns 0\n2. Test fibonacci(1) returns 1\n3. Test fibonacci(5) returns 5\n4. Test fibonacci(10) returns a correct large Fibonacci number\n5. Verify function raises ValueError for negative inputs",
+      "metadata": {
+        "file_path": "test_fibonacci.py"
+      }
+    },
+    {
+      "id": "106f9ea299074600b8e7386d8e10383a",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "def fibonacci(n: int) -> int:\n    \"\"\"\n    Generate the nth Fibonacci number using a recursive approach.\n\n    Args:\n        n (int): The position in the Fibonacci sequence (0-indexed).\n\n    Returns:\n        int: The Fibonacci number at the given position.\n\n    Raises:\n        ValueError: If the input is a negative number.\n\n    Examples:\n        >>> fibonacci(0)\n        0\n        >>> fibonacci(1)\n        1\n        >>> fibonacci(5)\n        5\n    \"\"\"\n    # Validate input\n    if n < 0:\n        raise ",
+      "metadata": {
+        "file_path": "fibonacci.py",
+        "language": "python",
+        "dependencies": null
+      }
+    },
+    {
+      "id": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 2,
+        "cost_actual": 0.048624
+      }
+    },
+    {
+      "id": "ab2decef3e8049108a1e7de907e1061f",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of Fibonacci sequence generation that handles edge cases and provides clear error handling.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly generates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence\",\n      \"is_automated\": true\n    },\n    {\n      \"criteri",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.017100000000000004
+      }
+    },
+    {
+      "id": "ce8beea9d63a4d7588c52490b3a16a94",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Create fib.py with fibonacci(n) function that:\n- Returns 0-indexed Fibonacci number\n- Uses iterative implementation\n- Input validation for non-negative numbers\n\nFunction signature: def fibonacci(n: int) -> int\n\nSpecific requirements:\n1. If n < 0, raise ValueError with message 'n must be non-negative'\n2. Handle base cases: fibonacci(0) = 0, fibonacci(1) = 1\n3. Use iterative approach with O(n) time complexity\n4. Avoid recursive implementation",
+      "metadata": {
+        "file_path": "fib.py",
+        "function_name": "fibonacci",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "4b120049ddf740869a207341111eeb7e",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "def fibonacci(n: int) -> int:\n    \"\"\"\n    Calculate the n-th Fibonacci number using an iterative approach.\n\n    Args:\n        n (int): The index of the Fibonacci number to calculate (0-indexed).\n\n    Returns:\n        int: The n-th Fibonacci number.\n\n    Raises:\n        ValueError: If the input is a negative number.\n\n    Time Complexity: O(n)\n    Space Complexity: O(1)\n    \"\"\"\n    # Input validation for non-negative numbers\n    if n < 0:\n        raise ValueError('n must be non-negative')\n    \n   ",
+      "metadata": {
+        "file_path": "fib.py",
+        "language": "python",
+        "dependencies": null
+      }
+    },
+    {
+      "id": "45c2d688979b4d0c8951cad541058381",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `fib.py` that implements a function `fibonacci(n)` which:\n1. Returns the n-th Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1)\n2. Raises a `ValueError` with message \"n must be non-negative\" for negative inputs\n3. Uses iterative approach (not recursive) for efficiency\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_001",
+        "attempts": 1,
+        "cost_actual": 0.037182
+      }
+    },
+    {
+      "id": "3225e5f5622a41bdab07eae751efba5e",
+      "type": "RESEARCH",
+      "status": "FAILED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need an efficient, iterative implementation of the Fibonacci sequence that handles edge cases and provides clear error handling.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly calculates Fibonacci numbers for non-negative inputs\",\n      \"test_method\": \"Verify output matches expected Fibonacci sequence values\",\n      \"is_automated\": true\n    },\n    {\n      \"criter",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "96ae6387014542e0abba1cd4c8ac32f9",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `calc.py` with a function `safe_divide(a, b)` that:\n1. Returns the result of a divided by b\n2. Raises `ZeroDivisionError` with message \"Cannot divide by zero\" when b is 0\n3. DO NOT return infinity or NaN - always raise for division by zero\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_002",
+        "attempts": 2,
+        "cost_actual": 0.048594
+      }
+    },
+    {
+      "id": "f4fd6a6d47ca4a8abe2be00adc7ac716",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers need a safe division function that handles zero division explicitly and prevents unexpected behavior in numerical computations\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Function returns correct division result for non-zero denominator\",\n      \"test_method\": \"Call function with valid inputs and verify correct output\",\n      \"is_automated\": true\n    },\n    {\n      \"crit",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.022031999999999996
+      }
+    },
+    {
+      "id": "5c32da66f884429e845e1302570de5e8",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Implement safe_divide(a, b) function in calc.py:\n- Function should take two numeric parameters a and b\n- Perform division a / b\n- If b is 0, raise ZeroDivisionError with message 'Cannot divide by zero'\n- Return the result of division for non-zero b\n- Ensure function works with integer and float inputs",
+      "metadata": {
+        "file_path": "calc.py",
+        "function_name": "safe_divide",
+        "attempts": 1
+      }
+    },
+    {
+      "id": "9850bf39488f4615b43457a534e02176",
+      "type": "TEST",
+      "status": "PENDING",
+      "content": "Create test cases for safe_divide():\n1. Test normal division with integers\n2. Test normal division with floats\n3. Test division by zero raises ZeroDivisionError with correct message\n4. Verify error is raised for b = 0, not just for b == 0",
+      "metadata": {
+        "file_path": "test_calc.py"
+      }
+    },
+    {
+      "id": "a49581dfa480498da63a07410fd3811b",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "def safe_divide(a: float, b: float) -> float:\n    \"\"\"\n    Perform a safe division operation with explicit zero division handling.\n\n    Args:\n        a (float): The numerator of the division.\n        b (float): The denominator of the division.\n\n    Returns:\n        float: The result of a divided by b.\n\n    Raises:\n        TypeError: If inputs are not numeric (int or float).\n        ZeroDivisionError: If the denominator is zero.\n    \"\"\"\n    # Validate input types\n    if not isinstance(a, (int, flo",
+      "metadata": {
+        "file_path": "calc.py",
+        "language": "python",
+        "dependencies": null
+      }
+    },
+    {
+      "id": "82b041a97df34ef697a78950b5ed4b5e",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `palindrome.py` with a function `is_palindrome(s)` that:\n1. Returns True if the string s is a palindrome (reads same forwards and backwards)\n2. Ignores case and non-alphanumeric characters\n3. Returns False for empty strings\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_003"
+      }
+    },
+    {
+      "id": "7535a043f7934dc7b6aba7d3931e6b8b",
+      "type": "REQ",
+      "status": "PROCESSING",
+      "content": "Create a Python file `primes.py` with a function `is_prime(n)` that:\n1. Returns True if n is a prime number, False otherwise\n2. Returns False for numbers less than 2\n3. Uses efficient algorithm (check divisibility up to sqrt(n))\n",
+      "metadata": {
+        "cost_limit": 5.0,
+        "max_attempts": 3,
+        "task_id": "builder_004",
+        "attempts": 2,
+        "cost_actual": 0.04921799999999999
+      }
+    },
+    {
+      "id": "72bca1d752cc44f8b9e309afe9f884b9",
+      "type": "RESEARCH",
+      "status": "VERIFIED",
+      "content": "{\n  \"maturity_level\": \"REVIEWABLE\",\n  \"completeness_score\": 1.0,\n  \"task_category\": \"algorithmic\",\n  \"why\": \"Developers and mathematicians often need to determine if a number is prime for various computational and mathematical applications, such as cryptography, number theory, and algorithm optimization.\",\n  \"success_criteria\": [\n    {\n      \"criterion\": \"Correctly identify prime numbers\",\n      \"test_method\": \"Verify is_prime() returns True for known prime numbers\",\n      \"is_automated\": true\n ",
+      "metadata": {
+        "maturity_level": "REVIEWABLE",
+        "completeness_score": 1.0,
+        "task_category": "algorithmic",
+        "attempts": 1,
+        "cost_actual": 0.022557
+      }
+    },
+    {
+      "id": "6d5613a44919485eb7e9712f4072b36f",
+      "type": "SPEC",
+      "status": "PROCESSING",
+      "content": "Implement is_prime(n) function in primes.py:\n- Input: Integer n\n- Return True if n is prime, False otherwise\n- Special cases: Return False for numbers < 2\n- Optimization: Check divisibility only up to sqrt(n)\n\nDetailed implementation steps:\n1. Handle edge cases (n < 2)\n2. Import math module for sqrt function\n3. Iterate from 2 to int(sqrt(n)) + 1\n4. Check if n is divisible by any number in this range\n5. Return True if no divisors found, False otherwise",
+      "metadata": {
+        "file_path": "primes.py",
+        "function_name": "is_prime",
+        "input_type": "int",
+        "return_type": "bool",
+        "attempts": 1,
+        "cost_actual": 0.016248
+      }
+    },
+    {
+      "id": "95a70681f2534da6afd1c846c3d927c2",
+      "type": "CODE",
+      "status": "PENDING",
+      "content": "import math\n\ndef is_prime(n: int) -> bool:\n    \"\"\"\n    Determine if a given number is prime.\n\n    Args:\n        n (int): The number to check for primality.\n\n    Returns:\n        bool: True if the number is prime, False otherwise.\n\n    Notes:\n    - Returns False for numbers less than 2\n    - Uses an efficient algorithm checking divisibility up to sqrt(n)\n    \"\"\"\n    # Handle edge cases: numbers less than 2 are not prime\n    if n < 2:\n        return False\n    \n    # Special case for 2, which is pr",
+      "metadata": {
+        "file_path": "primes.py",
+        "language": "python",
+        "dependencies": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "8490510c8cad41daa184cdb51180a795",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "aee56178c0ba4127b485674e237419e5",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ccf60032c9d14a81b4a44db174d7b2a4",
+      "target": "7df5ebb8ece041249fb294c369e1b8f2",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "106f9ea299074600b8e7386d8e10383a",
+      "target": "aee56178c0ba4127b485674e237419e5",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ab2decef3e8049108a1e7de907e1061f",
+      "target": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "ce8beea9d63a4d7588c52490b3a16a94",
+      "target": "ef59ebe58ea04d4a83b56b13cda23e14",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "4b120049ddf740869a207341111eeb7e",
+      "target": "ce8beea9d63a4d7588c52490b3a16a94",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "3225e5f5622a41bdab07eae751efba5e",
+      "target": "45c2d688979b4d0c8951cad541058381",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "f4fd6a6d47ca4a8abe2be00adc7ac716",
+      "target": "96ae6387014542e0abba1cd4c8ac32f9",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "5c32da66f884429e845e1302570de5e8",
+      "target": "96ae6387014542e0abba1cd4c8ac32f9",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "9850bf39488f4615b43457a534e02176",
+      "target": "96ae6387014542e0abba1cd4c8ac32f9",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "a49581dfa480498da63a07410fd3811b",
+      "target": "5c32da66f884429e845e1302570de5e8",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "72bca1d752cc44f8b9e309afe9f884b9",
+      "target": "7535a043f7934dc7b6aba7d3931e6b8b",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "6d5613a44919485eb7e9712f4072b36f",
+      "target": "7535a043f7934dc7b6aba7d3931e6b8b",
+      "type": "TRACES_TO"
+    },
+    {
+      "source": "95a70681f2534da6afd1c846c3d927c2",
+      "target": "6d5613a44919485eb7e9712f4072b36f",
+      "type": "TRACES_TO"
+    }
+  ]
+}

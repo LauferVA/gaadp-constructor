@@ -1,0 +1,61 @@
+# GAADP Benchmark Suite Configuration
+# Run with: python scripts/benchmark_suite.py
+#
+# Philosophy: No targets, no thresholds. Only measurement.
+# We track metrics over time to understand what drives change.
+
+version: "1.0"
+
+# Metrics we capture for each benchmark run
+# These are measured, not judged
+metrics:
+  # Graph Physics (structural integrity)
+  - name: tovs
+    description: Topological Order Violation Score (0 = perfect ordering)
+  - name: icr
+    description: Import Consistency Ratio (1 = all imports match edges)
+  - name: gcr
+    description: God Class Ratio (lower = more balanced modules)
+  - name: dsr
+    description: Dependency Satisfaction Rate (1 = all deps verified)
+
+  # Trajectory (execution behavior)
+  - name: oscillations
+    description: State flip-flops indicating instability
+  - name: token_efficiency
+    description: Useful tokens / total tokens
+  - name: cost_per_verified_node
+    description: Economic efficiency metric
+  - name: iteration_efficiency
+    description: Actual / optimal iteration count
+
+  # Basic execution stats
+  - name: execution_time
+    description: Wall-clock time in seconds
+  - name: total_cost
+    description: Total API cost in USD
+  - name: nodes_processed
+    description: Total nodes processed
+
+# Benchmark test cases
+# Each benchmark is a specific prompt we run through the system
+benchmarks:
+  - id: hello_world
+    prompt_file: test_prompts/hello_world.txt
+    description: Simplest possible test - single file output
+    tags: [simple, smoke, tier1]
+
+  - id: calculator_package
+    prompt_file: test_prompts/calculator_package.txt
+    description: Multi-file package with dependencies
+    tags: [multi-file, dependencies, tier2]
+
+  - id: asteroid_game
+    prompt_file: test_prompts/asteroid_game.txt
+    description: Complex 5-file pygame application
+    tags: [complex, dependencies, ui, tier3]
+
+# Tiers map roughly to SWE-bench complexity
+# Tier 1: 1 file, 1-2 functions, <30 lines
+# Tier 2: 2-3 files, 3-5 functions, 30-100 lines
+# Tier 3: 4+ files, 5+ functions, 100+ lines

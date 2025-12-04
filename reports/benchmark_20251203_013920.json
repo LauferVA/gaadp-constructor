@@ -1,0 +1,62 @@
+{
+  "run_id": "20251203_013920",
+  "commit": "7910d60",
+  "timestamp": "2025-12-03T01:39:34.535892",
+  "suite": "benchmarks/suite.yaml",
+  "results": [
+    {
+      "id": "hello_world",
+      "run_id": "20251203_013920",
+      "commit": "7910d60",
+      "status": "COMPLETED",
+      "timestamp": "2025-12-03T01:39:34.488598",
+      "prompt": "PROJECT: Hello World\nTARGET DIR: hello/\n\nOBJECTIVES:\nCreate a simple hello world function that prints \"Hello, World!\" to stdout.\n\nEXPECTED OUTPUT:\n- hello.py: Single file with greet() function\n",
+      "execution": {
+        "time_seconds": 13.92153286933899,
+        "iterations": 4,
+        "nodes_processed": 3,
+        "errors": 0,
+        "total_cost": 0.025598999999999997
+      },
+      "output_dir": "workspace/benchmark_hello_world_20251203_013920",
+      "graph_physics": {
+        "tovs": 0.0,
+        "icr": 0.0,
+        "gcr": 1.7123287671232876,
+        "dsr": 0.0,
+        "details": {
+          "tovs_violations": 0,
+          "phantom_imports": 8,
+          "largest_module_loc": 250,
+          "unsatisfied_deps": 14
+        }
+      },
+      "trajectory": {
+        "oscillations": 0,
+        "token_efficiency": 0.0,
+        "cost_per_verified_node": Infinity,
+        "iteration_efficiency": 1.0,
+        "details": {
+          "tokens_total": 0,
+          "tokens_wasted": 0,
+          "llm_calls": 0,
+          "state_transitions": 3
+        }
+      }
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "completed": 1,
+    "errors": 0,
+    "avg_time_seconds": 13.92153286933899,
+    "avg_cost": 0.025598999999999997,
+    "total_cost": 0.025598999999999997,
+    "avg_tovs": 0.0,
+    "avg_icr": 0.0,
+    "avg_gcr": 1.7123287671232876,
+    "avg_dsr": 0.0,
+    "avg_oscillations": 0.0,
+    "avg_token_efficiency": 0.0
+  }
+}

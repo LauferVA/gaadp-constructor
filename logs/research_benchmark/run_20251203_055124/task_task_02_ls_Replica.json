@@ -1,0 +1,250 @@
+{
+  "task_id": "task_02",
+  "task_name": "ls Replica",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.95,
+    "task_category": "systems",
+    "why": "Users need a cross-platform way to list directory contents with detailed file information (permissions, ownership, timestamps, sizes) that works consistently across different operating systems, replicating the familiar Unix 'ls -la' behavior for system administration, file management, and automation scripts.",
+    "success_criteria": [
+      {
+        "criterion": "Lists all files and directories including hidden ones (starting with '.')",
+        "test_method": "Run on directory with hidden files, verify all entries are shown",
+        "is_automated": true
+      },
+      {
+        "criterion": "Shows detailed file information: permissions, links, owner, group, size, timestamp, name",
+        "test_method": "Compare output format with actual 'ls -la' command",
+        "is_automated": true
+      },
+      {
+        "criterion": "Displays file permissions in Unix format (e.g., 'drwxr-xr-x')",
+        "test_method": "Check that permissions string matches expected 10-character format",
+        "is_automated": true
+      },
+      {
+        "criterion": "Shows file sizes in bytes",
+        "test_method": "Verify file sizes match actual file sizes from os.path.getsize()",
+        "is_automated": true
+      },
+      {
+        "criterion": "Displays modification timestamps in readable format",
+        "test_method": "Check timestamp format matches 'ls -la' style (e.g., 'Jan 15 14:30')",
+        "is_automated": true
+      },
+      {
+        "criterion": "Handles directories that don't exist gracefully",
+        "test_method": "Pass non-existent directory path, verify appropriate error handling",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "directory_path",
+        "type": "str",
+        "validation": "isinstance(directory_path, str)",
+        "trust_boundary": "untrusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "listing_output",
+        "type": "str",
+        "postcondition": "isinstance(listing_output, str) and len(listing_output) > 0"
+      }
+    ],
+    "happy_path_examples": [
+      {
+        "input": {
+          "directory_path": "/home/user/documents"
+        },
+        "expected_output": "total 24\ndrwxr-xr-x  3 user user 4096 Jan 15 14:30 .\ndrwxr-xr-x  5 user user 4096 Jan 15 14:25 ..\n-rw-r--r--  1 user user 1024 Jan 15 14:30 file.txt\ndrwxr-xr-x  2 user user 4096 Jan 15 14:28 subdir",
+        "explanation": "Standard directory listing with mixed files and subdirectories"
+      },
+      {
+        "input": {
+          "directory_path": "."
+        },
+        "expected_output": "total 12\ndrwxr-xr-x  2 user user 4096 Jan 15 14:30 .\ndrwxr-xr-x  3 user user 4096 Jan 15 14:25 ..\n-rw-r--r--  1 user user  156 Jan 15 14:30 ls_replica.py",
+        "explanation": "Current directory listing showing the script itself"
+      }
+    ],
+    "edge_case_examples": [
+      {
+        "input": {
+          "directory_path": "/root"
+        },
+        "expected_output": "Permission denied: /root",
+        "why_edge": "Directory with restricted permissions that current user cannot access"
+      },
+      {
+        "input": {
+          "directory_path": "/empty_dir"
+        },
+        "expected_output": "total 0\ndrwxr-xr-x  2 user user 4096 Jan 15 14:30 .\ndrwxr-xr-x  3 user user 4096 Jan 15 14:25 ..",
+        "why_edge": "Empty directory should still show . and .. entries with total 0"
+      },
+      {
+        "input": {
+          "directory_path": "/dir/with/.hidden_files"
+        },
+        "expected_output": "total 16\ndrwxr-xr-x  2 user user 4096 Jan 15 14:30 .\ndrwxr-xr-x  3 user user 4096 Jan 15 14:25 ..\n-rw-r--r--  1 user user  100 Jan 15 14:30 .bashrc\n-rw-r--r--  1 user user  200 Jan 15 14:30 .profile",
+        "why_edge": "Directory containing only hidden files (starting with dot) - all should be visible"
+      }
+    ],
+    "error_case_examples": [
+      {
+        "input": {
+          "directory_path": "/nonexistent/path"
+        },
+        "expected_exception": "FileNotFoundError: Directory '/nonexistent/path' not found",
+        "explanation": "Non-existent directory should raise clear error"
+      },
+      {
+        "input": {
+          "directory_path": "/etc/passwd"
+        },
+        "expected_exception": "NotADirectoryError: '/etc/passwd' is not a directory",
+        "explanation": "Passing a file path instead of directory should raise appropriate error"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "Should the output exactly match 'ls -la' format or can it be functionally equivalent?",
+        "options": [
+          "Exact byte-for-byte match",
+          "Functionally equivalent with same information",
+          "Close approximation"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Functionally equivalent with same information",
+        "rationale": "Cross-platform compatibility requires some differences (e.g., Windows doesn't have same user/group concepts), but all essential information should be present"
+      },
+      {
+        "description": "How to handle Windows vs Unix permission differences?",
+        "options": [
+          "Only work on Unix systems",
+          "Simulate Unix permissions on Windows",
+          "Show platform-appropriate permissions"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Simulate Unix permissions on Windows",
+        "rationale": "Goal is to replicate 'ls -la' behavior, so Unix-style permissions should be shown even on Windows"
+      },
+      {
+        "description": "Should symbolic links be dereferenced or shown as links?",
+        "options": [
+          "Show as symbolic links with -> target",
+          "Dereference and show target info",
+          "Show both link and target info"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Show as symbolic links with -> target",
+        "rationale": "This matches 'ls -la' behavior which shows symbolic links with their targets"
+      }
+    ],
+    "complexity_time": "O(n)",
+    "complexity_space": "O(n)",
+    "complexity_justification": "n = number of files in directory. Must stat() each file once to get metadata, and store file information for sorting/formatting. Linear time and space complexity.",
+    "unit_tests": [
+      {
+        "name": "test_shows_hidden_files",
+        "assertion": "'.bashrc' in ls_replica('/home/test') and '.profile' in ls_replica('/home/test')",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_detailed_format",
+        "assertion": "all(len(line.split()) >= 8 for line in ls_replica('/tmp').split('\\n')[1:] if line.strip())",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_permissions_format",
+        "assertion": "re.match(r'^[d-][rwx-]{9}', ls_replica('/tmp').split('\\n')[1].split()[0])",
+        "traces_to_criterion": 2,
+        "priority": "high"
+      },
+      {
+        "name": "test_file_sizes",
+        "assertion": "os.path.getsize('/tmp/test.txt') == int(ls_replica('/tmp').split('\\n')[2].split()[4])",
+        "traces_to_criterion": 3,
+        "priority": "high"
+      },
+      {
+        "name": "test_timestamp_format",
+        "assertion": "re.match(r'^\\w{3}\\s+\\d{1,2}\\s+\\d{2}:\\d{2}', ' '.join(ls_replica('/tmp').split('\\n')[1].split()[5:8]))",
+        "traces_to_criterion": 4,
+        "priority": "medium"
+      },
+      {
+        "name": "test_nonexistent_directory",
+        "assertion": "pytest.raises(FileNotFoundError, ls_replica, '/nonexistent/path')",
+        "traces_to_criterion": 5,
+        "priority": "high"
+      }
+    ],
+    "forbidden_patterns": [
+      "os.system(",
+      "subprocess.call('ls",
+      "eval(",
+      "exec("
+    ],
+    "trust_boundary": "untrusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "ls_replica.py",
+        "purpose": "Main script implementing ls -la functionality with file stat operations and formatting"
+      }
+    ],
+    "entry_point": "ls_replica.py",
+    "dependencies": [
+      "os",
+      "stat",
+      "pwd",
+      "grp",
+      "time",
+      "sys"
+    ],
+    "reasoning": "Analyzed this as a systems task requiring file system operations and Unix command replication. Key ambiguities resolved around cross-platform compatibility and output format fidelity. The implementation needs to handle file permissions, ownership, timestamps, and directory traversal while maintaining security against path traversal attacks. Standard library modules are sufficient for file system operations without external dependencies."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": false,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": true,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": false,
+    "issues": [
+      "Criterion 1: Input validation is not executable Python code. 'isinstance(directory_path, str)' only checks type but doesn't validate that the path is safe or properly formatted",
+      "Criterion 10: Found ambiguous pronouns: 'it' in files[0].purpose ('implementing ls -la functionality with file stat operations and formatting' - what does 'it' refer to?), multiple instances of 'this' without clear referents in reasoning section"
+    ],
+    "suggestions": [
+      "For input validation, use executable expressions like: 'isinstance(directory_path, str) and len(directory_path.strip()) > 0 and not any(char in directory_path for char in [\";\", \"|\", \"&\", \"`\"])'",
+      "Replace 'it' in file purpose with explicit subject: 'Main script implementing ls -la functionality with file stat operations and formatting'",
+      "In reasoning section, replace 'this' with specific referents like 'the task', 'the implementation', or 'the artifact'"
+    ],
+    "reasoning": "The artifact is well-structured with comprehensive examples, proper complexity analysis, and good test coverage. However, it fails on two critical criteria: the input validation is not sufficiently robust for a security-sensitive file system operation, and there are several ambiguous pronoun references that could cause confusion during implementation. The artifact needs 8/10 criteria to pass but only achieves 7/10.",
+    "verification_method": "tiebreaker_median",
+    "deterministic_score": 10,
+    "llm_score": 8
+  },
+  "attempts": 1,
+  "total_cost": 0.18521399999999996,
+  "total_tokens": {
+    "input": 48341,
+    "output": 17315
+  },
+  "duration_seconds": 61.825628,
+  "error": null
+}

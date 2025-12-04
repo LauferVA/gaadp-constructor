@@ -1,0 +1,239 @@
+{
+  "task_id": "task_04",
+  "task_name": "Markdown Parser",
+  "success": true,
+  "research_output": {
+    "maturity_level": "REVIEWABLE",
+    "completeness_score": 0.9,
+    "task_category": "algorithmic",
+    "why": "Users need to convert Markdown text to HTML for web display, documentation generation, and content management systems. This enables rich text formatting while maintaining human-readable source text.",
+    "success_criteria": [
+      {
+        "criterion": "Correctly converts headers (# ## ###) to HTML h1, h2, h3 tags",
+        "test_method": "Parse markdown with headers, verify HTML output contains proper h1/h2/h3 tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts bold text (**text**) to HTML strong tags",
+        "test_method": "Parse markdown with bold text, verify HTML output contains <strong> tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts italic text (*text*) to HTML em tags",
+        "test_method": "Parse markdown with italic text, verify HTML output contains <em> tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Correctly converts paragraphs separated by blank lines to HTML p tags",
+        "test_method": "Parse markdown with paragraphs, verify HTML output contains <p> tags",
+        "is_automated": true
+      },
+      {
+        "criterion": "Handles nested formatting (bold inside headers, etc.)",
+        "test_method": "Parse markdown with nested formatting, verify correct HTML nesting",
+        "is_automated": true
+      }
+    ],
+    "inputs": [
+      {
+        "name": "markdown_text",
+        "type": "str",
+        "validation": "isinstance(markdown_text, str)",
+        "trust_boundary": "untrusted"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "html_output",
+        "type": "str",
+        "postcondition": "isinstance(html_output, str) and len(html_output) >= 0"
+      }
+    ],
+    "happy_path_examples": [
+      {
+        "input": {
+          "markdown_text": "# Hello World\n\nThis is a **bold** paragraph."
+        },
+        "expected_output": "<h1>Hello World</h1>\n<p>This is a <strong>bold</strong> paragraph.</p>",
+        "explanation": "Basic header and bold text conversion"
+      },
+      {
+        "input": {
+          "markdown_text": "## Subtitle\n\nThis has *italic* text and **bold** text."
+        },
+        "expected_output": "<h2>Subtitle</h2>\n<p>This has <em>italic</em> text and <strong>bold</strong> text.</p>",
+        "explanation": "Mixed formatting with h2 header"
+      },
+      {
+        "input": {
+          "markdown_text": "Paragraph one.\n\nParagraph two."
+        },
+        "expected_output": "<p>Paragraph one.</p>\n<p>Paragraph two.</p>",
+        "explanation": "Multiple paragraphs separated by blank line"
+      }
+    ],
+    "edge_case_examples": [
+      {
+        "input": {
+          "markdown_text": ""
+        },
+        "expected_output": "",
+        "why_edge": "Empty input should produce empty output"
+      },
+      {
+        "input": {
+          "markdown_text": "# Header with **bold** inside"
+        },
+        "expected_output": "<h1>Header with <strong>bold</strong> inside</h1>",
+        "why_edge": "Nested formatting within headers"
+      },
+      {
+        "input": {
+          "markdown_text": "Text with no formatting"
+        },
+        "expected_output": "<p>Text with no formatting</p>",
+        "why_edge": "Plain text should still be wrapped in paragraph tags"
+      },
+      {
+        "input": {
+          "markdown_text": "**unclosed bold"
+        },
+        "expected_output": "<p>**unclosed bold</p>",
+        "why_edge": "Malformed markdown should be treated as literal text"
+      }
+    ],
+    "error_case_examples": [
+      {
+        "input": {
+          "markdown_text": 123
+        },
+        "expected_exception": "TypeError: markdown_text must be a string",
+        "explanation": "Non-string input should raise type error"
+      }
+    ],
+    "ambiguities": [
+      {
+        "description": "Should single asterisks (*text*) be treated as italic or emphasis?",
+        "options": [
+          "Convert to <em> tags",
+          "Convert to <i> tags",
+          "Leave as literal text"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Convert to <em> tags",
+        "rationale": "HTML5 semantic standard recommends <em> for emphasis over presentational <i>"
+      },
+      {
+        "description": "How to handle multiple consecutive blank lines between paragraphs?",
+        "options": [
+          "Treat as single paragraph break",
+          "Preserve as multiple <br> tags",
+          "Ignore extra blank lines"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Treat as single paragraph break",
+        "rationale": "Standard markdown behavior treats multiple blank lines as single paragraph separator"
+      },
+      {
+        "description": "What to do with malformed markdown (unclosed formatting)?",
+        "options": [
+          "Attempt to auto-close",
+          "Treat as literal text",
+          "Raise parsing error"
+        ],
+        "resolution_status": "resolved",
+        "chosen_option": "Treat as literal text",
+        "rationale": "Graceful degradation - malformed markdown should still produce readable output"
+      }
+    ],
+    "complexity_time": "O(n)",
+    "complexity_space": "O(n)",
+    "complexity_justification": "n = length of input text. Must scan through input once for parsing, output size proportional to input size.",
+    "unit_tests": [
+      {
+        "name": "test_header_conversion",
+        "assertion": "parse_markdown('# Test') == '<h1>Test</h1>'",
+        "traces_to_criterion": 0,
+        "priority": "critical"
+      },
+      {
+        "name": "test_bold_conversion",
+        "assertion": "parse_markdown('**bold**') == '<p><strong>bold</strong></p>'",
+        "traces_to_criterion": 1,
+        "priority": "critical"
+      },
+      {
+        "name": "test_italic_conversion",
+        "assertion": "parse_markdown('*italic*') == '<p><em>italic</em></p>'",
+        "traces_to_criterion": 2,
+        "priority": "critical"
+      },
+      {
+        "name": "test_paragraph_conversion",
+        "assertion": "'<p>' in parse_markdown('Hello world') and '</p>' in parse_markdown('Hello world')",
+        "traces_to_criterion": 3,
+        "priority": "critical"
+      },
+      {
+        "name": "test_nested_formatting",
+        "assertion": "parse_markdown('# **Bold Header**') == '<h1><strong>Bold Header</strong></h1>'",
+        "traces_to_criterion": 4,
+        "priority": "high"
+      },
+      {
+        "name": "test_empty_input",
+        "assertion": "parse_markdown('') == ''",
+        "traces_to_criterion": 3,
+        "priority": "medium"
+      }
+    ],
+    "forbidden_patterns": [
+      "eval(",
+      "exec(",
+      "import os",
+      "import subprocess",
+      "__import__"
+    ],
+    "trust_boundary": "untrusted",
+    "cost_limit": 1.0,
+    "max_attempts": 3,
+    "files": [
+      {
+        "path": "markdown_parser.py",
+        "purpose": "Main markdown to HTML conversion logic with parsing functions"
+      }
+    ],
+    "entry_point": "markdown_parser.py",
+    "dependencies": [],
+    "reasoning": "Analyzed this as an algorithmic text processing task requiring pattern matching and string transformation. Key design decisions: chose semantic HTML tags over presentational ones, graceful handling of malformed input, and standard markdown paragraph behavior. The parser will use regex or state-machine approach for efficiency while maintaining simplicity."
+  },
+  "verification_output": {
+    "verdict": "PASS",
+    "completeness_score": 1.0,
+    "criteria_passed": 10,
+    "criterion_1_input_types": true,
+    "criterion_2_output_types": true,
+    "criterion_3_examples": true,
+    "criterion_4_complexity": true,
+    "criterion_5_dependencies": true,
+    "criterion_6_security": true,
+    "criterion_7_files": true,
+    "criterion_8_tests": true,
+    "criterion_9_rationale": true,
+    "criterion_10_no_ambiguity": true,
+    "issues": null,
+    "suggestions": null,
+    "reasoning": "Excellent Research Artifact that meets all 10 criteria. Input types are fully specified with executable validation expressions. Output types include proper Python annotations and postconditions. All three example categories are present with concrete, realistic test cases. Complexity bounds are clearly stated with justification. Dependencies are declared (empty array). Security posture is well-defined with forbidden patterns and trust boundary classification. File structure is appropriately mapped for this single-file algorithmic task. Unit tests are comprehensive with proper traces_to_criterion mappings. Research rationale is thoroughly documented with design decisions. No ambiguous pronouns found - all references are clear and explicit.",
+    "verification_method": "llm",
+    "deterministic_score": 10,
+    "llm_score": 10
+  },
+  "attempts": 1,
+  "total_cost": 0.14193599999999998,
+  "total_tokens": {
+    "input": 80488,
+    "output": 26149
+  },
+  "duration_seconds": 35.920873,
+  "error": null
+}
