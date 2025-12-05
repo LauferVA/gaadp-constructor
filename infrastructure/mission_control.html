@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAADP Mission Control</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-panel: #16213e;
+            --bg-card: #0f3460;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --accent: #4ecdc4;
+            --border: #2a4a6e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* ================================================================
+           HEADER
+           ================================================================ */
+        .header {
+            background: var(--bg-panel);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            height: 50px;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .header-info {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .mode-badge {
+            background: var(--accent);
+            color: var(--bg-dark);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* ================================================================
+           MAIN LAYOUT
+           ================================================================ */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+
+        /* Panels container - flexes based on mode */
+        .panels-container {
+            flex: 1;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        /* Single panel in single mode, two panels in comparison mode */
+        .dag-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-panel);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .panel-stats {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* DAG SVG container */
+        .dag-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dag-container svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-panel);
+            border-left: 1px solid var(--border);
+        }
+
+        /* ================================================================
+           SIDEBAR SECTIONS
+           ================================================================ */
+        .sidebar-section {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header {
+            padding: 10px 12px;
+            background: var(--bg-card);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-header:hover {
+            background: var(--border);
+        }
+
+        .section-content {
+            padding: 10px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Legend */
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .metric-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Delta row (for comparison mode) */
+        .delta-row {
+            display: none;
+            background: var(--bg-card);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .comparison-mode .delta-row {
+            display: block;
+        }
+
+        .delta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            font-size: 10px;
+        }
+
+        .delta-item {
+            text-align: center;
+        }
+
+        .delta-value {
+            font-weight: 700;
+        }
+
+        .delta-value.positive { color: #27ae60; }
+        .delta-value.negative { color: #e74c3c; }
+        .delta-value.neutral { color: var(--text-secondary); }
+
+        /* Event log */
+        .event-log {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .event-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 12px;
+        }
+
+        .event-item {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+        }
+
+        .event-item:hover {
+            background: var(--border);
+        }
+
+        .event-item.selected {
+            border-left-color: var(--accent);
+        }
+
+        .event-time {
+            color: var(--text-secondary);
+            font-size: 9px;
+        }
+
+        .event-type {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .event-type.node_created { color: #4ecdc4; }
+        .event-type.status_change { color: #f39c12; }
+        .event-type.edge_created { color: #9b59b6; }
+        .event-type.agent_started { color: #3498db; }
+        .event-type.agent_finished { color: #27ae60; }
+        .event-type.error { color: #e74c3c; }
+
+        /* Playback controls */
+        .playback-controls {
+            padding: 8px 12px;
+            background: var(--bg-card);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .playback-btn {
+            background: var(--border);
+            border: none;
+            color: var(--text-primary);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .playback-btn:hover {
+            background: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .playback-slider {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--border);
+            border-radius: 2px;
+        }
+
+        .playback-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Agent dialogue */
+        .dialogue-section {
+            flex: 0 0 150px;
+            border-top: 1px solid var(--border);
+        }
+
+        .chat-messages {
+            height: 100px;
+            overflow-y: auto;
+            padding: 8px 12px;
+        }
+
+        .chat-message {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+
+        .chat-message.user {
+            background: var(--border);
+            text-align: right;
+        }
+
+        .chat-message.agent {
+            background: var(--bg-card);
+        }
+
+        .chat-input-row {
+            display: flex;
+            padding: 8px;
+            gap: 8px;
+            background: var(--bg-card);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .chat-send {
+            background: var(--accent);
+            border: none;
+            color: var(--bg-dark);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* ================================================================
+           D3 SVG STYLES
+           ================================================================ */
+        .node {
+            cursor: pointer;
+        }
+
+        .node circle {
+            stroke-width: 2px;
+        }
+
+        .node text {
+            font-size: 10px;
+            fill: var(--text-primary);
+            pointer-events: none;
+        }
+
+        .link {
+            fill: none;
+            stroke-width: 1.5px;
+            stroke-opacity: 0.6;
+        }
+
+        .link.DEPENDS_ON { stroke-dasharray: 5,3; }
+        .link.TRACES_TO { stroke-dasharray: 2,2; }
+        .link.FEEDBACK { stroke-dasharray: 8,3,2,3; }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            font-size: 11px;
+            max-width: 300px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .tooltip-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--accent);
+        }
+
+        .tooltip-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+        }
+
+        .tooltip-label {
+            color: var(--text-secondary);
+        }
+
+        /* Connection status */
+        .connection-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            z-index: 1000;
+        }
+
+        .connection-status.connected {
+            background: #27ae60;
+            color: white;
+        }
+
+        .connection-status.disconnected {
+            background: #e74c3c;
+            color: white;
+        }
+
+        /* Question modal */
+        .question-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .question-modal.active {
+            display: flex;
+        }
+
+        .question-content {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .question-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .question-text {
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .question-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .question-option {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .question-option:hover {
+            border-color: var(--accent);
+        }
+
+        .question-input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+        }
+
+        .question-submit {
+            background: var(--accent);
+            border: none;
+            color: var(--bg-dark);
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>GAADP Mission Control</h1>
+        <div class="header-info">
+            <span>Mode: <span class="mode-badge" id="mode-badge">SINGLE</span></span>
+            <span>WebSocket: <span id="ws-status">Connecting...</span></span>
+            <span id="git-info"></span>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container" id="main-container">
+        <!-- Panels Container (1 or 2 DAG panels based on mode) -->
+        <div class="panels-container" id="panels-container">
+            <!-- Panels injected by JS based on mode -->
+        </div>
+
+        <!-- Sidebar (shared) -->
+        <div class="sidebar">
+            <!-- Legend (shared - not duplicated) -->
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <span>Legend</span>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="legend-grid" id="node-legend"></div>
+                    <div style="margin-top: 10px; font-size: 10px; color: var(--text-secondary);">Edge Types:</div>
+                    <div class="legend-grid" id="edge-legend" style="margin-top: 6px;"></div>
+                </div>
+            </div>
+
+            <!-- Metrics (with delta row for comparison) -->
+            <div class="sidebar-section">
+                <div class="section-header">
+                    <span>Metrics</span>
+                    <span>▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="metrics-grid" id="metrics-grid"></div>
+                    <div class="delta-row" id="delta-row">
+                        <div style="font-size: 9px; color: var(--text-secondary); margin-bottom: 6px;">DELTA (Treatment - Baseline)</div>
+                        <div class="delta-grid" id="delta-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Log (with playback) -->
+            <div class="sidebar-section event-log">
+                <div class="section-header">
+                    <span>Event Log</span>
+                    <span id="event-count">0</span>
+                </div>
+                <div class="playback-controls">
+                    <button class="playback-btn" id="playback-start">⏮</button>
+                    <button class="playback-btn" id="playback-prev">◀</button>
+                    <button class="playback-btn" id="playback-play">▶</button>
+                    <button class="playback-btn" id="playback-next">▶</button>
+                    <button class="playback-btn" id="playback-end">⏭</button>
+                    <input type="range" class="playback-slider" id="playback-slider" min="0" max="100" value="100">
+                </div>
+                <div class="event-list" id="event-list"></div>
+            </div>
+
+            <!-- Agent Dialogue (shared - not duplicated) -->
+            <div class="dialogue-section">
+                <div class="section-header">
+                    <span>Agent Dialogue</span>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-row">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Type a message...">
+                    <button class="chat-send" id="chat-send">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip" style="display: none;"></div>
+
+    <!-- Connection Status -->
+    <div class="connection-status disconnected" id="connection-status">Disconnected</div>
+
+    <!-- Question Modal -->
+    <div class="question-modal" id="question-modal">
+        <div class="question-content">
+            <div class="question-title" id="question-title">Question from Agent</div>
+            <div class="question-text" id="question-text"></div>
+            <div class="question-options" id="question-options"></div>
+            <input type="text" class="question-input" id="question-input" placeholder="Or type your answer...">
+            <button class="question-submit" id="question-submit">Submit Answer</button>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        // STATE
+        // ================================================================
+        const state = {
+            mode: 'single',
+            sessions: {},
+            activeSession: 'default',
+            config: {
+                node_types: [],
+                edge_types: [],
+                node_statuses: [],
+                agent_types: [],
+                node_colors: {},
+                status_colors: {},
+                edge_colors: {},
+                agent_colors: {},
+            },
+            chatMessages: [],
+            pendingQuestions: [],
+            playbackIndex: -1, // -1 means live mode
+            isPlaying: false,
+        };
+
+        let ws = null;
+        const simulations = {}; // D3 simulations per session
+
+        // ================================================================
+        // INITIALIZATION
+        // ================================================================
+        function init() {
+            // Get mode from URL
+            const params = new URLSearchParams(window.location.search);
+            state.mode = params.get('mode') || 'single';
+
+            document.getElementById('mode-badge').textContent = state.mode.toUpperCase();
+            if (state.mode === 'comparison') {
+                document.getElementById('main-container').classList.add('comparison-mode');
+            }
+
+            // Initialize panels based on mode
+            initPanels();
+
+            // Connect WebSocket
+            connectWebSocket();
+
+            // Setup event listeners
+            setupEventListeners();
+        }
+
+        function initPanels() {
+            const container = document.getElementById('panels-container');
+            container.innerHTML = '';
+
+            if (state.mode === 'single') {
+                container.appendChild(createPanel('default', 'DAG Visualization'));
+            } else {
+                container.appendChild(createPanel('baseline', 'BASELINE'));
+                container.appendChild(createPanel('treatment', 'TREATMENT'));
+            }
+        }
+
+        function createPanel(sessionName, title) {
+            const panel = document.createElement('div');
+            panel.className = 'dag-panel';
+            panel.id = `panel-${sessionName}`;
+            panel.innerHTML = `
+                <div class="panel-header">
+                    <span class="panel-title">${title}</span>
+                    <span class="panel-stats" id="stats-${sessionName}">Nodes: 0 | Edges: 0</span>
+                </div>
+                <div class="dag-container" id="dag-${sessionName}">
+                    <svg id="svg-${sessionName}"></svg>
+                </div>
+            `;
+            return panel;
+        }
+
+        // ================================================================
+        // WEBSOCKET
+        // ================================================================
+        function connectWebSocket() {
+            ws = new WebSocket('ws://localhost:8765');
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                document.getElementById('connection-status').className = 'connection-status connected';
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('ws-status').textContent = 'Connected';
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                document.getElementById('connection-status').className = 'connection-status disconnected';
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('ws-status').textContent = 'Disconnected';
+
+                // Reconnect after 2 seconds
+                setTimeout(connectWebSocket, 2000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'full_state':
+                    handleFullState(data);
+                    break;
+                case 'node_created':
+                    handleNodeCreated(data);
+                    break;
+                case 'node_status_changed':
+                    handleNodeStatusChanged(data);
+                    break;
+                case 'edge_created':
+                    handleEdgeCreated(data);
+                    break;
+                case 'agent_started':
+                case 'agent_finished':
+                    handleAgentEvent(data);
+                    break;
+                case 'iteration':
+                    handleIteration(data);
+                    break;
+                case 'chat_message':
+                    handleChatMessage(data.message);
+                    break;
+                case 'question_from_model':
+                    showQuestion(data.question);
+                    break;
+                case 'snapshot':
+                    handleSnapshot(data.snapshot);
+                    break;
+            }
+        }
+
+        function handleFullState(data) {
+            state.mode = data.mode;
+            state.sessions = data.sessions;
+            state.activeSession = data.active_session;
+            state.config = data.config;
+            state.chatMessages = data.chat_messages || [];
+            state.pendingQuestions = data.pending_questions || [];
+
+            // Update legend (from graph-native config)
+            updateLegend();
+
+            // Initialize DAGs for all sessions
+            for (const [name, session] of Object.entries(state.sessions)) {
+                initDAG(name);
+                updateDAG(name, session);
+            }
+
+            // Update metrics
+            updateMetrics();
+
+            // Update events
+            updateEventLog();
+
+            // Update chat
+            updateChat();
+
+            // Show pending question if any
+            if (state.pendingQuestions.length > 0) {
+                showQuestion(state.pendingQuestions[0]);
+            }
+        }
+
+        function handleNodeCreated(data) {
+            const session = state.sessions[data.session];
+            if (session) {
+                session.nodes[data.node.id] = data.node;
+                session.metrics.nodes_created++;
+                addEvent(data.session, 'node_created', `Created ${data.node.type}: ${data.node.id.slice(0, 8)}`);
+                updateDAG(data.session, session);
+                updateMetrics();
+            }
+        }
+
+        function handleNodeStatusChanged(data) {
+            const session = state.sessions[data.session];
+            if (session && session.nodes[data.node_id]) {
+                session.nodes[data.node_id].status = data.new_status;
+                addEvent(data.session, 'status_change', `${data.node_id.slice(0, 8)}: ${data.old_status} → ${data.new_status}`);
+
+                if (data.new_status === 'VERIFIED') session.metrics.nodes_verified++;
+                if (data.new_status === 'FAILED') session.metrics.nodes_failed++;
+
+                updateDAG(data.session, session);
+                updateMetrics();
+            }
+        }
+
+        function handleEdgeCreated(data) {
+            const session = state.sessions[data.session];
+            if (session) {
+                session.edges.push(data.edge);
+                session.metrics.edges_created++;
+                addEvent(data.session, 'edge_created', `${data.edge.type}: ${data.edge.source.slice(0, 8)} → ${data.edge.target.slice(0, 8)}`);
+                updateDAG(data.session, session);
+                updateMetrics();
+            }
+        }
+
+        function handleAgentEvent(data) {
+            const session = state.sessions[data.session];
+            if (session) {
+                if (data.type === 'agent_started') {
+                    session.agents[data.agent.role] = data.agent;
+                    addEvent(data.session, 'agent_started', `${data.agent.role} started`);
+                } else {
+                    if (session.agents[data.agent_role]) {
+                        session.agents[data.agent_role].status = data.success ? 'completed' : 'failed';
+                    }
+                    session.metrics.total_cost += data.cost || 0;
+                    addEvent(data.session, 'agent_finished', `${data.agent_role} ${data.success ? 'completed' : 'failed'} ($${(data.cost || 0).toFixed(4)})`);
+                }
+                updateMetrics();
+            }
+        }
+
+        function handleIteration(data) {
+            const session = state.sessions[data.session];
+            if (session) {
+                session.metrics.iterations = data.iteration;
+                updateMetrics();
+            }
+        }
+
+        // ================================================================
+        // LEGEND (Graph-Native)
+        // ================================================================
+        function updateLegend() {
+            // Node types legend
+            const nodeLegend = document.getElementById('node-legend');
+            nodeLegend.innerHTML = '';
+            for (const type of state.config.node_types) {
+                const color = state.config.node_colors[type] || '#888';
+                nodeLegend.innerHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: ${color}"></div>
+                        <span>${type}</span>
+                    </div>
+                `;
+            }
+
+            // Edge types legend
+            const edgeLegend = document.getElementById('edge-legend');
+            edgeLegend.innerHTML = '';
+            for (const type of state.config.edge_types) {
+                const color = state.config.edge_colors[type] || '#888';
+                edgeLegend.innerHTML += `
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: ${color}; height: 3px;"></div>
+                        <span>${type}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // ================================================================
+        // METRICS
+        // ================================================================
+        function updateMetrics() {
+            const grid = document.getElementById('metrics-grid');
+
+            if (state.mode === 'single') {
+                const session = state.sessions['default'] || {};
+                const metrics = session.metrics || {};
+                grid.innerHTML = `
+                    <div class="metric-card">
+                        <div class="metric-value">${metrics.nodes_created || 0}</div>
+                        <div class="metric-label">Nodes</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${metrics.edges_created || 0}</div>
+                        <div class="metric-label">Edges</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${metrics.iterations || 0}</div>
+                        <div class="metric-label">Iterations</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">$${(metrics.total_cost || 0).toFixed(3)}</div>
+                        <div class="metric-label">Cost</div>
+                    </div>
+                `;
+            } else {
+                // Comparison mode: show both sessions
+                const baseline = state.sessions['baseline']?.metrics || {};
+                const treatment = state.sessions['treatment']?.metrics || {};
+
+                grid.innerHTML = `
+                    <div class="metric-card">
+                        <div class="metric-value">${baseline.nodes_created || 0} / ${treatment.nodes_created || 0}</div>
+                        <div class="metric-label">Nodes (B/T)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${baseline.iterations || 0} / ${treatment.iterations || 0}</div>
+                        <div class="metric-label">Iterations (B/T)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">$${(baseline.total_cost || 0).toFixed(2)}</div>
+                        <div class="metric-label">Baseline Cost</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">$${(treatment.total_cost || 0).toFixed(2)}</div>
+                        <div class="metric-label">Treatment Cost</div>
+                    </div>
+                `;
+
+                // Update delta row
+                updateDeltaRow(baseline, treatment);
+            }
+        }
+
+        function updateDeltaRow(baseline, treatment) {
+            const deltaGrid = document.getElementById('delta-grid');
+            const nodeDelta = (treatment.nodes_created || 0) - (baseline.nodes_created || 0);
+            const iterDelta = (treatment.iterations || 0) - (baseline.iterations || 0);
+            const costDelta = (treatment.total_cost || 0) - (baseline.total_cost || 0);
+            const verifiedDelta = (treatment.nodes_verified || 0) - (baseline.nodes_verified || 0);
+
+            deltaGrid.innerHTML = `
+                <div class="delta-item">
+                    <div class="delta-value ${getDeltaClass(nodeDelta)}">${formatDelta(nodeDelta)}</div>
+                    <div>Nodes</div>
+                </div>
+                <div class="delta-item">
+                    <div class="delta-value ${getDeltaClass(-iterDelta)}">${formatDelta(iterDelta)}</div>
+                    <div>Iterations</div>
+                </div>
+                <div class="delta-item">
+                    <div class="delta-value ${getDeltaClass(-costDelta)}">${formatDelta(costDelta, '$')}</div>
+                    <div>Cost</div>
+                </div>
+                <div class="delta-item">
+                    <div class="delta-value ${getDeltaClass(verifiedDelta)}">${formatDelta(verifiedDelta)}</div>
+                    <div>Verified</div>
+                </div>
+            `;
+        }
+
+        function getDeltaClass(value) {
+            if (value > 0) return 'positive';
+            if (value < 0) return 'negative';
+            return 'neutral';
+        }
+
+        function formatDelta(value, prefix = '') {
+            if (value === 0) return '0';
+            const sign = value > 0 ? '+' : '';
+            return `${sign}${prefix}${Math.abs(value).toFixed(value % 1 ? 3 : 0)}`;
+        }
+
+        // ================================================================
+        // EVENT LOG
+        // ================================================================
+        const events = [];
+
+        function addEvent(session, type, message) {
+            events.push({
+                session,
+                type,
+                message,
+                timestamp: new Date().toISOString(),
+            });
+            updateEventLog();
+        }
+
+        function updateEventLog() {
+            const list = document.getElementById('event-list');
+            const count = document.getElementById('event-count');
+
+            count.textContent = events.length;
+
+            list.innerHTML = events.slice(-50).reverse().map((e, i) => `
+                <div class="event-item ${state.playbackIndex === events.length - 1 - i ? 'selected' : ''}"
+                     data-index="${events.length - 1 - i}"
+                     onclick="seekToEvent(${events.length - 1 - i})">
+                    <span class="event-type ${e.type}">[${e.type}]</span>
+                    <span>${e.message}</span>
+                    <div class="event-time">${new Date(e.timestamp).toLocaleTimeString()}</div>
+                </div>
+            `).join('');
+
+            // Update slider
+            const slider = document.getElementById('playback-slider');
+            slider.max = events.length - 1;
+            if (state.playbackIndex === -1) {
+                slider.value = events.length - 1;
+            }
+        }
+
+        // ================================================================
+        // PLAYBACK
+        // ================================================================
+        function seekToEvent(index) {
+            state.playbackIndex = index;
+            updateEventLog();
+
+            // Request snapshot at this index
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'request_snapshot',
+                    event_index: index,
+                    session: state.activeSession,
+                }));
+            }
+        }
+
+        function handleSnapshot(snapshot) {
+            if (snapshot) {
+                // Update DAG with snapshot data
+                const session = state.sessions[state.activeSession];
+                if (session) {
+                    // Temporarily replace nodes/edges with snapshot
+                    const tempSession = {
+                        ...session,
+                        nodes: snapshot.nodes,
+                        edges: snapshot.edges,
+                    };
+                    updateDAG(state.activeSession, tempSession);
+                }
+            }
+        }
+
+        function setupEventListeners() {
+            // Playback controls
+            document.getElementById('playback-start').onclick = () => seekToEvent(0);
+            document.getElementById('playback-end').onclick = () => {
+                state.playbackIndex = -1;
+                updateEventLog();
+                updateAllDAGs();
+            };
+            document.getElementById('playback-prev').onclick = () => {
+                if (state.playbackIndex > 0) seekToEvent(state.playbackIndex - 1);
+                else if (state.playbackIndex === -1 && events.length > 0) seekToEvent(events.length - 1);
+            };
+            document.getElementById('playback-next').onclick = () => {
+                if (state.playbackIndex >= 0 && state.playbackIndex < events.length - 1) {
+                    seekToEvent(state.playbackIndex + 1);
+                } else {
+                    state.playbackIndex = -1;
+                    updateEventLog();
+                    updateAllDAGs();
+                }
+            };
+
+            document.getElementById('playback-slider').oninput = (e) => {
+                seekToEvent(parseInt(e.target.value));
+            };
+
+            // Keyboard shortcuts for playback
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                if (e.key === 'ArrowLeft') document.getElementById('playback-prev').click();
+                if (e.key === 'ArrowRight') document.getElementById('playback-next').click();
+                if (e.key === 'Home') document.getElementById('playback-start').click();
+                if (e.key === 'End') document.getElementById('playback-end').click();
+            });
+
+            // Chat
+            document.getElementById('chat-send').onclick = sendChatMessage;
+            document.getElementById('chat-input').onkeypress = (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            };
+
+            // Question modal
+            document.getElementById('question-submit').onclick = submitQuestionAnswer;
+        }
+
+        function updateAllDAGs() {
+            for (const [name, session] of Object.entries(state.sessions)) {
+                updateDAG(name, session);
+            }
+        }
+
+        // ================================================================
+        // CHAT
+        // ================================================================
+        function handleChatMessage(message) {
+            state.chatMessages.push(message);
+            updateChat();
+        }
+
+        function updateChat() {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = state.chatMessages.slice(-20).map(m => `
+                <div class="chat-message ${m.role}">
+                    ${m.agent ? `<strong>[${m.agent}]</strong> ` : ''}
+                    ${m.content}
+                </div>
+            `).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add to local state
+            state.chatMessages.push({
+                role: 'user',
+                content: message,
+                timestamp: new Date().toISOString(),
+            });
+            updateChat();
+            input.value = '';
+
+            // Send to server (for potential processing)
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'user_chat',
+                    message: message,
+                }));
+            }
+        }
+
+        // ================================================================
+        // QUESTION MODAL
+        // ================================================================
+        let currentQuestion = null;
+
+        function showQuestion(question) {
+            currentQuestion = question;
+            document.getElementById('question-text').textContent = question.question;
+
+            const optionsContainer = document.getElementById('question-options');
+            if (question.options && question.options.length > 0) {
+                optionsContainer.innerHTML = question.options.map((opt, i) => `
+                    <button class="question-option" onclick="selectOption('${opt}')">${opt}</button>
+                `).join('');
+                optionsContainer.style.display = 'flex';
+            } else {
+                optionsContainer.style.display = 'none';
+            }
+
+            document.getElementById('question-modal').classList.add('active');
+        }
+
+        function selectOption(option) {
+            document.getElementById('question-input').value = option;
+        }
+
+        function submitQuestionAnswer() {
+            const answer = document.getElementById('question-input').value.trim();
+            if (!answer || !currentQuestion) return;
+
+            // Send answer to server
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'user_response',
+                    question_id: currentQuestion.id,
+                    response: answer,
+                }));
+            }
+
+            // Close modal
+            document.getElementById('question-modal').classList.remove('active');
+            document.getElementById('question-input').value = '';
+            currentQuestion = null;
+        }
+
+        // ================================================================
+        // D3 DAG VISUALIZATION
+        // ================================================================
+        function initDAG(sessionName) {
+            const container = document.getElementById(`dag-${sessionName}`);
+            const svg = d3.select(`#svg-${sessionName}`);
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            svg.attr('viewBox', [0, 0, width, height]);
+
+            // Create groups for links and nodes
+            svg.append('g').attr('class', 'links');
+            svg.append('g').attr('class', 'nodes');
+
+            // Create simulation
+            simulations[sessionName] = d3.forceSimulation()
+                .force('link', d3.forceLink().id(d => d.id).distance(80))
+                .force('charge', d3.forceManyBody().strength(-200))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(30));
+
+            // Add zoom
+            const zoom = d3.zoom()
+                .scaleExtent([0.2, 4])
+                .on('zoom', (event) => {
+                    svg.selectAll('g').attr('transform', event.transform);
+                });
+            svg.call(zoom);
+        }
+
+        function updateDAG(sessionName, session) {
+            const svg = d3.select(`#svg-${sessionName}`);
+            const simulation = simulations[sessionName];
+            if (!svg.node() || !simulation) return;
+
+            // Convert nodes object to array
+            const nodes = Object.values(session.nodes || {});
+            const links = (session.edges || []).map(e => ({
+                source: e.source,
+                target: e.target,
+                type: e.type,
+            }));
+
+            // Update stats
+            const statsEl = document.getElementById(`stats-${sessionName}`);
+            if (statsEl) {
+                statsEl.textContent = `Nodes: ${nodes.length} | Edges: ${links.length}`;
+            }
+
+            // Update links
+            const link = svg.select('.links')
+                .selectAll('.link')
+                .data(links, d => `${d.source}-${d.target}`);
+
+            link.exit().remove();
+
+            const linkEnter = link.enter()
+                .append('line')
+                .attr('class', d => `link ${d.type}`)
+                .attr('stroke', d => state.config.edge_colors[d.type] || '#888');
+
+            // Update nodes
+            const node = svg.select('.nodes')
+                .selectAll('.node')
+                .data(nodes, d => d.id);
+
+            node.exit().remove();
+
+            const nodeEnter = node.enter()
+                .append('g')
+                .attr('class', 'node')
+                .call(d3.drag()
+                    .on('start', dragStarted)
+                    .on('drag', dragged)
+                    .on('end', dragEnded));
+
+            nodeEnter.append('circle')
+                .attr('r', 15)
+                .attr('fill', d => state.config.node_colors[d.type] || '#888')
+                .attr('stroke', d => state.config.status_colors[d.status] || '#888')
+                .on('mouseover', showTooltip)
+                .on('mouseout', hideTooltip);
+
+            nodeEnter.append('text')
+                .attr('dy', 25)
+                .attr('text-anchor', 'middle')
+                .text(d => d.type);
+
+            // Update existing nodes
+            svg.select('.nodes')
+                .selectAll('.node circle')
+                .attr('fill', d => state.config.node_colors[d.type] || '#888')
+                .attr('stroke', d => state.config.status_colors[d.status] || '#888');
+
+            // Update simulation
+            simulation.nodes(nodes);
+            simulation.force('link').links(links);
+            simulation.alpha(0.3).restart();
+
+            // Tick function
+            simulation.on('tick', () => {
+                svg.select('.links')
+                    .selectAll('.link')
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+
+                svg.select('.nodes')
+                    .selectAll('.node')
+                    .attr('transform', d => `translate(${d.x},${d.y})`);
+            });
+        }
+
+        function dragStarted(event, d) {
+            if (!event.active) {
+                const sessionName = this.closest('.dag-panel').id.replace('panel-', '');
+                simulations[sessionName].alphaTarget(0.3).restart();
+            }
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragEnded(event, d) {
+            if (!event.active) {
+                const sessionName = this.closest('.dag-panel').id.replace('panel-', '');
+                simulations[sessionName].alphaTarget(0);
+            }
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // ================================================================
+        // TOOLTIP
+        // ================================================================
+        function showTooltip(event, d) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${d.type}</div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">ID:</span>
+                    <span>${d.id.slice(0, 12)}...</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Status:</span>
+                    <span>${d.status}</span>
+                </div>
+                <div class="tooltip-row">
+                    <span class="tooltip-label">Content:</span>
+                    <span>${(d.content || '').slice(0, 100)}...</span>
+                </div>
+            `;
+            tooltip.style.display = 'block';
+            tooltip.style.left = (event.pageX + 15) + 'px';
+            tooltip.style.top = (event.pageY + 15) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').style.display = 'none';
+        }
+
+        // ================================================================
+        // START
+        // ================================================================
+        window.onload = init;
+        window.seekToEvent = seekToEvent;
+        window.selectOption = selectOption;
+    </script>
+</body>
+</html>

@@ -28,6 +28,8 @@ from core.protocols import (
 )
 from agents.generic_agent import GenericAgent, create_agent
 from core.telemetry import TelemetryRecorder, get_recorder
+from infrastructure.error_logger import log_error, ErrorCategory
+from infrastructure.checkpoint import RunResult, RunResultStore
 
 
 logger = logging.getLogger("GAADP.GraphRuntime")
@@ -863,7 +865,7 @@ class GraphRuntime:
         Process a single node if physics allows.
 
         This is the core execution method. It:
-        1. Checks if transition to PROCESSING is allowed
+        1. Checks if transition to PROCESSING or TESTING is allowed
         2. Dispatches to the appropriate agent
         3. Applies the agent's output to the graph
         4. Transitions based on results
@@ -874,10 +876,19 @@ class GraphRuntime:
         Returns:
             Agent output or None if node cannot be processed
         """
-        # Check if we can transition to PROCESSING
-        can_start, rule = self.can_transition(node_id, NodeStatus.PROCESSING)
-        if not can_start:
-            logger.debug(f"Cannot process {node_id[:8]}: transition not allowed")
+        # Gen-2 TDD: CODE nodes transition to TESTING, others to PROCESSING
+        # Check both and use whichever is valid
+        can_start_processing, rule_processing = self.can_transition(node_id, NodeStatus.PROCESSING)
+        can_start_testing, rule_testing = self.can_transition(node_id, NodeStatus.TESTING)
+
+        if can_start_testing:
+            target_status = NodeStatus.TESTING
+            rule = rule_testing
+        elif can_start_processing:
+            target_status = NodeStatus.PROCESSING
+            rule = rule_processing
+        else:
+            logger.debug(f"Cannot process {node_id[:8]}: no valid transition")
             return None
 
         # Get the agent
@@ -886,14 +897,14 @@ class GraphRuntime:
             logger.warning(f"No agent for node {node_id[:8]}")
             return None
 
-        # Transition to PROCESSING
+        # Transition to the appropriate status
         old_status = self.graph.graph.nodes[node_id].get('status', 'PENDING')
         node_type = self.graph.graph.nodes[node_id].get('type', 'UNKNOWN')
-        self.graph.set_status(node_id, NodeStatus.PROCESSING, f"Agent {agent_role} starting")
-        await self._emit('on_node_status_changed', node_id, old_status, 'PROCESSING', f"Agent {agent_role} starting")
+        self.graph.set_status(node_id, target_status, f"Agent {agent_role} starting")
+        await self._emit('on_node_status_changed', node_id, old_status, target_status.value, f"Agent {agent_role} starting")
 
         # Telemetry: Log state transition
-        self._telemetry.log_state_transition(node_id, node_type, old_status, 'PROCESSING', f"Agent {agent_role}")
+        self._telemetry.log_state_transition(node_id, node_type, old_status, target_status.value, f"Agent {agent_role}")
 
         # Increment attempts
         node_data = self.graph.graph.nodes[node_id]
@@ -950,6 +961,19 @@ class GraphRuntime:
             logger.error(f"Agent {agent_role} failed on {node_id[:8]}: {e}")
             metadata['last_error'] = str(e)
             node_data['metadata'] = metadata
+
+            # Gen-3: Log error with git commit tagging for regression testing
+            log_error(
+                error=e,
+                node_id=node_id,
+                node_type=node_type,
+                node_status=target_status.value,
+                agent_role=agent_role,
+                extra={
+                    'attempts': metadata.get('attempts', 0),
+                    'context_req_id': context.requirement_id if context else None,
+                }
+            )
 
             # Emit error events
             await self._emit('on_error', node_id, str(e))
@@ -1045,6 +1069,18 @@ class GraphRuntime:
                 except Exception as e:
                     logger.warning(f"Failed to update status for {update_node_id}: {e}")
 
+        # Apply metadata updates
+        for update_node_id, metadata_updates in output.metadata_updates.items():
+            if update_node_id in self.graph.graph.nodes:
+                try:
+                    node_data = self.graph.graph.nodes[update_node_id]
+                    existing_metadata = node_data.get('metadata', {})
+                    existing_metadata.update(metadata_updates)
+                    node_data['metadata'] = existing_metadata
+                    logger.info(f"Updated metadata for {update_node_id[:8]}: {metadata_updates}")
+                except Exception as e:
+                    logger.warning(f"Failed to update metadata for {update_node_id}: {e}")
+
         # Write artifacts to output directory
         for file_path, content in output.artifacts.items():
             try:
@@ -1099,7 +1135,7 @@ class GraphRuntime:
 
         Returns nodes where:
         - Status is PENDING
-        - Can transition to PROCESSING (physics allows)
+        - Can transition to PROCESSING or TESTING (physics allows)
         - Has an agent dispatch rule
         """
         processable = []
@@ -1108,8 +1144,12 @@ class GraphRuntime:
             if data.get('status') != NodeStatus.PENDING.value:
                 continue
 
-            can_start, _ = self.can_transition(node_id, NodeStatus.PROCESSING)
-            if not can_start:
+            # Gen-2 TDD: CODE nodes transition to TESTING, not PROCESSING
+            # Check for either valid transition
+            can_start_processing, _ = self.can_transition(node_id, NodeStatus.PROCESSING)
+            can_start_testing, _ = self.can_transition(node_id, NodeStatus.TESTING)
+
+            if not (can_start_processing or can_start_testing):
                 continue
 
             agent = self.get_agent_for_node(node_id)
@@ -1167,6 +1207,12 @@ class GraphRuntime:
         Returns:
             Execution statistics
         """
+        import time
+        from infrastructure.error_logger import get_error_logger
+
+        run_start_time = time.time()
+        run_start_iso = datetime.now(timezone.utc).isoformat()
+
         stats = {
             'iterations': 0,
             'nodes_processed': 0,
@@ -1215,6 +1261,66 @@ class GraphRuntime:
 
         # Telemetry: Flush session
         self._telemetry.flush()
+
+        # Gen-3: Create and save RunResult for regression testing
+        run_end_time = time.time()
+        run_end_iso = datetime.now(timezone.utc).isoformat()
+        duration_seconds = run_end_time - run_start_time
+
+        # Count node statuses from graph
+        status_counts = {s.value: 0 for s in NodeStatus}
+        type_counts = {t.value: 0 for t in NodeType}
+        for _, data in self.graph.graph.nodes(data=True):
+            status = data.get('status', NodeStatus.PENDING.value)
+            node_type = data.get('type', 'UNKNOWN')
+            if status in status_counts:
+                status_counts[status] += 1
+            if node_type in type_counts:
+                type_counts[node_type] += 1
+
+        # Get error summary from ErrorLogger
+        error_logger = get_error_logger()
+        error_summary = error_logger.get_error_summary()
+
+        # Determine success (all REQs verified, no errors)
+        all_verified = self._all_reqs_terminal()
+        has_failed_reqs = any(
+            data.get('status') == NodeStatus.FAILED.value
+            for _, data in self.graph.graph.nodes(data=True)
+            if data.get('type') == NodeType.REQ.value
+        )
+        success = all_verified and not has_failed_reqs
+
+        # Create and save RunResult
+        run_store = RunResultStore()
+        run_result = RunResult(
+            git_commit=run_store.current_commit,
+            git_branch=run_store.current_branch,
+            started_at=run_start_iso,
+            completed_at=run_end_iso,
+            duration_seconds=duration_seconds,
+            iterations=stats['iterations'],
+            nodes_processed=stats['nodes_processed'],
+            total_cost=stats['total_cost'],
+            pending_count=status_counts.get(NodeStatus.PENDING.value, 0),
+            processing_count=status_counts.get(NodeStatus.PROCESSING.value, 0),
+            blocked_count=status_counts.get(NodeStatus.BLOCKED.value, 0),
+            testing_count=status_counts.get(NodeStatus.TESTING.value, 0),
+            tested_count=status_counts.get(NodeStatus.TESTED.value, 0),
+            verified_count=status_counts.get(NodeStatus.VERIFIED.value, 0),
+            failed_count=status_counts.get(NodeStatus.FAILED.value, 0),
+            node_type_counts=type_counts,
+            error_count=error_summary.get('total_errors', 0),
+            errors_by_category=error_summary.get('by_category', {}),
+            errors_by_severity=error_summary.get('by_severity', {}),
+            success=success,
+            failure_reason=None if success else "One or more REQs failed",
+        )
+        run_store.save_result(run_result)
+
+        # Add run result to stats for return
+        stats['run_result_commit'] = run_result.git_commit[:8]
+        stats['success'] = success
 
         return stats
 

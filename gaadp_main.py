@@ -49,7 +49,7 @@ logging.basicConfig(
 logger = logging.getLogger("GAADP.Main")
 
 
-async def main(requirement: str = None, enable_viz: bool = False, output_dir: str = None, dev_mode: bool = False) -> dict:
+async def main(requirement: str = None, enable_viz: bool = False, output_dir: str = None, dev_mode: bool = False, clean: bool = False) -> dict:
     """
     Main entry point for GAADP.
 
@@ -58,12 +58,22 @@ async def main(requirement: str = None, enable_viz: bool = False, output_dir: st
         enable_viz: If True, start the visualization server.
         output_dir: Directory to write generated code files.
         dev_mode: If True, enable all development instrumentation.
+        clean: If True, clear prior state before running.
 
     Returns:
         Execution statistics
     """
     from datetime import datetime
     import json
+
+    # Clean prior state if requested
+    if clean:
+        graph_path = Path(".gaadp/graph.json")
+        if graph_path.exists():
+            graph_path.unlink()
+            logger.info("[CLEAN] Removed prior graph state: .gaadp/graph.json")
+        else:
+            logger.info("[CLEAN] No prior graph state to clear")
 
     # Dev mode enables multiple features
     if dev_mode:
@@ -89,11 +99,14 @@ async def main(requirement: str = None, enable_viz: bool = False, output_dir: st
     # Start visualization server if requested
     if enable_viz:
         try:
-            from infrastructure.viz_server import start_viz_server
-            logger.info("Starting visualization server...")
-            # In dev mode, use comparison dashboard with session support
-            viz_server = await start_viz_server(dev_mode=dev_mode)
+            from infrastructure.mission_control import start_mission_control
+            logger.info("Starting Mission Control...")
+            # In dev mode, use comparison dashboard with git-based sessions
+            mode = "comparison" if dev_mode else "single"
+            viz_server = await start_mission_control(mode=mode)
             if dev_mode:
+                # Set up git-based baseline vs treatment comparison
+                viz_server.setup_git_comparison(baseline_steps_back=1)
                 logger.info("Dashboard: http://localhost:8766 (comparison mode)")
             else:
                 logger.info("Dashboard: http://localhost:8766")
@@ -197,9 +210,9 @@ async def main(requirement: str = None, enable_viz: bool = False, output_dir: st
             while True:
                 await asyncio.sleep(1)
         except KeyboardInterrupt:
-            logger.info("Shutting down visualization server...")
-            from infrastructure.viz_server import stop_viz_server
-            await stop_viz_server()
+            logger.info("Shutting down Mission Control...")
+            from infrastructure.mission_control import stop_mission_control
+            await stop_mission_control()
 
     return stats
 
@@ -256,6 +269,11 @@ Modes:
         default=None,
         help="Override output directory (default: '.' in prod, 'workspace/run_*' in dev)"
     )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Clear prior graph state before running (removes .gaadp/graph.json)"
+    )
 
     args = parser.parse_args()
 
@@ -276,7 +294,8 @@ Modes:
             requirement,
             enable_viz=args.viz,
             output_dir=args.output_dir,
-            dev_mode=args.dev
+            dev_mode=args.dev,
+            clean=args.clean
         ))
         sys.exit(1 if stats['errors'] > 0 else 0)
     except KeyboardInterrupt:

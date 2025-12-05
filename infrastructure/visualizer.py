@@ -28,6 +28,8 @@ STATUS_SHAPES = {
     NodeStatus.PENDING.value: "ellipse",
     NodeStatus.PROCESSING.value: "box",
     NodeStatus.BLOCKED.value: "octagon",
+    NodeStatus.TESTING.value: "hexagon",      # Gen-2 TDD: being tested
+    NodeStatus.TESTED.value: "diamond",       # Gen-2 TDD: tests passed
     NodeStatus.VERIFIED.value: "doublecircle",
     NodeStatus.FAILED.value: "triangle",
 }
@@ -177,12 +179,19 @@ class GraphVisualizer:
             status = data.get('status', 'PENDING')
             short_id = node_id[:12]
 
-            # Mermaid node shapes based on status
+            # Mermaid node shapes based on status - explicit handling for all NodeStatus values
             if status == NodeStatus.VERIFIED.value:
-                lines.append(f'    {short_id}(({node_type}))')
+                lines.append(f'    {short_id}(({node_type}))')     # Circle - success
             elif status == NodeStatus.FAILED.value:
-                lines.append(f'    {short_id}>{node_type}]')
+                lines.append(f'    {short_id}>{node_type}]')       # Asymmetric - failure
+            elif status == NodeStatus.TESTED.value:
+                lines.append(f'    {short_id}{{{{{node_type}}}}}') # Hexagon - tests passed
+            elif status == NodeStatus.TESTING.value:
+                lines.append(f'    {short_id}[/{node_type}/]')     # Parallelogram - in test
+            elif status == NodeStatus.BLOCKED.value:
+                lines.append(f'    {short_id}{{{{node_type}}}}')   # Rhombus - blocked
             else:
+                # PENDING, PROCESSING - default box
                 lines.append(f'    {short_id}[{node_type}]')
 
         lines.append('')

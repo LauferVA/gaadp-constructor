@@ -321,8 +321,11 @@ class GenericAgent:
                 logger.warning(f"Response not JSON, forcing output")
                 parsed = {"content": response}
 
+            logger.debug(f"{self.role} parsed response keys: {list(parsed.keys()) if isinstance(parsed, dict) else type(parsed)}")
+
             # Check for tool calls
             tool_calls = parsed.get("tool_calls", [])
+            logger.debug(f"{self.role} tool_calls count: {len(tool_calls)}, expected output tool: {self.config.output_tool_name}")
 
             for tc in tool_calls:
                 tool_name = tc.get("name") or tc.get("function", {}).get("name", "")
@@ -335,8 +338,14 @@ class GenericAgent:
                     if isinstance(args, str):
                         args = json.loads(args)
 
+                    # Preprocess args: parse JSON strings that should be lists/dicts
+                    # LLMs sometimes double-encode array/object fields
+                    args = self._preprocess_tool_args(args)
+
                     # Validate against protocol
+                    logger.debug(f"{self.role} validating args: keys={list(args.keys())[:5]}...")
                     validated = self.output_protocol.model_validate(args)
+                    logger.info(f"{self.role} validated output successfully, calling _to_unified_output")
 
                     # Convert to UnifiedAgentOutput
                     return self._to_unified_output(
@@ -365,6 +374,33 @@ class GenericAgent:
             cost_incurred=total_cost,
             tokens_used={"input_tokens": total_tokens["input"], "output_tokens": total_tokens["output"]}
         )
+
+    def _preprocess_tool_args(self, args: Dict) -> Dict:
+        """
+        Preprocess tool arguments to handle LLM quirks.
+
+        LLMs sometimes return JSON strings for array/object fields instead of
+        actual arrays/objects. This method recursively parses such strings.
+        """
+        def parse_value(v):
+            if isinstance(v, str) and v.strip():
+                # Check if it looks like a JSON array or object
+                stripped = v.strip()
+                if (stripped.startswith('[') and stripped.endswith(']')) or \
+                   (stripped.startswith('{') and stripped.endswith('}')):
+                    try:
+                        parsed = json.loads(stripped)
+                        # Recursively process the parsed value
+                        return parse_value(parsed)
+                    except json.JSONDecodeError:
+                        pass
+            elif isinstance(v, dict):
+                return {k: parse_value(val) for k, val in v.items()}
+            elif isinstance(v, list):
+                return [parse_value(item) for item in v]
+            return v
+
+        return {k: parse_value(v) for k, v in args.items()}
 
     async def _execute_tool(self, tool_name: str, args: Dict) -> str:
         """Execute a tool and return result."""
@@ -444,34 +480,75 @@ class GenericAgent:
                     "dependencies": getattr(protocol_output, 'dependencies', None)
                 }
             ))
+            # CRITICAL: Mark the SPEC node as VERIFIED so dependent SPECs can start
+            # This unblocks the dependency chain (SPEC2 depends on SPEC1, etc.)
+            output.status_updates[context.node_id] = NodeStatus.VERIFIED.value
+            logger.info(f"BUILDER: Created CODE for {protocol_output.file_path} - marking SPEC {context.node_id[:8]} as VERIFIED")
 
-        # Extract verdict (Verifier and Research Verifier)
+        # Extract verdict (Verifier, Research Verifier, and Dialector)
         if hasattr(protocol_output, 'verdict'):
             verdict = protocol_output.verdict
-            # Update the node status based on verdict
-            if verdict == "PASS":
-                output.status_updates[context.node_id] = NodeStatus.VERIFIED.value
-            else:
-                output.status_updates[context.node_id] = NodeStatus.FAILED.value
 
-            # Create TEST node only for CODE verification (not RESEARCH verification)
-            if context.node_type == NodeType.CODE.value:
-                output.new_nodes.append(NodeSpec(
-                    type="TEST",
-                    content=json.dumps(protocol_output.model_dump()),
-                    metadata={"verdict": verdict}
-                ))
-            elif context.node_type == NodeType.RESEARCH.value:
-                # For RESEARCH_VERIFIER, store verification details in metadata
-                # The status update above handles VERIFIED/FAILED transition
-                # CRITICAL FIX: Also set REQ back to PENDING so ARCHITECT can be dispatched
-                if verdict == "PASS" and context.requirement_id:
-                    output.status_updates[context.requirement_id] = NodeStatus.PENDING.value
-                    logger.info(f"RESEARCH verified - setting REQ {context.requirement_id[:8]} back to PENDING for ARCHITECT")
+            # DIALECTOR uses CLEAR/NEEDS_CLARIFICATION, not PASS/FAIL
+            # Check for clarifications_required to identify DIALECTOR output
+            if hasattr(protocol_output, 'clarifications_required'):
+                # This is DIALECTOR output
+                if verdict == "CLEAR":
+                    # No blocking ambiguities - set dialectic_passed flag and reset to PENDING
+                    # The REQ will then be picked up by RESEARCHER
+                    output.status_updates[context.node_id] = NodeStatus.PENDING.value
+                    output.metadata_updates[context.node_id] = {"dialectic_passed": True}
+                    logger.info(f"DIALECTOR: verdict CLEAR - setting dialectic_passed=True on {context.node_id[:8]}")
+                else:
+                    # NEEDS_CLARIFICATION - create CLARIFICATION nodes (blocking)
+                    # Node stays PENDING waiting for user answers
+                    output.status_updates[context.node_id] = NodeStatus.PENDING.value
+                    # Create CLARIFICATION nodes for each blocking ambiguity
+                    for amb in getattr(protocol_output, 'ambiguities', []):
+                        if amb.impact == "blocking":
+                            output.new_nodes.append(NodeSpec(
+                                type="CLARIFICATION",
+                                content=amb.question.question if hasattr(amb.question, 'question') else str(amb.question),
+                                metadata={
+                                    "source": "DIALECTOR",
+                                    "phrase": amb.phrase,
+                                    "category": amb.category,
+                                    "options": getattr(amb.question, 'options', None),
+                                    "blocking": True
+                                }
+                            ))
+            else:
+                # VERIFIER output (PASS/FAIL)
+                logger.info(f"VERIFIER verdict for {context.node_id[:8]}: '{verdict}' (type={type(verdict).__name__})")
+                if verdict == "PASS":
+                    output.status_updates[context.node_id] = NodeStatus.VERIFIED.value
+                else:
+                    logger.warning(f"Non-PASS verdict '{verdict}' for {context.node_id[:8]} - setting FAILED")
+                    output.status_updates[context.node_id] = NodeStatus.FAILED.value
+
+                # Create TEST node only for CODE verification (not RESEARCH verification)
+                if context.node_type == NodeType.CODE.value:
+                    output.new_nodes.append(NodeSpec(
+                        type="TEST",
+                        content=json.dumps(protocol_output.model_dump()),
+                        metadata={"verdict": verdict}
+                    ))
+                elif context.node_type == NodeType.RESEARCH.value:
+                    # For RESEARCH_VERIFIER, store verification details in metadata
+                    # The status update above handles VERIFIED/FAILED transition
+                    # CRITICAL FIX: Also set REQ back to PENDING so ARCHITECT can be dispatched
+                    if verdict == "PASS" and context.requirement_id:
+                        output.status_updates[context.requirement_id] = NodeStatus.PENDING.value
+                        logger.info(f"RESEARCH verified - setting REQ {context.requirement_id[:8]} back to PENDING for ARCHITECT")
 
         # Extract research artifact (Researcher) - create RESEARCH node
-        if hasattr(protocol_output, 'maturity_level') and hasattr(protocol_output, 'task_category'):
+        has_maturity = hasattr(protocol_output, 'maturity_level')
+        has_category = hasattr(protocol_output, 'task_category')
+        logger.debug(f"_to_unified_output: has_maturity={has_maturity}, has_category={has_category}, protocol_type={type(protocol_output).__name__}")
+
+        if has_maturity and has_category:
             # This is a ResearcherOutput - create RESEARCH node
+            logger.info(f"Creating RESEARCH node with maturity={protocol_output.maturity_level}, category={protocol_output.task_category}")
             artifact_content = json.dumps(protocol_output.model_dump(), indent=2)
             output.new_nodes.append(NodeSpec(
                 type="RESEARCH",
@@ -482,6 +559,7 @@ class GenericAgent:
                     "task_category": protocol_output.task_category,
                 }
             ))
+            logger.debug(f"RESEARCH node added to output.new_nodes (count={len(output.new_nodes)})")
 
         return output
 

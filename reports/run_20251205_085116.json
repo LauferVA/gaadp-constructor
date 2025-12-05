@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-12-05T08:51:16.409226",
+  "mode": "dev",
+  "requirement": "Design a Python class `LinkedList` with:\n- `append(value)` - adds node to end\n- `prepend(value)` - adds node to beginning\n- `find(value)` - returns node with value or None\n- `delete(value)` - removes first node with value\n- `to_list()` - returns Python list of all values\n",
+  "output_dir": "workspace/run_20251205_085046",
+  "stats": {
+    "iterations": 3,
+    "nodes_processed": 1,
+    "errors": 0,
+    "total_cost": 0.013052999999999999,
+    "run_result_commit": "ae2cdd20",
+    "success": false
+  },
+  "verified_nodes": 6,
+  "failed_nodes": 0,
+  "code_artifacts": [
+    "math_utils.py",
+    "math_utils.py"
+  ]
+}

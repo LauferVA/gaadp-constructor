@@ -12,9 +12,11 @@ class WavefrontExecutor:
             n for n, d in graph.nodes(data=True)
             if d.get('status') in [NodeStatus.PENDING.value, NodeStatus.BLOCKED.value]
         }
+        # Nodes considered "complete" for dependency resolution:
+        # VERIFIED = successfully completed, TESTED = tests passed (Gen-2 TDD)
         completed_nodes = {
             n for n, d in graph.nodes(data=True)
-            if d.get('status') in [NodeStatus.COMPLETE.value, NodeStatus.VERIFIED.value]
+            if d.get('status') in [NodeStatus.VERIFIED.value, NodeStatus.TESTED.value]
         }
 
         while pending_nodes:

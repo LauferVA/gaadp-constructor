@@ -238,14 +238,22 @@ class AnthropicAPIProvider(LLMProvider):
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
-        if self.api_key:
-            self.client = Anthropic(api_key=self.api_key)
-        else:
-            self.client = None
-
+        self._api_key_override = api_key
+        self._client = None  # Lazy initialization
         self._token_usage = {"input": 0, "output": 0}
         self._cost_session = 0.0
+
+    @property
+    def api_key(self) -> Optional[str]:
+        """Get API key, checking env at access time for lazy loading."""
+        return self._api_key_override or os.getenv("ANTHROPIC_API_KEY")
+
+    @property
+    def client(self) -> Optional["Anthropic"]:
+        """Lazy-initialize Anthropic client on first access."""
+        if self._client is None and self.api_key:
+            self._client = Anthropic(api_key=self.api_key)
+        return self._client
 
     def is_available(self) -> bool:
         """Check if Anthropic API is available."""

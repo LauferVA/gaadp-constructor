@@ -579,3 +579,10 @@ With GAADP's graph-native approach:
 
 *Document generated December 2024*
 *Based on analysis of GAADP architecture and graph theory literature*
+
+---
+
+## Related Documentation
+
+- **[ARCHITECTURE_GUARDRAILS.md](./ARCHITECTURE_GUARDRAILS.md)** - Practical coding patterns
+  (graph-first output schemas, configuration-driven design, historical failures)

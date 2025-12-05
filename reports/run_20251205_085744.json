@@ -1,0 +1,20 @@
+{
+  "timestamp": "2025-12-05T08:57:44.447626",
+  "mode": "dev",
+  "requirement": "Design a Python class `Queue` implementing a FIFO data structure with:\n- `enqueue(item)` - adds item to back\n- `dequeue()` - removes and returns front item, raises IndexError if empty\n- `front()` - returns front item without removing\n- `is_empty()` - returns True if queue is empty\n- `size()` - returns number of items\n",
+  "output_dir": "workspace/run_20251205_085716",
+  "stats": {
+    "iterations": 3,
+    "nodes_processed": 1,
+    "errors": 0,
+    "total_cost": 0.01293,
+    "run_result_commit": "ae2cdd20",
+    "success": false
+  },
+  "verified_nodes": 6,
+  "failed_nodes": 0,
+  "code_artifacts": [
+    "math_utils.py",
+    "math_utils.py"
+  ]
+}

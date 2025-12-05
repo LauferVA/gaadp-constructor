@@ -1,0 +1,44 @@
+{
+  "git_commit": "ae2cdd2061e2cafc57215c7fc584be2c86c61d8e",
+  "git_branch": "main",
+  "started_at": "2025-12-05T17:25:30.298895+00:00",
+  "completed_at": "2025-12-05T17:26:06.420100+00:00",
+  "duration_seconds": 36.12120604515076,
+  "iterations": 3,
+  "nodes_processed": 1,
+  "total_cost": 0.014655,
+  "pending_count": 0,
+  "processing_count": 1,
+  "blocked_count": 0,
+  "testing_count": 0,
+  "tested_count": 0,
+  "verified_count": 0,
+  "failed_count": 0,
+  "node_type_counts": {
+    "REQ": 1,
+    "RESEARCH": 0,
+    "CLARIFICATION": 0,
+    "SPEC": 0,
+    "PLAN": 0,
+    "CODE": 0,
+    "TEST": 0,
+    "TEST_SUITE": 0,
+    "DOC": 0,
+    "ESCALATION": 0,
+    "CLASS": 0,
+    "FUNCTION": 0,
+    "CALL": 0
+  },
+  "error_count": 14,
+  "errors_by_category": {
+    "RESEARCH": 12,
+    "DIALECTIC": 2
+  },
+  "errors_by_severity": {
+    "ERROR": 14
+  },
+  "success": false,
+  "failure_reason": "One or more REQs failed",
+  "requirement_hash": null,
+  "extra": {}
+}

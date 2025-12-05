@@ -15,11 +15,11 @@ Usage:
     # Get JSON schema for tool definition
     schema = ArchitectOutput.model_json_schema()
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
+import json
 from typing import List, Optional, Literal, Dict, Any, Union
 from enum import Enum
 from pathlib import Path
-import json
 
 from core.ontology import NodeType, EdgeType, NodeStatus
 
@@ -494,6 +494,21 @@ class ResearcherOutput(BaseModel):
         description="Research reasoning and methodology"
     )
 
+    @model_validator(mode='before')
+    @classmethod
+    def parse_json_strings(cls, data):
+        """Parse JSON strings to lists for fields that LLMs sometimes double-serialize."""
+        if isinstance(data, dict):
+            for field in ['success_criteria', 'inputs', 'outputs', 'preconditions', 'postconditions',
+                          'happy_path_examples', 'edge_case_examples', 'error_case_examples',
+                          'ambiguities', 'unit_tests', 'forbidden_patterns', 'files', 'dependencies']:
+                if field in data and isinstance(data[field], str):
+                    try:
+                        data[field] = json.loads(data[field])
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+        return data
+
 
 class ResearchVerifierOutput(BaseModel):
     """
@@ -928,6 +943,10 @@ class UnifiedAgentOutput(BaseModel):
     status_updates: Dict[str, str] = Field(
         default_factory=dict,
         description="Node ID -> new status"
+    )
+    metadata_updates: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Node ID -> metadata key-value pairs to update"
     )
 
     # File artifacts
